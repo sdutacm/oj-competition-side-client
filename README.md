@@ -1,6 +1,6 @@
-# Electron OJ 客户端
+# SDUT OJ3 客户端
 
-这是一个基于 Electron 的在线判题系统客户端，具有自定义工具栏和域名访问控制功能。
+基于 Electron 框架开发 🎉
 
 ## 项目结构
 
