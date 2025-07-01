@@ -1,6 +1,7 @@
 const { BrowserView } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const PlatformHelper = require('./platformHelper');
 
 class ToolbarManager {
   constructor(mainWindow, onActionCallback) {
@@ -47,11 +48,26 @@ class ToolbarManager {
    * 创建工具栏 HTML 内容
    */
   createToolbarHTML() {
-    // 读取本地 SVG 文件内容
-    const backSVG = fs.readFileSync(path.join(__dirname, '../public/svg/back.svg'), 'utf8');
-    const forwardSVG = fs.readFileSync(path.join(__dirname, '../public/svg/forward.svg'), 'utf8');
-    const refreshSVG = fs.readFileSync(path.join(__dirname, '../public/svg/refresh.svg'), 'utf8');
-    const homeSVG = fs.readFileSync(path.join(__dirname, '../public/svg/home.svg'), 'utf8');
+    // 读取本地 SVG 文件内容，增加错误处理
+    let backSVG, forwardSVG, refreshSVG, homeSVG;
+    
+    try {
+      const svgPath = PlatformHelper.joinPath(__dirname, '..', 'public', 'svg');
+      
+      backSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'back.svg'), 'utf8');
+      forwardSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'forward.svg'), 'utf8');
+      refreshSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'refresh.svg'), 'utf8');
+      homeSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'home.svg'), 'utf8');
+    } catch (error) {
+      console.error('Error loading SVG files:', error);
+      
+      // 提供默认的 SVG 图标
+      const defaultSVG = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM5.354 4.646L4.646 5.354 7.293 8l-2.647 2.646.708.708L8 8.707l2.646 2.647.708-.708L8.707 8l2.647-2.646-.708-.708L8 7.293 5.354 4.646z"/></svg>';
+      backSVG = defaultSVG;
+      forwardSVG = defaultSVG;
+      refreshSVG = defaultSVG;
+      homeSVG = defaultSVG;
+    }
 
     return `
       <!DOCTYPE html>

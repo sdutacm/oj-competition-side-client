@@ -1,13 +1,69 @@
-# SDUT OJ3 客户端
+# OJ Client - Online Judge 客户端
 
-基于 Electron 框架开发 🎉
+一个基于 Electron 的在线评测系统客户端应用程序，专为访问 op.sdutacm.cn 而设计。
 
-## 项目结构
+## 功能特性
 
-```
-oj-client/
-├── main.js                    # 主程序入口
-├── package.json              # 项目配置
+- � 专用浏览器界面，针对 OJ 系统优化
+- 🔧 自定义工具栏，支持后退、前进、刷新、主页等操作
+- ⌨️ 跨平台快捷键支持
+- 🔒 安全的域名白名单和黑名单机制
+- 🪟 支持弹出窗口管理
+- 📱 响应式布局
+
+## 系统要求
+
+- Windows 10 或更高版本
+- Node.js 16.0.0 或更高版本
+- npm 或 yarn 包管理器
+
+## 安装和运行
+
+### 快速开始
+
+1. **克隆或下载项目**
+   ```bash
+   git clone <repository-url>
+   cd oj-client
+   ```
+
+2. **安装依赖**
+   ```bash
+   npm install
+   ```
+
+3. **启动应用**
+   ```bash
+   npm start
+   ```
+
+## 快捷键
+
+| 操作 | Windows | macOS | Linux |
+|------|---------|-------|-------|
+| 后退 | Alt + ← | Cmd + ← | Alt + ← |
+| 前进 | Alt + → | Cmd + → | Alt + → |
+| 刷新 | F5 | Cmd + R | Ctrl + R |
+| 主页 | Alt + H | Cmd + H | Alt + H |
+
+## 跨平台兼容性
+
+本项目已经过跨平台兼容性优化：
+
+### Windows 特有问题及解决方案
+
+1. **路径分隔符问题**
+   - ✅ 使用 `path.join()` 和 `PlatformHelper` 确保路径兼容性
+
+2. **GPU 进程错误**
+   - ✅ 添加了 Windows 特定的启动参数来解决 GPU 相关错误
+   - ✅ 这些错误不影响应用正常运行
+
+3. **文件编码问题**
+   - ✅ 使用 UTF-8 编码读取所有文件
+
+4. **API 兼容性**
+   - ✅ 支持新旧版本的 Electron navigation API
 ├── public/                    # 静态资源
 │   └── svg/                   # SVG 图标文件
 │       ├── back.svg          # 后退图标
