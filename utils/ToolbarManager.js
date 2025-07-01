@@ -89,11 +89,11 @@ class ToolbarManager {
             justify-content: center;
             transition: all 0.15s ease;
             position: relative;
+            transition: background 0.3s ease;
           }
 
           .toolbar-btn:hover {
             background: var(--toolbar-btn-hover);
-            transform: translateY(-1px);
           }
 
           .toolbar-btn:active {
@@ -119,7 +119,7 @@ class ToolbarManager {
 
           /* 主题变量 - 亮色主题 */
           :root {
-            --toolbar-bg: #ffffff;
+            --toolbar-bg: #fcfcfc;
             --toolbar-border: #e5e7eb;
             --toolbar-btn-hover: #f3f4f6;
             --toolbar-icon-color: #4b5563;
@@ -128,10 +128,10 @@ class ToolbarManager {
           /* 暗色主题检测 */
           @media (prefers-color-scheme: dark) {
             :root {
-              --toolbar-bg: #1f2937;
-              --toolbar-border: #374151;
-              --toolbar-btn-hover: #374151;
-              --toolbar-icon-color: #d1d5db;
+              --toolbar-bg: #1f1f1f;
+              --toolbar-border: #21262d;
+              --toolbar-btn-hover: #262c36;
+              --toolbar-icon-color: #e6edf3;
             }
           }
         </style>
