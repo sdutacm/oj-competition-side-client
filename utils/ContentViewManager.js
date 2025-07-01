@@ -7,6 +7,14 @@ class ContentViewManager {
     this.mainWindow = mainWindow;
     this.contentView = null;
     this.config = config;
+    this.toolbarManager = null;
+  }
+
+  /**
+   * 设置工具栏管理器
+   */
+  setToolbarManager(toolbarManager) {
+    this.toolbarManager = toolbarManager;
   }
 
   /**
@@ -33,6 +41,15 @@ class ContentViewManager {
    * 设置导航监听
    */
   setupNavigation() {
+    // 监听导航状态变化
+    this.contentView.webContents.on('did-navigate', () => {
+      this.updateNavigationState();
+    });
+
+    this.contentView.webContents.on('did-navigate-in-page', () => {
+      this.updateNavigationState();
+    });
+
     this.contentView.webContents.on('will-navigate', (event, targetUrl) => {
       const hostname = getHostname(targetUrl);
       if (!hostname) {
@@ -74,6 +91,17 @@ class ContentViewManager {
       }
       return { action: 'deny' };
     });
+  }
+
+  /**
+   * 更新导航状态
+   */
+  updateNavigationState() {
+    if (this.toolbarManager && this.contentView) {
+      const canGoBack = this.contentView.webContents.navigationHistory.canGoBack();
+      const canGoForward = this.contentView.webContents.navigationHistory.canGoForward();
+      this.toolbarManager.updateNavigationState(canGoBack, canGoForward);
+    }
   }
 
   /**

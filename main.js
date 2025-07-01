@@ -79,6 +79,9 @@ function initializeManagers() {
   // 创建内容视图管理器
   contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG);
   
+  // 连接工具栏管理器和内容视图管理器
+  contentViewManager.setToolbarManager(toolbarManager);
+  
   // 更新快捷键管理器的内容视图引用
   shortcutManager.contentViewManager = contentViewManager;
   

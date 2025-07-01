@@ -61,11 +61,19 @@ class ShortcutManager {
       case 'back':
         if (webContents.navigationHistory.canGoBack()) {
           webContents.navigationHistory.goBack();
+          // 延迟更新状态，等待导航完成
+          setTimeout(() => {
+            this.contentViewManager.updateNavigationState();
+          }, 100);
         }
         break;
       case 'forward':
         if (webContents.navigationHistory.canGoForward()) {
           webContents.navigationHistory.goForward();
+          // 延迟更新状态，等待导航完成
+          setTimeout(() => {
+            this.contentViewManager.updateNavigationState();
+          }, 100);
         }
         break;
       case 'refresh':

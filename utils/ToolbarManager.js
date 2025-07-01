@@ -115,6 +115,20 @@ class ToolbarManager {
             height: 20px;
             stroke: var(--toolbar-icon-color);
             pointer-events: none;
+            transition: stroke-dasharray 0.3s ease, stroke-dashoffset 0.3s ease;
+          }
+
+          /* 点击动画效果 */
+          .toolbar-btn.animate svg {
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            animation: drawStroke 0.6s ease-out forwards;
+          }
+
+          @keyframes drawStroke {
+            to {
+              stroke-dashoffset: 0;
+            }
           }
 
           /* 主题变量 - 亮色主题 */
@@ -154,9 +168,17 @@ class ToolbarManager {
           // 工具栏按钮点击处理
           document.addEventListener('click', (e) => {
             const btn = e.target.closest('.toolbar-btn');
-            if (!btn) return;
+            if (!btn || btn.disabled) return;
             
             const action = btn.getAttribute('data-action');
+            
+            // 为刷新和主页按钮添加动画效果
+            if (action === 'refresh' || action === 'home') {
+              btn.classList.add('animate');
+              setTimeout(() => {
+                btn.classList.remove('animate');
+              }, 600);
+            }
             
             // 直接发送消息到主进程
             fetch('electron://toolbar-action', {
@@ -167,6 +189,26 @@ class ToolbarManager {
               // 备用方案：使用 console 消息
               console.log('TOOLBAR_ACTION:' + action);
             });
+          });
+
+          // 更新按钮状态的函数
+          window.updateButtonStates = function(canGoBack, canGoForward) {
+            const backBtn = document.querySelector('[data-action="back"]');
+            const forwardBtn = document.querySelector('[data-action="forward"]');
+            
+            if (backBtn) {
+              backBtn.disabled = !canGoBack;
+            }
+            if (forwardBtn) {
+              forwardBtn.disabled = !canGoForward;
+            }
+          };
+
+          // 监听来自主进程的状态更新消息
+          window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'UPDATE_NAVIGATION_STATE') {
+              window.updateButtonStates(event.data.canGoBack, event.data.canGoForward);
+            }
           });
         </script>
       </body>
@@ -180,6 +222,19 @@ class ToolbarManager {
   setBounds(bounds) {
     if (this.toolbarView) {
       this.toolbarView.setBounds(bounds);
+    }
+  }
+
+  /**
+   * 更新导航按钮状态
+   */
+  updateNavigationState(canGoBack, canGoForward) {
+    if (this.toolbarView && this.toolbarView.webContents) {
+      this.toolbarView.webContents.executeJavaScript(`
+        window.updateButtonStates(${canGoBack}, ${canGoForward});
+      `).catch(err => {
+        console.log('更新按钮状态失败:', err);
+      });
     }
   }
 
