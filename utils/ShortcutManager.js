@@ -1,0 +1,81 @@
+const { globalShortcut } = require('electron');
+
+class ShortcutManager {
+  constructor(contentViewManager, homeUrl) {
+    this.contentViewManager = contentViewManager;
+    this.homeUrl = homeUrl;
+  }
+
+  /**
+   * 注册所有快捷键
+   */
+  registerShortcuts() {
+    // 后退
+    globalShortcut.register('CmdOrCtrl+Left', () => {
+      const webContents = this.contentViewManager.getWebContents();
+      if (webContents && webContents.navigationHistory.canGoBack()) {
+        webContents.navigationHistory.goBack();
+      }
+    });
+
+    // 前进
+    globalShortcut.register('CmdOrCtrl+Right', () => {
+      const webContents = this.contentViewManager.getWebContents();
+      if (webContents && webContents.navigationHistory.canGoForward()) {
+        webContents.navigationHistory.goForward();
+      }
+    });
+
+    // 刷新
+    globalShortcut.register('CmdOrCtrl+R', () => {
+      const webContents = this.contentViewManager.getWebContents();
+      if (webContents) {
+        webContents.reload();
+      }
+    });
+
+    // 主页
+    globalShortcut.register('CmdOrCtrl+H', () => {
+      const webContents = this.contentViewManager.getWebContents();
+      if (webContents) {
+        webContents.loadURL(this.homeUrl);
+      }
+    });
+  }
+
+  /**
+   * 取消注册所有快捷键
+   */
+  unregisterAll() {
+    globalShortcut.unregisterAll();
+  }
+
+  /**
+   * 处理工具栏动作
+   */
+  handleToolbarAction(action) {
+    const webContents = this.contentViewManager.getWebContents();
+    if (!webContents) return;
+
+    switch(action) {
+      case 'back':
+        if (webContents.navigationHistory.canGoBack()) {
+          webContents.navigationHistory.goBack();
+        }
+        break;
+      case 'forward':
+        if (webContents.navigationHistory.canGoForward()) {
+          webContents.navigationHistory.goForward();
+        }
+        break;
+      case 'refresh':
+        webContents.reload();
+        break;
+      case 'home':
+        webContents.loadURL(this.homeUrl);
+        break;
+    }
+  }
+}
+
+module.exports = ShortcutManager;
