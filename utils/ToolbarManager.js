@@ -137,16 +137,16 @@ class ToolbarManager {
         </style>
       </head>
       <body>
-        <button class="toolbar-btn" data-action="back" title="后退 (Ctrl+←)">
+        <button class="toolbar-btn" data-action="back" title="后退 (Alt+←)">
           ${backSVG}
         </button>
-        <button class="toolbar-btn" data-action="forward" title="前进 (Ctrl+→)">
+        <button class="toolbar-btn" data-action="forward" title="前进 (Alt+→)">
           ${forwardSVG}
         </button>
-        <button class="toolbar-btn" data-action="refresh" title="刷新 (Ctrl+R)">
+        <button class="toolbar-btn" data-action="refresh" title="刷新 (Alt+R)">
           ${refreshSVG}
         </button>
-        <button class="toolbar-btn" data-action="home" title="主页 (Ctrl+H)">
+        <button class="toolbar-btn" data-action="home" title="主页 (Alt+H)">
           ${homeSVG}
         </button>
         

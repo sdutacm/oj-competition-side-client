@@ -11,7 +11,7 @@ class ShortcutManager {
    */
   registerShortcuts() {
     // 后退
-    globalShortcut.register('CmdOrCtrl+Left', () => {
+    globalShortcut.register('Alt+Left', () => {
       const webContents = this.contentViewManager.getWebContents();
       if (webContents && webContents.navigationHistory.canGoBack()) {
         webContents.navigationHistory.goBack();
@@ -19,7 +19,7 @@ class ShortcutManager {
     });
 
     // 前进
-    globalShortcut.register('CmdOrCtrl+Right', () => {
+    globalShortcut.register('Alt+Right', () => {
       const webContents = this.contentViewManager.getWebContents();
       if (webContents && webContents.navigationHistory.canGoForward()) {
         webContents.navigationHistory.goForward();
@@ -27,7 +27,7 @@ class ShortcutManager {
     });
 
     // 刷新
-    globalShortcut.register('CmdOrCtrl+R', () => {
+    globalShortcut.register('Alt+R', () => {
       const webContents = this.contentViewManager.getWebContents();
       if (webContents) {
         webContents.reload();
@@ -35,7 +35,7 @@ class ShortcutManager {
     });
 
     // 主页
-    globalShortcut.register('CmdOrCtrl+H', () => {
+    globalShortcut.register('Alt+H', () => {
       const webContents = this.contentViewManager.getWebContents();
       if (webContents) {
         webContents.loadURL(this.homeUrl);
