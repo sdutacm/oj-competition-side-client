@@ -7,6 +7,28 @@
     "start": "electron .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "build": {
+    "appId": "com.oj.client",
+    "productName": "OJ Client",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "utils/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "icon": "public/favicon.png"
+    },
+    "win": {
+      "icon": "public/favicon.png"
+    },
+    "linux": {
+      "icon": "public/favicon.png"
+    }
+  },
   "devDependencies": {
     "electron": "^27.0.0"
   },

@@ -1,4 +1,5 @@
 const { app, BrowserWindow } = require('electron');
+const path = require('path');
 
 // 导入工具类和管理器
 const ToolbarManager = require('./utils/ToolbarManager');
@@ -57,6 +58,7 @@ app.whenReady().then(() => {
     mainWindow = new BrowserWindow({
       width: 1000,
       height: 800,
+      icon: path.join(__dirname, 'public/favicon.png'), // 设置应用图标
       webPreferences: {
         nodeIntegration: platformConfig.nodeIntegration,
         contextIsolation: platformConfig.contextIsolation,

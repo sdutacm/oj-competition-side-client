@@ -1,4 +1,5 @@
 const { BrowserWindow } = require('electron');
+const path = require('path');
 
 /**
  * 创建新窗口
@@ -9,6 +10,7 @@ function createNewWindow(url, options = {}) {
   const defaultOptions = {
     width: 800,
     height: 600,
+    icon: path.join(__dirname, '../public/favicon.png'), // 设置应用图标
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
