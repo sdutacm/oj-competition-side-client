@@ -8,8 +8,8 @@ const path = require('path');
  */
 function createNewWindow(url, options = {}) {
   const defaultOptions = {
-    width: 800,
-    height: 600,
+    width: 1280,
+    height: 800,
     icon: path.join(__dirname, '../public/favicon.png'), // 设置应用图标
     webPreferences: {
       nodeIntegration: false,

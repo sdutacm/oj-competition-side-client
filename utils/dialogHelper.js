@@ -62,12 +62,16 @@ function showInfoDialog(parentWindow) {
     modal: true,
     resizable: false,
     show: false,
+    autoHideMenuBar: true, // 自动隐藏菜单栏
     icon: path.join(__dirname, '../public/favicon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
     }
   });
+
+  // 确保隐藏菜单栏
+  infoWindow.setMenuBarVisibility(false);
 
   // 异步函数获取 favicon 的 base64 编码
   async function getBase64Image() {
@@ -110,6 +114,17 @@ function showInfoDialog(parentWindow) {
           min-height: 100vh;
           display: flex;
           flex-direction: column;
+          overflow: hidden; /* 隐藏滚动条 */
+        }
+
+        /* 隐藏所有滚动条 */
+        ::-webkit-scrollbar {
+          display: none;
+        }
+        
+        * {
+          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none; /* Internet Explorer 10+ */
         }
         
         .container {
@@ -121,6 +136,8 @@ function showInfoDialog(parentWindow) {
           flex: 1;
           display: flex;
           flex-direction: column;
+          overflow: hidden; /* 防止内容溢出 */
+          max-height: calc(100vh - 40px); /* 确保不超过视窗高度 */
         }
         
         .header {
@@ -161,6 +178,11 @@ function showInfoDialog(parentWindow) {
         .content {
           padding: 20px 30px;
           flex: 1;
+          overflow-y: auto; /* 只有内容区域可滚动，但隐藏滚动条 */
+        }
+        
+        .content::-webkit-scrollbar {
+          display: none;
         }
         
         .feature-section {
@@ -283,7 +305,7 @@ function showInfoDialog(parentWindow) {
       <div class="container">
         <div class="header">
           ${logoImg}
-          <div class="app-name">OJ Client</div>
+          <div class="app-name">SDUTOJ Client</div>
           <div class="app-version">版本 1.0.0</div>
           <div class="app-description">专业的在线评测系统客户端</div>
         </div>

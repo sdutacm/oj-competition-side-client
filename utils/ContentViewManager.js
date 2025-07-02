@@ -98,26 +98,9 @@ class ContentViewManager {
    */
   updateNavigationState() {
     if (this.toolbarManager && this.contentView) {
-      try {
-        // 检查 navigationHistory API 是否可用
-        const webContents = this.contentView.webContents;
-        let canGoBack = false;
-        let canGoForward = false;
-        
-        if (webContents.navigationHistory) {
-          // 新版本 Electron API
-          canGoBack = webContents.navigationHistory.canGoBack();
-          canGoForward = webContents.navigationHistory.canGoForward();
-        } else {
-          // 旧版本 Electron API
-          canGoBack = webContents.canGoBack();
-          canGoForward = webContents.canGoForward();
-        }
-        
-        this.toolbarManager.updateNavigationState(canGoBack, canGoForward);
-      } catch (error) {
-        console.error('更新导航状态失败:', error);
-      }
+      const canGoBack = this.contentView.webContents.navigationHistory.canGoBack();
+      const canGoForward = this.contentView.webContents.navigationHistory.canGoForward();
+      this.toolbarManager.updateNavigationState(canGoBack, canGoForward);
     }
   }
 

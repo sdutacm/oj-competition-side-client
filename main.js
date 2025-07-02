@@ -56,8 +56,8 @@ app.whenReady().then(() => {
     
     // 创建主窗口
     mainWindow = new BrowserWindow({
-      width: 1000,
-      height: 800,
+      width: 1440,
+      height: 900,
       icon: path.join(__dirname, 'public/favicon.png'), // 设置应用图标
       webPreferences: {
         nodeIntegration: platformConfig.nodeIntegration,
