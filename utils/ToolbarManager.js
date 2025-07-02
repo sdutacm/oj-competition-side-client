@@ -49,7 +49,7 @@ class ToolbarManager {
    */
   createToolbarHTML() {
     // 读取本地 SVG 文件内容，增加错误处理
-    let backSVG, forwardSVG, refreshSVG, homeSVG;
+    let backSVG, forwardSVG, refreshSVG, homeSVG, infoSVG;
     
     try {
       const svgPath = PlatformHelper.joinPath(__dirname, '..', 'public', 'svg');
@@ -58,6 +58,7 @@ class ToolbarManager {
       forwardSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'forward.svg'), 'utf8');
       refreshSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'refresh.svg'), 'utf8');
       homeSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'home.svg'), 'utf8');
+      infoSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'info.svg'), 'utf8');
     } catch (error) {
       console.error('Error loading SVG files:', error);
       
@@ -67,6 +68,7 @@ class ToolbarManager {
       forwardSVG = defaultSVG;
       refreshSVG = defaultSVG;
       homeSVG = defaultSVG;
+      infoSVG = defaultSVG;
     }
 
     return `
@@ -87,10 +89,22 @@ class ToolbarManager {
             border-bottom: 1px solid var(--toolbar-border);
             display: flex;
             align-items: center;
+            justify-content: space-between;
             padding: 0 12px;
-            gap: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          }
+
+          .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
           }
 
           .toolbar-btn {
@@ -167,18 +181,26 @@ class ToolbarManager {
         </style>
       </head>
       <body>
-        <button class="toolbar-btn" data-action="back" title="后退 (Alt+←)">
-          ${backSVG}
-        </button>
-        <button class="toolbar-btn" data-action="forward" title="前进 (Alt+→)">
-          ${forwardSVG}
-        </button>
-        <button class="toolbar-btn" data-action="refresh" title="刷新 (Alt+R)">
-          ${refreshSVG}
-        </button>
-        <button class="toolbar-btn" data-action="home" title="主页 (Alt+H)">
-          ${homeSVG}
-        </button>
+        <div class="toolbar-left">
+          <button class="toolbar-btn" data-action="back" title="后退 (Alt+←)">
+            ${backSVG}
+          </button>
+          <button class="toolbar-btn" data-action="forward" title="前进 (Alt+→)">
+            ${forwardSVG}
+          </button>
+          <button class="toolbar-btn" data-action="refresh" title="刷新 (Alt+R)">
+            ${refreshSVG}
+          </button>
+          <button class="toolbar-btn" data-action="home" title="主页 (Alt+H)">
+            ${homeSVG}
+          </button>
+        </div>
+        
+        <div class="toolbar-right">
+          <button class="toolbar-btn" data-action="info" title="系统信息 (Alt+I)">
+            ${infoSVG}
+          </button>
+        </div>
         
         <script>
           // 工具栏按钮点击处理

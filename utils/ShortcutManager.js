@@ -1,11 +1,20 @@
 const { globalShortcut } = require('electron');
 const PlatformHelper = require('./platformHelper');
+const { showInfoDialog } = require('./dialogHelper');
 
 class ShortcutManager {
-  constructor(contentViewManager, homeUrl) {
+  constructor(contentViewManager, homeUrl, mainWindow = null) {
     this.contentViewManager = contentViewManager;
     this.homeUrl = homeUrl;
+    this.mainWindow = mainWindow;
     this.shortcuts = PlatformHelper.getNavigationShortcuts();
+  }
+
+  /**
+   * 设置主窗口引用
+   */
+  setMainWindow(mainWindow) {
+    this.mainWindow = mainWindow;
   }
 
   /**
@@ -60,6 +69,13 @@ class ShortcutManager {
           webContents.loadURL(this.homeUrl);
         }
       });
+
+      // 系统信息
+      globalShortcut.register('Alt+I', () => {
+        if (this.mainWindow) {
+          showInfoDialog(this.mainWindow);
+        }
+      });
     } catch (error) {
       console.error('注册快捷键失败:', error);
     }
@@ -108,6 +124,11 @@ class ShortcutManager {
           break;
         case 'home':
           webContents.loadURL(this.homeUrl);
+          break;
+        case 'info':
+          if (this.mainWindow) {
+            showInfoDialog(this.mainWindow);
+          }
           break;
       }
     } catch (error) {

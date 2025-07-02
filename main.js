@@ -100,7 +100,7 @@ app.whenReady().then(() => {
 function initializeManagers() {
   try {
     // 创建快捷键管理器（需要在其他管理器之前创建）
-    shortcutManager = new ShortcutManager(null, APP_CONFIG.HOME_URL);
+    shortcutManager = new ShortcutManager(null, APP_CONFIG.HOME_URL, mainWindow);
     
     // 创建工具栏管理器
     toolbarManager = new ToolbarManager(mainWindow, (action) => {
@@ -113,8 +113,9 @@ function initializeManagers() {
     // 连接工具栏管理器和内容视图管理器
     contentViewManager.setToolbarManager(toolbarManager);
     
-    // 更新快捷键管理器的内容视图引用
+    // 更新快捷键管理器的内容视图引用和主窗口引用
     shortcutManager.contentViewManager = contentViewManager;
+    shortcutManager.setMainWindow(mainWindow);
     
     // 创建布局管理器
     layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
