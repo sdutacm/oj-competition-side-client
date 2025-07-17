@@ -236,10 +236,6 @@ npm run build:all
 - **SDUT OJ**: [https://oj.sdutacm.cn/onlinejudge3/](https://oj.sdutacm.cn/onlinejudge3/)
 - **问题反馈**: 请在 GitHub Issues 中提交问题和建议
 
-## 📄 许可证
-
-本项目采用 MIT 许可证，详见 [LICENSE](LICENSE) 文件。
-
 ---
 
 **© 2008-2025 SDUTACM. All Rights Reserved.**
