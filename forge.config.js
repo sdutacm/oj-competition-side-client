@@ -4,8 +4,8 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     asar: true,
-    name: 'SDUT OJ 竞赛客户端',
-    executableName: 'sdut-oj-contest-client', // 设置可执行文件名
+    name: 'SDUT OJ Contest Client',
+    executableName: 'sdut-oj-contest-client',
     // 根据平台设置不同的图标
     icon: process.platform === 'darwin' ? 'public/favicon.icns' : 
           process.platform === 'linux' ? 'public/favicon.png' : 'public/favicon.ico',
@@ -21,17 +21,6 @@ module.exports = {
   rebuildConfig: {},
   makers: [
     {
-      name: '@electron-forge/maker-squirrel',
-      config: {
-        // Windows 安装程序配置
-        name: 'SDUT OJ 竞赛客户端',
-        authors: 'SDUTACM',
-        description: 'SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端应用程序',
-        iconUrl: 'public/favicon.ico',
-        setupIcon: 'public/favicon.ico',
-      },
-    },
-    {
       name: '@electron-forge/maker-zip',
       platforms: ['darwin', 'linux', 'win32'],
       config: {
@@ -44,8 +33,8 @@ module.exports = {
         // Linux DEB 包配置
         options: {
           name: 'sdut-oj-contest-client',
-          productName: 'SDUT OJ 竞赛客户端',
-          description: 'SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端应用程序',
+          productName: 'SDUT OJ Contest Client',
+          description: 'SDUT OJ Contest Client - Professional online judge system client application',
           categories: ['Education'],
           maintainer: 'SDUTACM',
           icon: 'public/favicon.png',
