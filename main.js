@@ -71,6 +71,11 @@ app.whenReady().then(() => {
       show: false, // 初始不显示，等待准备完成
     });
 
+    // 设置自定义 User-Agent
+    const defaultUserAgent = mainWindow.webContents.getUserAgent();
+    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
+    mainWindow.webContents.setUserAgent(customUserAgent);
+
     // 隐藏默认菜单栏
     mainWindow.setMenuBarVisibility(false);
 

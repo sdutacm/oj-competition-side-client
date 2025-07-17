@@ -24,6 +24,12 @@ class ToolbarManager {
     
     this.mainWindow.setBrowserView(this.toolbarView);
     
+    // 设置自定义 User-Agent 并加载内容
+    const webContents = this.toolbarView.webContents;
+    const defaultUserAgent = webContents.getUserAgent();
+    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
+    webContents.setUserAgent(customUserAgent);
+    
     // 禁用工具栏视图的开发者工具相关功能
     this.disableDevToolsForToolbar();
     
@@ -31,7 +37,6 @@ class ToolbarManager {
     const toolbarHTML = this.createToolbarHTML();
     const toolbarDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(toolbarHTML)}`;
     
-    const webContents = this.toolbarView.webContents;
     webContents.loadURL(toolbarDataURL);
     
     // 工具栏按钮点击事件处理

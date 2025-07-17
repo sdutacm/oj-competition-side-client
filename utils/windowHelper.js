@@ -22,6 +22,11 @@ function createNewWindow(url, options = {}) {
   
   const newWin = new BrowserWindow(windowOptions);
   
+  // 设置自定义 User-Agent
+  const defaultUserAgent = newWin.webContents.getUserAgent();
+  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
+  newWin.webContents.setUserAgent(customUserAgent);
+  
   // 禁用新窗口的开发者工具相关功能
   disableDevToolsForWindow(newWin);
   

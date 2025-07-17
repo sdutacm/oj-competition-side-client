@@ -30,6 +30,13 @@ class ContentViewManager {
     });
     
     this.mainWindow.addBrowserView(this.contentView);
+    
+    // 设置自定义 User-Agent
+    const webContents = this.contentView.webContents;
+    const defaultUserAgent = webContents.getUserAgent();
+    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
+    webContents.setUserAgent(customUserAgent);
+    
     this.contentView.webContents.loadURL(this.config.HOME_URL);
     
     // 禁用内容视图的开发者工具相关功能

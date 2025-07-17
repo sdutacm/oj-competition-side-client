@@ -74,6 +74,11 @@ function showInfoDialog(parentWindow) {
   // 确保隐藏菜单栏
   infoWindow.setMenuBarVisibility(false);
 
+  // 设置自定义 User-Agent
+  const defaultUserAgent = infoWindow.webContents.getUserAgent();
+  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
+  infoWindow.webContents.setUserAgent(customUserAgent);
+
   // 禁用信息窗口的开发者工具相关功能
   const webContents = infoWindow?.webContents;
   if (webContents) {
