@@ -7,3 +7,17 @@ cache
 .temp
 *.local
 out/
+
+# Forge 相关文件 (已移除 electron-forge)
+forge.config.js
+.forge/
+
+# 临时文档和总结文件
+*_SUMMARY.md
+*_CHANGE_SUMMARY.md
+PRODUCT_NAME_CHANGE_SUMMARY.md
+
+# 其他临时文件
+*.tmp
+*.temp
+.vscode/settings.json
