@@ -67,11 +67,58 @@ function showInfoDialog(parentWindow) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      devTools: false, // 禁用开发者工具
     }
   });
 
   // 确保隐藏菜单栏
   infoWindow.setMenuBarVisibility(false);
+
+  // 禁用信息窗口的开发者工具相关功能
+  if (infoWindow.webContents) {
+    // 禁用右键菜单
+    infoWindow.webContents.on('context-menu', (event) => {
+      event.preventDefault();
+    });
+
+    // 禁用开发者工具快捷键
+    infoWindow.webContents.on('before-input-event', (event, input) => {
+      // 禁用 F12
+      if (input.key === 'F12') {
+        event.preventDefault();
+      }
+      
+      // 禁用 Ctrl+Shift+I (Windows/Linux)
+      if (input.control && input.shift && input.key === 'I') {
+        event.preventDefault();
+      }
+      
+      // 禁用 Cmd+Option+I (macOS)
+      if (input.meta && input.alt && input.key === 'I') {
+        event.preventDefault();
+      }
+      
+      // 禁用 Ctrl+Shift+J (Windows/Linux)
+      if (input.control && input.shift && input.key === 'J') {
+        event.preventDefault();
+      }
+      
+      // 禁用 Cmd+Option+J (macOS)
+      if (input.meta && input.alt && input.key === 'J') {
+        event.preventDefault();
+      }
+      
+      // 禁用 Ctrl+U (查看源码)
+      if (input.control && input.key === 'U') {
+        event.preventDefault();
+      }
+      
+      // 禁用 Cmd+U (macOS查看源码)
+      if (input.meta && input.key === 'U') {
+        event.preventDefault();
+      }
+    });
+  }
 
   // 异步函数获取 favicon 的 base64 编码
   async function getBase64Image() {

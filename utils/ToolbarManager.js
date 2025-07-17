@@ -18,10 +18,14 @@ class ToolbarManager {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        devTools: false, // 禁用开发者工具
       }
     });
     
     this.mainWindow.setBrowserView(this.toolbarView);
+    
+    // 禁用工具栏视图的开发者工具相关功能
+    this.disableDevToolsForToolbar();
     
     // 创建工具栏 HTML 内容
     const toolbarHTML = this.createToolbarHTML();
@@ -42,6 +46,56 @@ class ToolbarManager {
     });
 
     return this.toolbarView;
+  }
+
+  /**
+   * 禁用工具栏视图的开发者工具
+   */
+  disableDevToolsForToolbar() {
+    if (this.toolbarView && this.toolbarView.webContents) {
+      // 禁用右键菜单
+      this.toolbarView.webContents.on('context-menu', (event) => {
+        event.preventDefault();
+      });
+
+      // 禁用开发者工具快捷键
+      this.toolbarView.webContents.on('before-input-event', (event, input) => {
+        // 禁用 F12
+        if (input.key === 'F12') {
+          event.preventDefault();
+        }
+        
+        // 禁用 Ctrl+Shift+I (Windows/Linux)
+        if (input.control && input.shift && input.key === 'I') {
+          event.preventDefault();
+        }
+        
+        // 禁用 Cmd+Option+I (macOS)
+        if (input.meta && input.alt && input.key === 'I') {
+          event.preventDefault();
+        }
+        
+        // 禁用 Ctrl+Shift+J (Windows/Linux)
+        if (input.control && input.shift && input.key === 'J') {
+          event.preventDefault();
+        }
+        
+        // 禁用 Cmd+Option+J (macOS)
+        if (input.meta && input.alt && input.key === 'J') {
+          event.preventDefault();
+        }
+        
+        // 禁用 Ctrl+U (查看源码)
+        if (input.control && input.key === 'U') {
+          event.preventDefault();
+        }
+        
+        // 禁用 Cmd+U (macOS查看源码)
+        if (input.meta && input.key === 'U') {
+          event.preventDefault();
+        }
+      });
+    }
   }
 
   /**

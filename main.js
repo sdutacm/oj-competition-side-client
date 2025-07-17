@@ -66,12 +66,16 @@ app.whenReady().then(() => {
         allowRunningInsecureContent: platformConfig.allowRunningInsecureContent,
         sandbox: platformConfig.sandbox,
         experimentalFeatures: platformConfig.experimentalFeatures,
+        devTools: false, // 禁用开发者工具
       },
       show: false, // 初始不显示，等待准备完成
     });
 
     // 隐藏默认菜单栏
     mainWindow.setMenuBarVisibility(false);
+
+    // 禁用开发者工具相关功能
+    disableDevTools();
 
     // 初始化管理器
     initializeManagers();
@@ -93,6 +97,60 @@ app.whenReady().then(() => {
 }).catch(error => {
   console.error('应用启动失败:', error);
 });
+
+/**
+ * 禁用开发者工具相关功能
+ */
+function disableDevTools() {
+  // 禁用主窗口的开发者工具
+  if (mainWindow && mainWindow.webContents) {
+    // 禁用右键菜单
+    mainWindow.webContents.on('context-menu', (event) => {
+      event.preventDefault();
+    });
+
+    // 禁用开发者工具快捷键
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      // 禁用 F12
+      if (input.key === 'F12') {
+        event.preventDefault();
+      }
+      
+      // 禁用 Ctrl+Shift+I (Windows/Linux)
+      if (input.control && input.shift && input.key === 'I') {
+        event.preventDefault();
+      }
+      
+      // 禁用 Cmd+Option+I (macOS)
+      if (input.meta && input.alt && input.key === 'I') {
+        event.preventDefault();
+      }
+      
+      // 禁用 Ctrl+Shift+J (Windows/Linux)
+      if (input.control && input.shift && input.key === 'J') {
+        event.preventDefault();
+      }
+      
+      // 禁用 Cmd+Option+J (macOS)
+      if (input.meta && input.alt && input.key === 'J') {
+        event.preventDefault();
+      }
+      
+      // 禁用 Ctrl+U (查看源码)
+      if (input.control && input.key === 'U') {
+        event.preventDefault();
+      }
+      
+      // 禁用 Cmd+U (macOS查看源码)
+      if (input.meta && input.key === 'U') {
+        event.preventDefault();
+      }
+    });
+
+    // 禁用通过 webContents.openDevTools() 打开开发者工具
+    mainWindow.webContents.setDevToolsWebContents = null;
+  }
+}
 
 /**
  * 初始化所有管理器

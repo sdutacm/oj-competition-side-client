@@ -25,16 +25,70 @@ class ContentViewManager {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        devTools: false, // 禁用开发者工具
       }
     });
     
     this.mainWindow.addBrowserView(this.contentView);
     this.contentView.webContents.loadURL(this.config.HOME_URL);
     
+    // 禁用内容视图的开发者工具相关功能
+    this.disableDevToolsForContentView();
+    
     // 设置内容视图的导航监听
     this.setupNavigation();
 
     return this.contentView;
+  }
+
+  /**
+   * 禁用内容视图的开发者工具
+   */
+  disableDevToolsForContentView() {
+    if (this.contentView && this.contentView.webContents) {
+      // 禁用右键菜单
+      this.contentView.webContents.on('context-menu', (event) => {
+        event.preventDefault();
+      });
+
+      // 禁用开发者工具快捷键
+      this.contentView.webContents.on('before-input-event', (event, input) => {
+        // 禁用 F12
+        if (input.key === 'F12') {
+          event.preventDefault();
+        }
+        
+        // 禁用 Ctrl+Shift+I (Windows/Linux)
+        if (input.control && input.shift && input.key === 'I') {
+          event.preventDefault();
+        }
+        
+        // 禁用 Cmd+Option+I (macOS)
+        if (input.meta && input.alt && input.key === 'I') {
+          event.preventDefault();
+        }
+        
+        // 禁用 Ctrl+Shift+J (Windows/Linux)
+        if (input.control && input.shift && input.key === 'J') {
+          event.preventDefault();
+        }
+        
+        // 禁用 Cmd+Option+J (macOS)
+        if (input.meta && input.alt && input.key === 'J') {
+          event.preventDefault();
+        }
+        
+        // 禁用 Ctrl+U (查看源码)
+        if (input.control && input.key === 'U') {
+          event.preventDefault();
+        }
+        
+        // 禁用 Cmd+U (macOS查看源码)
+        if (input.meta && input.key === 'U') {
+          event.preventDefault();
+        }
+      });
+    }
   }
 
   /**
