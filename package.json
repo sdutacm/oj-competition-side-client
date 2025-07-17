@@ -20,10 +20,10 @@
       "package.json"
     ],
     "mac": {
-      "icon": "public/favicon.png"
+      "icon": "public/favicon.ico"
     },
     "win": {
-      "icon": "public/favicon.png"
+      "icon": "public/favicon.ico"
     },
     "linux": {
       "icon": "public/favicon.png"
