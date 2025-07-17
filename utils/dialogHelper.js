@@ -76,6 +76,11 @@ function showInfoDialog(parentWindow) {
     show: false,
     autoHideMenuBar: true, // 自动隐藏菜单栏
     icon: iconPath,
+    // 确保窗口有标题栏和关闭按钮
+    titleBarStyle: 'default',
+    closable: true, // 确保窗口可以关闭
+    minimizable: false, // 禁用最小化按钮
+    maximizable: false, // 禁用最大化按钮
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -101,6 +106,12 @@ function showInfoDialog(parentWindow) {
 
     // 禁用开发者工具快捷键
     webContents.on('before-input-event', (event, input) => {
+      // ESC 键关闭窗口（macOS 用户习惯）
+      if (input.key === 'Escape') {
+        infoWindow.close();
+        return;
+      }
+      
       // 禁用 F12
       if (input.key === 'F12') {
         event.preventDefault();
@@ -452,6 +463,13 @@ function showInfoDialog(parentWindow) {
           // 通过 console 消息发送到主进程
           console.log('OPEN_EXTERNAL_LINK:' + url);
         }
+        
+        // 添加键盘事件监听（ESC键关闭窗口）
+        document.addEventListener('keydown', function(event) {
+          if (event.key === 'Escape') {
+            console.log('CLOSE_WINDOW');
+          }
+        });
       </script>
     </body>
     </html>`;
@@ -464,11 +482,13 @@ function showInfoDialog(parentWindow) {
     
     infoWindow.loadURL(dataURL);
     
-    // 监听控制台消息以处理外部链接
+    // 监听控制台消息以处理外部链接和窗口关闭
     infoWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
       if (message.startsWith('OPEN_EXTERNAL_LINK:')) {
         const url = message.replace('OPEN_EXTERNAL_LINK:', '');
         shell.openExternal(url);
+      } else if (message === 'CLOSE_WINDOW') {
+        infoWindow.close();
       }
     });
     
@@ -483,11 +503,13 @@ function showInfoDialog(parentWindow) {
     
     infoWindow.loadURL(dataURL);
     
-    // 监听控制台消息以处理外部链接
+    // 监听控制台消息以处理外部链接和窗口关闭
     infoWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
       if (message.startsWith('OPEN_EXTERNAL_LINK:')) {
         const url = message.replace('OPEN_EXTERNAL_LINK:', '');
         shell.openExternal(url);
+      } else if (message === 'CLOSE_WINDOW') {
+        infoWindow.close();
       }
     });
     
