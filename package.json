@@ -4,8 +4,10 @@
   "description": "SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端应用程序",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "electron-forge start",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
   },
   "build": {
     "appId": "com.oj.client",
@@ -20,7 +22,7 @@
       "package.json"
     ],
     "mac": {
-      "icon": "public/favicon.ico",
+      "icon": "public/favicon.icns",
       "category": "public.app-category.education",
       "target": [
         {
@@ -40,9 +42,20 @@
     }
   },
   "devDependencies": {
+    "@electron-forge/cli": "^7.8.1",
+    "@electron-forge/maker-deb": "^7.8.1",
+    "@electron-forge/maker-rpm": "^7.8.1",
+    "@electron-forge/maker-squirrel": "^7.8.1",
+    "@electron-forge/maker-zip": "^7.8.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.8.1",
+    "@electron-forge/plugin-fuses": "^7.8.1",
+    "@electron/fuses": "^1.8.0",
     "electron": "^27.0.0"
   },
   "engines": {
     "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1"
   }
 }

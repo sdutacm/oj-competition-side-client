@@ -54,7 +54,7 @@ app.whenReady().then(() => {
   if (PlatformHelper.isMacOS()) {
     // 设置 Dock 图标
     try {
-      const iconPath = path.join(__dirname, 'public/favicon.ico');
+      const iconPath = path.join(__dirname, 'public/favicon.icns');
       if (app.dock) {
         app.dock.setIcon(iconPath);
       }
@@ -77,8 +77,10 @@ app.whenReady().then(() => {
     
     if (platform === 'linux') {
       iconPath = path.join(__dirname, 'public/favicon.png');
+    } else if (platform === 'darwin') {
+      iconPath = path.join(__dirname, 'public/favicon.icns');
     } else {
-      // Windows 和 macOS 使用 .ico 文件
+      // Windows 使用 .ico 文件
       iconPath = path.join(__dirname, 'public/favicon.ico');
     }
     
