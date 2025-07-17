@@ -57,7 +57,7 @@ function showInfoDialog(parentWindow) {
   // 创建一个新的信息窗口
   const infoWindow = new BrowserWindow({
     width: 500,
-    height: 600,
+    height: 520,
     parent: parentWindow,
     modal: true,
     resizable: false,
@@ -90,13 +90,13 @@ function showInfoDialog(parentWindow) {
   function createInfoHTML(base64Image = '') {
     const logoImg = base64Image ? 
       `<img src="data:image/png;base64,${base64Image}" alt="Logo" class="logo">` : 
-      '<div class="logo" style="background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">OJ</div>';
+      '<div class="logo" style="background: var(--accent-color); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 600;">OJ</div>';
 
     return `<!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>系统信息</title>
+      <title>关于</title>
       <style>
         * {
           margin: 0;
@@ -106,8 +106,8 @@ function showInfoDialog(parentWindow) {
         
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: #333;
+          background: var(--bg-color);
+          color: var(--text-color);
           line-height: 1.6;
           padding: 0;
           margin: 0;
@@ -115,6 +115,38 @@ function showInfoDialog(parentWindow) {
           display: flex;
           flex-direction: column;
           overflow: hidden; /* 隐藏滚动条 */
+        }
+
+        /* 主题变量 */
+        :root {
+          --bg-color: #f5f5f5;
+          --container-bg: rgba(255, 255, 255, 0.95);
+          --text-color: #1f1f1f;
+          --text-secondary: #666;
+          --text-tertiary: #888;
+          --border-color: rgba(0, 0, 0, 0.1);
+          --accent-color: #007aff;
+          --accent-bg: rgba(0, 122, 255, 0.1);
+          --accent-border: rgba(0, 122, 255, 0.2);
+          --hover-bg: rgba(0, 0, 0, 0.05);
+          --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* 暗色主题 */
+        @media (prefers-color-scheme: dark) {
+          :root {
+            --bg-color: #1a1a1a;
+            --container-bg: rgba(30, 30, 30, 0.95);
+            --text-color: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-tertiary: #707070;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #0a84ff;
+            --accent-bg: rgba(10, 132, 255, 0.15);
+            --accent-border: rgba(10, 132, 255, 0.3);
+            --hover-bg: rgba(255, 255, 255, 0.05);
+            --shadow-color: rgba(0, 0, 0, 0.3);
+          }
         }
 
         /* 隐藏所有滚动条 */
@@ -128,11 +160,9 @@ function showInfoDialog(parentWindow) {
         }
         
         .container {
-          background: rgba(255, 255, 255, 0.95);
+          background: transparent; 
           margin: 20px;
-          border-radius: 16px;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-          backdrop-filter: blur(10px);
+          border-radius: 12px;
           flex: 1;
           display: flex;
           flex-direction: column;
@@ -142,162 +172,86 @@ function showInfoDialog(parentWindow) {
         
         .header {
           text-align: center;
-          padding: 30px 30px 20px;
-          border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+          padding: 25px 30px 15px;
         }
         
         .logo {
-          width: 64px;
-          height: 64px;
-          margin: 0 auto 16px;
-          border-radius: 12px;
-          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+          width: 56px;
+          height: 56px;
+          margin: 0 auto 12px;
+          border-radius: 8px;
         }
         
         .app-name {
-          font-size: 28px;
+          font-size: 24px;
           font-weight: 700;
-          margin-bottom: 8px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          margin-bottom: 6px;
+          color: var(--text-color);
         }
         
         .app-version {
           font-size: 16px;
-          color: #666;
+          color: var(--text-secondary);
           margin-bottom: 4px;
         }
         
         .app-description {
           font-size: 14px;
-          color: #888;
+          color: var(--text-tertiary);
         }
         
         .content {
           padding: 20px 30px;
           flex: 1;
-          overflow-y: auto; /* 只有内容区域可滚动，但隐藏滚动条 */
-        }
-        
-        .content::-webkit-scrollbar {
-          display: none;
-        }
-        
-        .feature-section {
-          margin-bottom: 24px;
-        }
-        
-        .section-title {
-          font-size: 18px;
-          font-weight: 600;
-          color: #333;
-          margin-bottom: 12px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        
-        .section-icon {
-          width: 20px;
-          height: 20px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
-          border-radius: 50%;
+          overflow: hidden; /* 禁用滚动 */
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
-          font-size: 12px;
+        }
+        
+        .feature-section {
+          margin-bottom: 0;
+          width: 100%;
+          text-align: center;
         }
         
         .feature-list {
           list-style: none;
           padding-left: 0;
+          display: inline-block;
+          text-align: left;
         }
         
         .feature-item {
-          padding: 8px 0;
-          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+          padding: 6px 0;
           display: flex;
           align-items: center;
           gap: 12px;
         }
         
-        .feature-item:last-child {
-          border-bottom: none;
-        }
-        
         .feature-icon {
-          width: 6px;
-          height: 6px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
+          width: 4px;
+          height: 4px;
+          background: var(--text-tertiary);
           border-radius: 50%;
           flex-shrink: 0;
         }
         
         .feature-text {
-          color: #555;
+          color: var(--text-secondary);
           font-size: 14px;
-        }
-        
-        .shortcuts {
-          background: rgba(102, 126, 234, 0.1);
-          padding: 16px;
-          border-radius: 12px;
-          margin-top: 16px;
-        }
-        
-        .shortcut-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 6px 0;
-          border-bottom: 1px solid rgba(102, 126, 234, 0.1);
-        }
-        
-        .shortcut-item:last-child {
-          border-bottom: none;
-        }
-        
-        .shortcut-key {
-          background: rgba(102, 126, 234, 0.2);
-          padding: 4px 8px;
-          border-radius: 6px;
-          font-family: 'Consolas', 'Monaco', monospace;
-          font-size: 12px;
-          font-weight: 600;
-          color: #667eea;
         }
         
         .footer {
           text-align: center;
-          padding: 20px 30px;
-          border-top: 1px solid rgba(0, 0, 0, 0.1);
-          background: rgba(0, 0, 0, 0.02);
-          border-radius: 0 0 16px 16px;
+          padding: 15px 30px;
+          border-radius: 0 0 12px 12px;
         }
         
-        .close-btn {
-          background: linear-gradient(135deg, #667eea, #764ba2);
-          color: white;
-          border: none;
-          padding: 12px 24px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-        
-        .close-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-        
-        .close-btn:active {
-          transform: translateY(0);
+        .copyright {
+          color: var(--text-tertiary);
+          font-size: 12px;
+          font-weight: 400;
         }
       </style>
     </head>
@@ -305,73 +259,36 @@ function showInfoDialog(parentWindow) {
       <div class="container">
         <div class="header">
           ${logoImg}
-          <div class="app-name">SDUTOJ Client</div>
+          <div class="app-name">SDUT OJ 竞赛客户端</div>
           <div class="app-version">版本 1.0.0</div>
           <div class="app-description">专业的在线评测系统客户端</div>
         </div>
         
         <div class="content">
           <div class="feature-section">
-            <div class="section-title">
-              <div class="section-icon">✨</div>
-              核心功能
-            </div>
             <ul class="feature-list">
               <li class="feature-item">
                 <div class="feature-icon"></div>
-                <div class="feature-text">智能浏览器环境，专为编程竞赛优化</div>
+                <div class="feature-text">Electron 36.5.0</div>
               </li>
               <li class="feature-item">
                 <div class="feature-icon"></div>
-                <div class="feature-text">域名白名单机制，确保专注比赛环境</div>
+                <div class="feature-text">Node.js 18.19.1</div>
               </li>
               <li class="feature-item">
                 <div class="feature-icon"></div>
-                <div class="feature-text">自定义工具栏，提供便捷的导航操作</div>
+                <div class="feature-text">Chromium 130.0.6723.131</div>
               </li>
               <li class="feature-item">
                 <div class="feature-icon"></div>
-                <div class="feature-text">全局快捷键支持，提升操作效率</div>
-              </li>
-              <li class="feature-item">
-                <div class="feature-icon"></div>
-                <div class="feature-text">跨平台兼容，支持 Windows、macOS、Linux</div>
+                <div class="feature-text">V8 13.0.245.12</div>
               </li>
             </ul>
-          </div>
-          
-          <div class="feature-section">
-            <div class="section-title">
-              <div class="section-icon">⌨️</div>
-              快捷键
-            </div>
-            <div class="shortcuts">
-              <div class="shortcut-item">
-                <span>后退</span>
-                <span class="shortcut-key">Alt + ←</span>
-              </div>
-              <div class="shortcut-item">
-                <span>前进</span>
-                <span class="shortcut-key">Alt + →</span>
-              </div>
-              <div class="shortcut-item">
-                <span>刷新</span>
-                <span class="shortcut-key">Alt + R</span>
-              </div>
-              <div class="shortcut-item">
-                <span>主页</span>
-                <span class="shortcut-key">Alt + H</span>
-              </div>
-              <div class="shortcut-item">
-                <span>系统信息</span>
-                <span class="shortcut-key">Alt + I</span>
-              </div>
-            </div>
           </div>
         </div>
         
         <div class="footer">
-          <button class="close-btn" onclick="window.close()">关闭 (◕‿◕)✨</button>
+          <div class="copyright">© 2008-2025 SDUTACM. All Rights Reserved.</div>
         </div>
       </div>
     </body>
