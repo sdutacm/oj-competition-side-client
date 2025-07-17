@@ -115,6 +115,29 @@ class ContentViewManager {
       this.updateNavigationState();
     });
 
+    webContents.on('did-finish-load', () => {
+      this.updateNavigationState();
+    });
+
+    webContents.on('did-start-loading', () => {
+      this.updateNavigationState();
+    });
+
+    webContents.on('did-stop-loading', () => {
+      this.updateNavigationState();
+    });
+
+    // 为 macOS 添加额外的导航状态检查
+    if (process.platform === 'darwin') {
+      // 定期更新导航状态，确保在 macOS 上正确检测
+      const navigationUpdateInterval = setInterval(() => {
+        this.updateNavigationState();
+      }, 1000);
+
+      // 保存定时器引用以便清理
+      this.navigationUpdateInterval = navigationUpdateInterval;
+    }
+
     webContents.on('will-navigate', (event, targetUrl) => {
       const hostname = getHostname(targetUrl);
       if (!hostname) {
@@ -164,8 +187,26 @@ class ContentViewManager {
   updateNavigationState() {
     const webContents = this.contentView?.webContents;
     if (this.toolbarManager && webContents) {
-      const canGoBack = webContents.navigationHistory?.canGoBack() || false;
-      const canGoForward = webContents.navigationHistory?.canGoForward() || false;
+      let canGoBack = false;
+      let canGoForward = false;
+      
+      try {
+        // 优先使用新的 navigationHistory API
+        if (webContents.navigationHistory) {
+          canGoBack = webContents.navigationHistory.canGoBack();
+          canGoForward = webContents.navigationHistory.canGoForward();
+        } else {
+          // 回退到旧的 API
+          canGoBack = webContents.canGoBack();
+          canGoForward = webContents.canGoForward();
+        }
+      } catch (error) {
+        // 在 macOS 上，可能会出现 API 访问错误，使用默认值
+        console.log('导航状态检查失败（已忽略）:', error.message);
+        canGoBack = false;
+        canGoForward = false;
+      }
+      
       this.toolbarManager.updateNavigationState(canGoBack, canGoForward);
     }
   }
@@ -191,6 +232,17 @@ class ContentViewManager {
    */
   getWebContents() {
     return this.contentView?.webContents || null;
+  }
+
+  /**
+   * 清理资源
+   */
+  destroy() {
+    // 清理 macOS 的导航状态更新定时器
+    if (this.navigationUpdateInterval) {
+      clearInterval(this.navigationUpdateInterval);
+      this.navigationUpdateInterval = null;
+    }
   }
 }
 

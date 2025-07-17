@@ -80,8 +80,9 @@ class ShortcutManager {
         }
       });
 
-      // 系统信息
-      globalShortcut.register('Alt+I', () => {
+      // 系统信息 - 根据平台使用不同快捷键
+      const infoShortcut = process.platform === 'darwin' ? 'Cmd+I' : 'Alt+I';
+      globalShortcut.register(infoShortcut, () => {
         if (this.mainWindow) {
           try {
             showInfoDialog(this.mainWindow);
