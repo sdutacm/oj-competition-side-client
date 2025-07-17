@@ -279,15 +279,8 @@ class ToolbarManager {
               }, 600);
             }
             
-            // 直接发送消息到主进程
-            fetch('electron://toolbar-action', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action })
-            }).catch(() => {
-              // 备用方案：使用 console 消息
-              console.log('TOOLBAR_ACTION:' + action);
-            });
+            // 使用 console 消息发送动作（安全且兼容所有平台）
+            console.log('TOOLBAR_ACTION:' + action);
           });
 
           // 更新按钮状态的函数
@@ -330,11 +323,19 @@ class ToolbarManager {
   updateNavigationState(canGoBack, canGoForward) {
     const webContents = this.toolbarView?.webContents;
     if (webContents) {
-      webContents.executeJavaScript(`
-        window.updateButtonStates(${canGoBack}, ${canGoForward});
-      `).catch(err => {
-        console.log('更新按钮状态失败:', err);
-      });
+      try {
+        webContents.executeJavaScript(`
+          if (window.updateButtonStates) {
+            window.updateButtonStates(${canGoBack}, ${canGoForward});
+          }
+        `).catch(err => {
+          // 静默处理 JavaScript 执行错误，避免在 macOS 上显示弹窗
+          console.log('更新按钮状态失败（已忽略）:', err.message);
+        });
+      } catch (error) {
+        // 静默处理同步错误
+        console.log('执行 JavaScript 失败（已忽略）:', error.message);
+      }
     }
   }
 

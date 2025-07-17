@@ -67,6 +67,7 @@ SDUT OJ 竞赛客户端是一个基于 Electron 的专业在线评测系统客�
 
 4. **API 兼容性**
    - ✅ 支持新旧版本的 Electron navigation API
+```
 ├── public/                    # 静态资源
 │   └── svg/                   # SVG 图标文件
 │       ├── back.svg          # 后退图标

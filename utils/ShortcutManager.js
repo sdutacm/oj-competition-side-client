@@ -33,7 +33,8 @@ class ShortcutManager {
               webContents.goBack();
             }
           } catch (error) {
-            console.error('后退操作失败:', error);
+            // 静默处理导航错误，避免在 macOS 上显示弹窗
+            console.log('后退操作失败（已忽略）:', error.message);
           }
         }
       });
@@ -49,7 +50,8 @@ class ShortcutManager {
               webContents.goForward();
             }
           } catch (error) {
-            console.error('前进操作失败:', error);
+            // 静默处理导航错误，避免在 macOS 上显示弹窗
+            console.log('前进操作失败（已忽略）:', error.message);
           }
         }
       });
@@ -58,7 +60,11 @@ class ShortcutManager {
       globalShortcut.register(this.shortcuts.refresh, () => {
         const webContents = this.contentViewManager.getWebContents();
         if (webContents) {
-          webContents.reload();
+          try {
+            webContents.reload();
+          } catch (error) {
+            console.log('刷新操作失败（已忽略）:', error.message);
+          }
         }
       });
 
@@ -66,18 +72,26 @@ class ShortcutManager {
       globalShortcut.register(this.shortcuts.home, () => {
         const webContents = this.contentViewManager.getWebContents();
         if (webContents) {
-          webContents.loadURL(this.homeUrl);
+          try {
+            webContents.loadURL(this.homeUrl);
+          } catch (error) {
+            console.log('主页跳转失败（已忽略）:', error.message);
+          }
         }
       });
 
       // 系统信息
       globalShortcut.register('Alt+I', () => {
         if (this.mainWindow) {
-          showInfoDialog(this.mainWindow);
+          try {
+            showInfoDialog(this.mainWindow);
+          } catch (error) {
+            console.log('显示系统信息失败（已忽略）:', error.message);
+          }
         }
       });
     } catch (error) {
-      console.error('注册快捷键失败:', error);
+      console.log('注册快捷键失败（已忽略）:', error.message);
     }
   }
 
@@ -98,41 +112,69 @@ class ShortcutManager {
     try {
       switch(action) {
         case 'back':
-          if (webContents.navigationHistory && webContents.navigationHistory.canGoBack()) {
-            webContents.navigationHistory.goBack();
-          } else if (webContents.canGoBack()) {
-            webContents.goBack();
+          try {
+            if (webContents.navigationHistory && webContents.navigationHistory.canGoBack()) {
+              webContents.navigationHistory.goBack();
+            } else if (webContents.canGoBack()) {
+              webContents.goBack();
+            }
+            // 延迟更新状态，等待导航完成
+            setTimeout(() => {
+              try {
+                this.contentViewManager.updateNavigationState();
+              } catch (error) {
+                console.log('更新导航状态失败（已忽略）:', error.message);
+              }
+            }, 100);
+          } catch (error) {
+            console.log('后退操作失败（已忽略）:', error.message);
           }
-          // 延迟更新状态，等待导航完成
-          setTimeout(() => {
-            this.contentViewManager.updateNavigationState();
-          }, 100);
           break;
         case 'forward':
-          if (webContents.navigationHistory && webContents.navigationHistory.canGoForward()) {
-            webContents.navigationHistory.goForward();
-          } else if (webContents.canGoForward()) {
-            webContents.goForward();
+          try {
+            if (webContents.navigationHistory && webContents.navigationHistory.canGoForward()) {
+              webContents.navigationHistory.goForward();
+            } else if (webContents.canGoForward()) {
+              webContents.goForward();
+            }
+            // 延迟更新状态，等待导航完成
+            setTimeout(() => {
+              try {
+                this.contentViewManager.updateNavigationState();
+              } catch (error) {
+                console.log('更新导航状态失败（已忽略）:', error.message);
+              }
+            }, 100);
+          } catch (error) {
+            console.log('前进操作失败（已忽略）:', error.message);
           }
-          // 延迟更新状态，等待导航完成
-          setTimeout(() => {
-            this.contentViewManager.updateNavigationState();
-          }, 100);
           break;
         case 'refresh':
-          webContents.reload();
+          try {
+            webContents.reload();
+          } catch (error) {
+            console.log('刷新操作失败（已忽略）:', error.message);
+          }
           break;
         case 'home':
-          webContents.loadURL(this.homeUrl);
+          try {
+            webContents.loadURL(this.homeUrl);
+          } catch (error) {
+            console.log('主页跳转失败（已忽略）:', error.message);
+          }
           break;
         case 'info':
           if (this.mainWindow) {
-            showInfoDialog(this.mainWindow);
+            try {
+              showInfoDialog(this.mainWindow);
+            } catch (error) {
+              console.log('显示系统信息失败（已忽略）:', error.message);
+            }
           }
           break;
       }
     } catch (error) {
-      console.error('处理工具栏动作失败:', error);
+      console.log('处理工具栏动作失败（已忽略）:', error.message);
     }
   }
 }
