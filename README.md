@@ -218,18 +218,6 @@ npm start
 npm test
 ```
 
-### 打包发布
-```bash
-# 安装打包工具
-npm install electron-builder --save-dev
-
-# 打包当前平台
-npm run build
-
-# 打包所有平台
-npm run build:all
-```
-
 ## 📧 联系方式
 
 - **项目主页**: [GitHub Repository](https://github.com/ATRIOR-LCL/oj-client)
