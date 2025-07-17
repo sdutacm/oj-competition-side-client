@@ -50,15 +50,43 @@ app.whenReady().then(() => {
     app.commandLine.appendSwitch('no-sandbox');
   }
   
+  // macOS 特定设置
+  if (PlatformHelper.isMacOS()) {
+    // 设置 Dock 图标
+    try {
+      const iconPath = path.join(__dirname, 'public/favicon.ico');
+      if (app.dock) {
+        app.dock.setIcon(iconPath);
+      }
+    } catch (error) {
+      console.error('设置 Dock 图标失败:', error);
+    }
+    
+    // 设置应用程序名称
+    app.setName('SDUT OJ 竞赛客户端');
+  }
+  
   try {
     // 获取平台特定配置
     const platformConfig = PlatformHelper.getPlatformConfig();
+    
+    // 根据平台选择图标
+    const os = require('os');
+    const platform = os.platform();
+    let iconPath;
+    
+    if (platform === 'linux') {
+      iconPath = path.join(__dirname, 'public/favicon.png');
+    } else {
+      // Windows 和 macOS 使用 .ico 文件
+      iconPath = path.join(__dirname, 'public/favicon.ico');
+    }
     
     // 创建主窗口
     mainWindow = new BrowserWindow({
       width: 1440,
       height: 900,
-      icon: path.join(__dirname, 'public/favicon.png'), // 设置应用图标
+      icon: iconPath, // 设置应用图标
       webPreferences: {
         nodeIntegration: platformConfig.nodeIntegration,
         contextIsolation: platformConfig.contextIsolation,

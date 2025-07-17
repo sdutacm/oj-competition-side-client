@@ -20,7 +20,17 @@
       "package.json"
     ],
     "mac": {
-      "icon": "public/favicon.ico"
+      "icon": "public/favicon.ico",
+      "category": "public.app-category.education",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
     },
     "win": {
       "icon": "public/favicon.ico"
