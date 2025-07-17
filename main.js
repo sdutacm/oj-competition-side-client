@@ -103,14 +103,15 @@ app.whenReady().then(() => {
  */
 function disableDevTools() {
   // 禁用主窗口的开发者工具
-  if (mainWindow && mainWindow.webContents) {
+  const webContents = mainWindow?.webContents;
+  if (webContents) {
     // 禁用右键菜单
-    mainWindow.webContents.on('context-menu', (event) => {
+    webContents.on('context-menu', (event) => {
       event.preventDefault();
     });
 
     // 禁用开发者工具快捷键
-    mainWindow.webContents.on('before-input-event', (event, input) => {
+    webContents.on('before-input-event', (event, input) => {
       // 禁用 F12
       if (input.key === 'F12') {
         event.preventDefault();
@@ -148,7 +149,7 @@ function disableDevTools() {
     });
 
     // 禁用通过 webContents.openDevTools() 打开开发者工具
-    mainWindow.webContents.setDevToolsWebContents = null;
+    webContents.setDevToolsWebContents = null;
   }
 }
 

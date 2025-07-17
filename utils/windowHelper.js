@@ -34,17 +34,18 @@ function createNewWindow(url, options = {}) {
  * 为指定窗口禁用开发者工具
  */
 function disableDevToolsForWindow(window) {
-  if (window && window.webContents) {
+  const webContents = window?.webContents;
+  if (webContents) {
     // 隐藏菜单栏
     window.setMenuBarVisibility(false);
     
     // 禁用右键菜单
-    window.webContents.on('context-menu', (event) => {
+    webContents.on('context-menu', (event) => {
       event.preventDefault();
     });
 
     // 禁用开发者工具快捷键
-    window.webContents.on('before-input-event', (event, input) => {
+    webContents.on('before-input-event', (event, input) => {
       // 禁用 F12
       if (input.key === 'F12') {
         event.preventDefault();

@@ -45,14 +45,15 @@ class ContentViewManager {
    * 禁用内容视图的开发者工具
    */
   disableDevToolsForContentView() {
-    if (this.contentView && this.contentView.webContents) {
+    const webContents = this.contentView?.webContents;
+    if (webContents) {
       // 禁用右键菜单
-      this.contentView.webContents.on('context-menu', (event) => {
+      webContents.on('context-menu', (event) => {
         event.preventDefault();
       });
 
       // 禁用开发者工具快捷键
-      this.contentView.webContents.on('before-input-event', (event, input) => {
+      webContents.on('before-input-event', (event, input) => {
         // 禁用 F12
         if (input.key === 'F12') {
           event.preventDefault();
@@ -95,16 +96,19 @@ class ContentViewManager {
    * 设置导航监听
    */
   setupNavigation() {
+    const webContents = this.contentView?.webContents;
+    if (!webContents) return;
+
     // 监听导航状态变化
-    this.contentView.webContents.on('did-navigate', () => {
+    webContents.on('did-navigate', () => {
       this.updateNavigationState();
     });
 
-    this.contentView.webContents.on('did-navigate-in-page', () => {
+    webContents.on('did-navigate-in-page', () => {
       this.updateNavigationState();
     });
 
-    this.contentView.webContents.on('will-navigate', (event, targetUrl) => {
+    webContents.on('will-navigate', (event, targetUrl) => {
       const hostname = getHostname(targetUrl);
       if (!hostname) {
         event.preventDefault();
@@ -136,7 +140,7 @@ class ContentViewManager {
       showBlockedDialog(this.mainWindow, hostname, '该域名不在允许访问的白名单中');
     });
 
-    this.contentView.webContents.setWindowOpenHandler(({ url }) => {
+    webContents.setWindowOpenHandler(({ url }) => {
       const hostname = getHostname(url);
       if (this.config.POPUP_WHITELIST.has(hostname)) {
         this.config.openNewWindow(url);
@@ -151,9 +155,10 @@ class ContentViewManager {
    * 更新导航状态
    */
   updateNavigationState() {
-    if (this.toolbarManager && this.contentView) {
-      const canGoBack = this.contentView.webContents.navigationHistory.canGoBack();
-      const canGoForward = this.contentView.webContents.navigationHistory.canGoForward();
+    const webContents = this.contentView?.webContents;
+    if (this.toolbarManager && webContents) {
+      const canGoBack = webContents.navigationHistory?.canGoBack() || false;
+      const canGoForward = webContents.navigationHistory?.canGoForward() || false;
       this.toolbarManager.updateNavigationState(canGoBack, canGoForward);
     }
   }
@@ -178,7 +183,7 @@ class ContentViewManager {
    * 获取 webContents
    */
   getWebContents() {
-    return this.contentView ? this.contentView.webContents : null;
+    return this.contentView?.webContents || null;
   }
 }
 

@@ -31,11 +31,12 @@ class ToolbarManager {
     const toolbarHTML = this.createToolbarHTML();
     const toolbarDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(toolbarHTML)}`;
     
-    this.toolbarView.webContents.loadURL(toolbarDataURL);
+    const webContents = this.toolbarView.webContents;
+    webContents.loadURL(toolbarDataURL);
     
     // 工具栏按钮点击事件处理
-    this.toolbarView.webContents.on('dom-ready', () => {
-      this.toolbarView.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    webContents.on('dom-ready', () => {
+      webContents.on('console-message', (event, level, message, line, sourceId) => {
         if (message.startsWith('TOOLBAR_ACTION:')) {
           const action = message.replace('TOOLBAR_ACTION:', '');
           if (this.onActionCallback) {
@@ -52,14 +53,15 @@ class ToolbarManager {
    * 禁用工具栏视图的开发者工具
    */
   disableDevToolsForToolbar() {
-    if (this.toolbarView && this.toolbarView.webContents) {
+    const webContents = this.toolbarView?.webContents;
+    if (webContents) {
       // 禁用右键菜单
-      this.toolbarView.webContents.on('context-menu', (event) => {
+      webContents.on('context-menu', (event) => {
         event.preventDefault();
       });
 
       // 禁用开发者工具快捷键
-      this.toolbarView.webContents.on('before-input-event', (event, input) => {
+      webContents.on('before-input-event', (event, input) => {
         // 禁用 F12
         if (input.key === 'F12') {
           event.preventDefault();
@@ -321,8 +323,9 @@ class ToolbarManager {
    * 更新导航按钮状态
    */
   updateNavigationState(canGoBack, canGoForward) {
-    if (this.toolbarView && this.toolbarView.webContents) {
-      this.toolbarView.webContents.executeJavaScript(`
+    const webContents = this.toolbarView?.webContents;
+    if (webContents) {
+      webContents.executeJavaScript(`
         window.updateButtonStates(${canGoBack}, ${canGoForward});
       `).catch(err => {
         console.log('更新按钮状态失败:', err);

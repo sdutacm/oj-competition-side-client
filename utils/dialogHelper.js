@@ -75,14 +75,15 @@ function showInfoDialog(parentWindow) {
   infoWindow.setMenuBarVisibility(false);
 
   // 禁用信息窗口的开发者工具相关功能
-  if (infoWindow.webContents) {
+  const webContents = infoWindow?.webContents;
+  if (webContents) {
     // 禁用右键菜单
-    infoWindow.webContents.on('context-menu', (event) => {
+    webContents.on('context-menu', (event) => {
       event.preventDefault();
     });
 
     // 禁用开发者工具快捷键
-    infoWindow.webContents.on('before-input-event', (event, input) => {
+    webContents.on('before-input-event', (event, input) => {
       // 禁用 F12
       if (input.key === 'F12') {
         event.preventDefault();
