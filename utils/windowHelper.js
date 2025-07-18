@@ -27,17 +27,17 @@ function createNewWindow(url, options = {}, useSimpleMode = false) {
   };
 
   const windowOptions = { ...defaultOptions, ...options };
-  
+
   const newWin = new BrowserWindow(windowOptions);
-  
+
   // 设置自定义 User-Agent
   const defaultUserAgent = newWin.webContents.getUserAgent();
   const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
   newWin.webContents.setUserAgent(customUserAgent);
-  
+
   // 禁用新窗口的开发者工具相关功能
   disableDevToolsForWindow(newWin);
-  
+
   // 为新窗口添加导航栏
   try {
     setupNavigationForNewWindow(newWin, url);
@@ -46,7 +46,7 @@ function createNewWindow(url, options = {}, useSimpleMode = false) {
     // 如果导航栏设置失败，至少让窗口显示内容
     newWin.loadURL(url);
   }
-  
+
   return newWin;
 }
 
@@ -57,7 +57,7 @@ function createNewWindow(url, options = {}, useSimpleMode = false) {
  */
 function setupNavigationForNewWindow(window, url) {
   const toolbarHeight = 48;
-  
+
   try {
     // 创建工具栏视图
     const toolbarView = new BrowserView({
@@ -67,7 +67,7 @@ function setupNavigationForNewWindow(window, url) {
         devTools: false,
       }
     });
-    
+
     // 创建内容视图
     const contentView = new BrowserView({
       webPreferences: {
@@ -76,78 +76,78 @@ function setupNavigationForNewWindow(window, url) {
         devTools: false,
       }
     });
-    
+
     // 设置 User-Agent
     const defaultUserAgent = toolbarView.webContents.getUserAgent();
     const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
     toolbarView.webContents.setUserAgent(customUserAgent);
     contentView.webContents.setUserAgent(customUserAgent);
-    
+
     // 禁用开发者工具
     disableDevToolsForBrowserView(toolbarView);
     disableDevToolsForBrowserView(contentView);
-    
+
     // 添加视图到窗口
     window.addBrowserView(toolbarView);
     window.addBrowserView(contentView);
-    
+
     // 创建工具栏HTML
     const toolbarHTML = createToolbarHTMLForNewWindow();
     const toolbarDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(toolbarHTML)}`;
-    
+
     // 加载工具栏和内容
     toolbarView.webContents.loadURL(toolbarDataURL).then(() => {
     }).catch(error => {
       console.error('工具栏加载失败:', error);
     });
-    
+
     contentView.webContents.loadURL(url).then(() => {
     }).catch(error => {
       console.error('内容页面加载失败:', url, error);
     });
-  
-  // 设置布局
-  const updateLayout = () => {
-    const bounds = window.getBounds();
-    toolbarView.setBounds({ x: 0, y: 0, width: bounds.width, height: toolbarHeight });
-    contentView.setBounds({ x: 0, y: toolbarHeight, width: bounds.width, height: bounds.height - toolbarHeight });
-  };
-  
-  // 初始布局 - 立即执行一次
-  setTimeout(() => {
-    updateLayout();
-  }, 100);
-  
-  // 监听窗口显示和大小变化
-  window.once('ready-to-show', updateLayout);
-  window.on('resize', updateLayout);
-  
-  // 设置工具栏事件处理
-  toolbarView.webContents.on('dom-ready', () => {
-    toolbarView.webContents.on('console-message', (event, level, message) => {
-      if (message.startsWith('TOOLBAR_ACTION:')) {
-        const action = message.replace('TOOLBAR_ACTION:', '');
-        // 传入主页URL而不是当前页面URL
-        const homeUrl = 'https://op.sdutacm.cn/';
-        handleNewWindowToolbarAction(action, contentView, homeUrl);
-      }
-    });
-  });    // 监听导航状态变化并更新工具栏
+
+    // 设置布局
+    const updateLayout = () => {
+      const bounds = window.getBounds();
+      toolbarView.setBounds({ x: 0, y: 0, width: bounds.width, height: toolbarHeight });
+      contentView.setBounds({ x: 0, y: toolbarHeight, width: bounds.width, height: bounds.height - toolbarHeight });
+    };
+
+    // 初始布局 - 立即执行一次
+    setTimeout(() => {
+      updateLayout();
+    }, 100);
+
+    // 监听窗口显示和大小变化
+    window.once('ready-to-show', updateLayout);
+    window.on('resize', updateLayout);
+
+    // 设置工具栏事件处理
+    toolbarView.webContents.on('dom-ready', () => {
+      toolbarView.webContents.on('console-message', (event, level, message) => {
+        if (message.startsWith('TOOLBAR_ACTION:')) {
+          const action = message.replace('TOOLBAR_ACTION:', '');
+          // 传入主页URL而不是当前页面URL
+          const homeUrl = 'https://op.sdutacm.cn/';
+          handleNewWindowToolbarAction(action, contentView, homeUrl);
+        }
+      });
+    });    // 监听导航状态变化并更新工具栏
     const updateNavigationState = () => {
       const webContents = contentView.webContents;
       const canGoBack = webContents.navigationHistory?.canGoBack() || webContents.canGoBack();
       const canGoForward = webContents.navigationHistory?.canGoForward() || webContents.canGoForward();
-      
+
       toolbarView.webContents.executeJavaScript(`
         if (window.updateButtonStates) {
           window.updateButtonStates(${canGoBack}, ${canGoForward});
         }
-      `).catch(() => {});
+      `).catch(() => { });
     };
-    
+
     contentView.webContents.on('did-navigate', updateNavigationState);
     contentView.webContents.on('did-navigate-in-page', updateNavigationState);
-    
+
   } catch (error) {
     console.error('设置新窗口导航栏过程中出现错误:', error);
     // 如果出现错误，回退到简单的窗口加载
@@ -166,7 +166,7 @@ function handleNewWindowToolbarAction(action, contentView, homeUrl) {
   if (!webContents) return;
 
   try {
-    switch(action) {
+    switch (action) {
       case 'back':
         if (webContents.navigationHistory?.canGoBack()) {
           webContents.navigationHistory.goBack();
@@ -223,9 +223,9 @@ function disableDevToolsForBrowserView(view) {
 function createToolbarHTMLForNewWindow() {
   // 读取SVG图标
   const svgDir = path.join(__dirname, '../public/svg');
-  
+
   let backSvg, forwardSvg, refreshSvg, homeSvg;
-  
+
   try {
     backSvg = fs.readFileSync(path.join(svgDir, 'back.svg'), 'utf8');
     forwardSvg = fs.readFileSync(path.join(svgDir, 'forward.svg'), 'utf8');
@@ -240,7 +240,7 @@ function createToolbarHTMLForNewWindow() {
     refreshSvg = defaultSVG;
     homeSvg = defaultSVG;
   }
-  
+
   return `
     <!DOCTYPE html>
     <html>
@@ -422,23 +422,23 @@ function createSimpleNewWindow(url, options = {}) {
   };
 
   const windowOptions = { ...defaultOptions, ...options };
-  
+
   const newWin = new BrowserWindow(windowOptions);
-  
+
   // 设置自定义 User-Agent
   const defaultUserAgent = newWin.webContents.getUserAgent();
   const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
   newWin.webContents.setUserAgent(customUserAgent);
-  
+
   // 禁用开发者工具
   disableDevToolsForWindow(newWin);
-  
+
   // 直接加载URL
   newWin.loadURL(url).then(() => {
   }).catch(error => {
     console.error('简单新窗口加载失败:', url, error);
   });
-  
+
   return newWin;
 }
 
@@ -458,21 +458,21 @@ class LayoutManager {
    */
   layoutViews() {
     const bounds = this.mainWindow.getBounds();
-    
+
     // 设置工具栏位置（顶部）
-    this.toolbarManager.setBounds({ 
-      x: 0, 
-      y: 0, 
-      width: bounds.width, 
-      height: this.toolbarHeight 
+    this.toolbarManager.setBounds({
+      x: 0,
+      y: 0,
+      width: bounds.width,
+      height: this.toolbarHeight
     });
-    
+
     // 设置内容视图位置（工具栏下方）
-    this.contentViewManager.setBounds({ 
-      x: 0, 
-      y: this.toolbarHeight, 
-      width: bounds.width, 
-      height: bounds.height - this.toolbarHeight 
+    this.contentViewManager.setBounds({
+      x: 0,
+      y: this.toolbarHeight,
+      width: bounds.width,
+      height: bounds.height - this.toolbarHeight
     });
   }
 

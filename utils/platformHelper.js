@@ -88,7 +88,7 @@ class PlatformHelper {
   static getPlatformConfig() {
     const isWin = this.isWindows();
     const isMac = this.isMacOS();
-    
+
     return {
       // Windows 需要更严格的安全设置
       webSecurity: isWin,

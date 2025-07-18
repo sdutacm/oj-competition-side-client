@@ -20,24 +20,24 @@ class ToolbarManager {
         devTools: false, // 禁用开发者工具
       }
     });
-    
+
     this.mainWindow.setBrowserView(this.toolbarView);
-    
+
     // 设置自定义 User-Agent 并加载内容
     const webContents = this.toolbarView.webContents;
     const defaultUserAgent = webContents.getUserAgent();
     const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
     webContents.setUserAgent(customUserAgent);
-    
+
     // 禁用工具栏视图的开发者工具相关功能
     this.disableDevToolsForToolbar();
-    
+
     // 创建工具栏 HTML 内容
     const toolbarHTML = this.createToolbarHTML();
     const toolbarDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(toolbarHTML)}`;
-    
+
     webContents.loadURL(toolbarDataURL);
-    
+
     // 工具栏按钮点击事件处理
     webContents.on('dom-ready', () => {
       webContents.on('console-message', (event, level, message, line, sourceId) => {
@@ -99,10 +99,10 @@ class ToolbarManager {
   createToolbarHTML() {
     // 读取本地 SVG 文件内容，增加错误处理
     let backSVG, forwardSVG, refreshSVG, homeSVG, infoSVG;
-    
+
     try {
       const svgPath = PlatformHelper.joinPath(__dirname, '..', 'public', 'svg');
-      
+
       backSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'back.svg'), 'utf8');
       forwardSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'forward.svg'), 'utf8');
       refreshSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'refresh.svg'), 'utf8');
@@ -110,7 +110,7 @@ class ToolbarManager {
       infoSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'info.svg'), 'utf8');
     } catch (error) {
       console.error('Error loading SVG files:', error);
-      
+
       // 提供默认的 SVG 图标
       const defaultSVG = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM5.354 4.646L4.646 5.354 7.293 8l-2.647 2.646.708.708L8 8.707l2.646 2.647.708-.708L8.707 8l2.647-2.646-.708-.708L8 7.293 5.354 4.646z"/></svg>';
       backSVG = defaultSVG;

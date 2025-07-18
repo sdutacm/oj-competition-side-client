@@ -19,10 +19,10 @@ let layoutManager = null;
 const APP_CONFIG = {
   // 主页面地址
   HOME_URL: 'https://op.sdutacm.cn/',
-  
+
   // 主窗口允许访问的根域名（支持子路径）
   MAIN_DOMAIN: 'op.sdutacm.cn',
-  
+
   // 新窗口白名单域名
   POPUP_WHITELIST: new Set([
     'rl.algoux.cn',
@@ -30,7 +30,7 @@ const APP_CONFIG = {
     'rank.ac',
     'acm.sdut.edu.cn'
   ]),
-  
+
   // 显式禁止的域名
   BLOCKED_DOMAINS: new Set([
     'oj.sdutacm.cn'
@@ -127,7 +127,7 @@ app.whenReady().then(() => {
     app.commandLine.appendSwitch('disable-gpu');
     app.commandLine.appendSwitch('no-sandbox');
   }
-  
+
   // macOS 特定设置
   if (PlatformHelper.isMacOS()) {
     // 设置 Dock 图标
@@ -139,20 +139,20 @@ app.whenReady().then(() => {
     } catch (error) {
       console.error('设置 Dock 图标失败:', error);
     }
-    
+
     // 设置应用程序名称
     app.setName('SDUT OJ 竞赛客户端');
   }
-  
+
   try {
     // 获取平台特定配置
     const platformConfig = PlatformHelper.getPlatformConfig();
-    
+
     // 根据平台选择图标
     const os = require('os');
     const platform = os.platform();
     let iconPath;
-    
+
     if (platform === 'linux') {
       iconPath = path.join(__dirname, 'public/favicon.png');
     } else if (platform === 'darwin') {
@@ -161,7 +161,7 @@ app.whenReady().then(() => {
       // Windows 使用 .ico 文件
       iconPath = path.join(__dirname, 'public/favicon.ico');
     }
-    
+
     // 创建主窗口
     mainWindow = new BrowserWindow({
       width: 1440,
@@ -240,7 +240,7 @@ function disableDevTools() {
   const webContents = mainWindow?.webContents;
   if (webContents) {
     // 移除禁止右键菜单的监听，恢复系统默认行为
-    
+
     // 禁用开发者工具的打开
     webContents.on('devtools-opened', () => {
       webContents.closeDevTools();
@@ -259,16 +259,16 @@ function initializeManagers() {
         shortcutManager.handleToolbarAction(action);
       }
     });
-    
+
     // 创建内容视图管理器
     contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
-    
+
     // 连接工具栏管理器和内容视图管理器
     contentViewManager.setToolbarManager(toolbarManager);
-    
+
     // 创建快捷键管理器（在内容视图管理器创建后）
     shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, mainWindow, true);
-    
+
     // 创建布局管理器
     layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
   } catch (error) {

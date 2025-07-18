@@ -68,7 +68,7 @@ function showInfoDialog(parentWindow) {
   const os = require('os');
   const platform = os.platform();
   let iconPath;
-  
+
   if (platform === 'linux') {
     iconPath = path.join(__dirname, '../public/favicon.png');
   } else if (platform === 'darwin') {
@@ -77,7 +77,7 @@ function showInfoDialog(parentWindow) {
     // Windows 使用 .ico 文件
     iconPath = path.join(__dirname, '../public/favicon.ico');
   }
-  
+
   // 创建一个新的信息窗口
   const infoWindow = new BrowserWindow({
     width: 500,
@@ -120,37 +120,37 @@ function showInfoDialog(parentWindow) {
         infoWindow.close();
         return;
       }
-      
+
       // 禁用 F12
       if (input.key === 'F12') {
         event.preventDefault();
       }
-      
+
       // 禁用 Ctrl+Shift+I (Windows/Linux)
       if (input.control && input.shift && input.key === 'I') {
         event.preventDefault();
       }
-      
+
       // 禁用 Cmd+Option+I (macOS)
       if (input.meta && input.alt && input.key === 'I') {
         event.preventDefault();
       }
-      
+
       // 禁用 Ctrl+Shift+J (Windows/Linux)
       if (input.control && input.shift && input.key === 'J') {
         event.preventDefault();
       }
-      
+
       // 禁用 Cmd+Option+J (macOS)
       if (input.meta && input.alt && input.key === 'J') {
         event.preventDefault();
       }
-      
+
       // 禁用 Ctrl+U (查看源码)
       if (input.control && input.key === 'U') {
         event.preventDefault();
       }
-      
+
       // 禁用 Cmd+U (macOS查看源码)
       if (input.meta && input.key === 'U') {
         event.preventDefault();
@@ -164,7 +164,7 @@ function showInfoDialog(parentWindow) {
       const fs = require('fs');
       const os = require('os');
       const platform = os.platform();
-      
+
       let imagePath;
       if (platform === 'linux') {
         imagePath = path.join(__dirname, '../public/favicon.png');
@@ -174,7 +174,7 @@ function showInfoDialog(parentWindow) {
         // Windows 使用 .ico 文件
         imagePath = path.join(__dirname, '../public/favicon.ico');
       }
-      
+
       const imageBuffer = fs.readFileSync(imagePath);
       return imageBuffer.toString('base64');
     } catch (error) {
@@ -189,7 +189,7 @@ function showInfoDialog(parentWindow) {
     const platform = os.platform();
     const isLinux = platform === 'linux';
     const isDarwin = platform === 'darwin';
-    
+
     let mimeType;
     if (isLinux) {
       mimeType = 'image/png';
@@ -198,9 +198,9 @@ function showInfoDialog(parentWindow) {
     } else {
       mimeType = 'image/x-icon';
     }
-    
-    const logoImg = base64Image ? 
-      `<img src="data:${mimeType};base64,${base64Image}" alt="Logo" class="logo">` : 
+
+    const logoImg = base64Image ?
+      `<img src="data:${mimeType};base64,${base64Image}" alt="Logo" class="logo">` :
       '<div class="logo" style="background: var(--accent-color); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 600;">OJ</div>';
 
     return `<!DOCTYPE html>
@@ -499,9 +499,9 @@ function showInfoDialog(parentWindow) {
   getBase64Image().then(base64Image => {
     const finalHTML = createInfoHTML(base64Image);
     const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(finalHTML)}`;
-    
+
     infoWindow.loadURL(dataURL);
-    
+
     // 监听控制台消息以处理外部链接和窗口关闭
     infoWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
       if (message.startsWith('OPEN_EXTERNAL_LINK:')) {
@@ -511,7 +511,7 @@ function showInfoDialog(parentWindow) {
         infoWindow.close();
       }
     });
-    
+
     infoWindow.once('ready-to-show', () => {
       infoWindow.show();
     });
@@ -520,9 +520,9 @@ function showInfoDialog(parentWindow) {
     // 无图片版本
     const simpleHTML = createInfoHTML();
     const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(simpleHTML)}`;
-    
+
     infoWindow.loadURL(dataURL);
-    
+
     // 监听控制台消息以处理外部链接和窗口关闭
     infoWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
       if (message.startsWith('OPEN_EXTERNAL_LINK:')) {
@@ -532,7 +532,7 @@ function showInfoDialog(parentWindow) {
         infoWindow.close();
       }
     });
-    
+
     infoWindow.once('ready-to-show', () => {
       infoWindow.show();
     });

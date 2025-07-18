@@ -84,7 +84,7 @@ class ShortcutManager {
   /**
    * 处理按键输入
    */
-  handleKeyInput() {}
+  handleKeyInput() { }
 
   /**
    * 检查是否是开发者工具快捷键
@@ -179,17 +179,17 @@ class ShortcutManager {
    */
   getShortcutKey(input) {
     const keys = [];
-    
+
     // 修饰键
     if (input.control) keys.push('Ctrl');
     if (input.alt) keys.push('Alt');
     if (input.shift) keys.push('Shift');
     if (input.meta) keys.push('Cmd');
-    
+
     // 主键 - 处理特殊键
     if (input.key) {
       let key = input.key;
-      
+
       // 处理方向键
       if (key === 'ArrowLeft') key = 'Left';
       else if (key === 'ArrowRight') key = 'Right';
@@ -199,10 +199,10 @@ class ShortcutManager {
       else if (key.startsWith('F') && key.length > 1) key = key.toUpperCase();
       // 处理字母键
       else if (key.length === 1) key = key.toUpperCase();
-      
+
       keys.push(key);
     }
-    
+
     return keys.join('+');
   }
 
@@ -214,7 +214,7 @@ class ShortcutManager {
     if (!webContents) return;
 
     try {
-      switch(action) {
+      switch (action) {
         case 'back':
           try {
             if (webContents.navigationHistory && webContents.navigationHistory.canGoBack()) {
