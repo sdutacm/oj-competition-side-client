@@ -38,7 +38,6 @@ const APP_CONFIG = {
 
 // 独立的新窗口创建函数，不放在 APP_CONFIG 内，避免 require 副作用
 function openNewWindow(url) {
-  // 不再 require 管理器类，直接用顶部的
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -48,25 +47,38 @@ function openNewWindow(url) {
       devTools: false,
     },
     show: true,
-    autoHideMenuBar: true // 创建时彻底隐藏菜单栏
+    autoHideMenuBar: true
   });
-  win.setMenuBarVisibility(false); // 立即隐藏原生菜单栏
+  win.setMenuBarVisibility(false);
   win.on('ready-to-show', () => {
-    win.setMenuBarVisibility(false); // 再次确保彻底隐藏
+    win.setMenuBarVisibility(false);
   });
-  // 独立管理器实例
-  const toolbarManager = new ToolbarManager(win, () => {}); // 可根据需要传递 action handler
-  toolbarManager.createToolbarView();
+  // 先声明 contentViewManager，便于 action handler 使用
   const contentViewManager = new ContentViewManager(win, APP_CONFIG, openNewWindow);
+  // 计算初始 url 的顶级域名主页
+  let homeUrl = url;
+  try {
+    const u = new URL(url);
+    homeUrl = u.origin + '/';
+  } catch (e) {
+    // fallback: 不是合法 url 就用原始 url
+  }
+  // 新窗口快捷键管理器需提前声明，便于 action handler 使用
+  let shortcutManager;
+  // 传递 action handler，所有按钮和快捷键统一处理
+  const toolbarManager = new ToolbarManager(win, (action) => {
+    if (shortcutManager) {
+      shortcutManager.handleToolbarAction(action);
+    }
+  });
+  toolbarManager.createToolbarView();
   contentViewManager.setToolbarManager(toolbarManager);
-  // 新增 LayoutManager 实现分区布局
   const layoutManager = new LayoutManager(win, toolbarManager, contentViewManager);
   layoutManager.layoutViews();
   layoutManager.setupResizeListener();
-  // 创建内容区视图
   contentViewManager.createContentView(win, url);
-  // 新窗口
-  const shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, win, false);
+  // 关键：将 homeUrl 作为 home 页面传递给 ShortcutManager
+  shortcutManager = new ShortcutManager(contentViewManager, homeUrl, win, false);
   shortcutManager.registerShortcuts();
   win.on('closed', () => {
     shortcutManager.unregisterAll();
