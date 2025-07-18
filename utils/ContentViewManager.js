@@ -140,15 +140,30 @@ class ContentViewManager {
     }
 
     webContents.on('will-navigate', (event, targetUrl) => {
-      const allow = interceptDomain(targetWindow, targetUrl, this.config, targetWindow === this.mainWindow);
+      const currentDomain = getHostname(webContents.getURL());
+      const targetDomain = getHostname(targetUrl);
+      const allow = interceptDomain(targetWindow, targetUrl, this.config, targetWindow === this.mainWindow, 'default');
       if (!allow) {
-        event.preventDefault(); // 只弹窗，不跳转，页面停留原地
+        event.preventDefault();
+        return;
+      }
+      // 白名单域名但与当前窗口域名不同，自动新开窗口访问
+      if (targetDomain && targetDomain !== currentDomain && checkDomainAllowed(targetDomain, this.config, false).allowed) {
+        event.preventDefault();
+        this.openNewWindow(targetUrl);
       }
     });
     webContents.on('will-redirect', (event, targetUrl) => {
-      const allow = interceptDomain(targetWindow, targetUrl, this.config, targetWindow === this.mainWindow);
+      const currentDomain = getHostname(webContents.getURL());
+      const targetDomain = getHostname(targetUrl);
+      const allow = interceptDomain(targetWindow, targetUrl, this.config, targetWindow === this.mainWindow, 'redirect');
       if (!allow) {
-        event.preventDefault(); // 拦截重定向跳转，页面停留原地
+        event.preventDefault();
+        return;
+      }
+      if (targetDomain && targetDomain !== currentDomain && checkDomainAllowed(targetDomain, this.config, false).allowed) {
+        event.preventDefault();
+        this.openNewWindow(targetUrl);
       }
     });
     contentView.webContents.setWindowOpenHandler(({ url }) => {

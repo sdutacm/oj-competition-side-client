@@ -58,13 +58,14 @@ function checkDomainAllowed(domain, config, isMainWindow = false) {
  * @param {string} url
  * @param {object} config
  * @param {boolean} isMainWindow
+ * @param {string} type - 拦截类型（可选：'redirect' | 'default'）
  * @returns {boolean} 是否允许访问
  */
-function interceptDomain(win, url, config, isMainWindow = false) {
+function interceptDomain(win, url, config, isMainWindow = false, type = 'default') {
   const domain = getHostname(url);
   const { allowed, reason } = checkDomainAllowed(domain, config, isMainWindow);
   if (!allowed) {
-    showBlockedDialog(win, domain, reason);
+    showBlockedDialog(win, domain, reason, type);
     if (!isMainWindow) {
       win.hide();
       win.close();
