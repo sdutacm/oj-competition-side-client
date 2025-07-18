@@ -54,9 +54,80 @@ class ContentViewManager {
   disableDevToolsForContentView() {
     const webContents = this.contentView?.webContents;
     if (webContents) {
-      // 禁用右键菜单
-      webContents.on('context-menu', (event) => {
+      // 创建自定义右键菜单，提供导航功能
+      webContents.on('context-menu', (event, params) => {
         event.preventDefault();
+        
+        const { Menu } = require('electron');
+        const contextMenuTemplate = [
+          {
+            label: '后退',
+            enabled: webContents.canGoBack(),
+            click: () => {
+              if (webContents.canGoBack()) {
+                webContents.goBack();
+                // 更新工具栏状态
+                if (this.toolbarManager) {
+                  this.toolbarManager.updateNavigationButtons();
+                }
+              }
+            }
+          },
+          {
+            label: '前进',
+            enabled: webContents.canGoForward(),
+            click: () => {
+              if (webContents.canGoForward()) {
+                webContents.goForward();
+                // 更新工具栏状态
+                if (this.toolbarManager) {
+                  this.toolbarManager.updateNavigationButtons();
+                }
+              }
+            }
+          },
+          {
+            type: 'separator'
+          },
+          {
+            label: '刷新',
+            click: () => {
+              webContents.reload();
+              // 更新工具栏状态
+              if (this.toolbarManager) {
+                this.toolbarManager.updateNavigationButtons();
+              }
+            }
+          },
+          {
+            label: '返回主页',
+            click: () => {
+              webContents.loadURL(this.config.HOME_URL);
+              // 更新工具栏状态
+              if (this.toolbarManager) {
+                this.toolbarManager.updateNavigationButtons();
+              }
+            }
+          },
+          {
+            type: 'separator'
+          },
+          {
+            label: '系统信息',
+            click: () => {
+              const { showInfoDialog } = require('./dialogHelper');
+              showInfoDialog();
+            }
+          }
+        ];
+        
+        // 创建并显示右键菜单
+        const contextMenu = Menu.buildFromTemplate(contextMenuTemplate);
+        contextMenu.popup({
+          window: this.mainWindow,
+          x: params.x,
+          y: params.y
+        });
       });
 
       // 禁用开发者工具快捷键

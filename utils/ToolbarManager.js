@@ -340,6 +340,18 @@ class ToolbarManager {
   }
 
   /**
+   * 更新导航按钮状态（别名方法）
+   */
+  updateNavigationButtons() {
+    const webContents = this.mainWindow?.webContents;
+    if (webContents) {
+      const canGoBack = webContents.canGoBack();
+      const canGoForward = webContents.canGoForward();
+      this.updateNavigationState(canGoBack, canGoForward);
+    }
+  }
+
+  /**
    * 获取工具栏视图
    */
   getView() {

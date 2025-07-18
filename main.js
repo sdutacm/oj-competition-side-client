@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 
 // 导入工具类和管理器
@@ -143,61 +143,18 @@ function disableDevTools() {
   // 禁用主窗口的开发者工具
   const webContents = mainWindow?.webContents;
   if (webContents) {
-    // 禁用右键菜单
-    webContents.on('context-menu', (event) => {
-      event.preventDefault();
-    });
-
     // 禁用开发者工具快捷键
     webContents.on('before-input-event', (event, input) => {
       try {
-        // 禁用 F12
-        if (input.key === 'F12') {
-          event.preventDefault();
-        }
-        
-        // 禁用 Ctrl+Shift+I (Windows/Linux)
-        if (input.control && input.shift && input.key === 'I') {
-          event.preventDefault();
-        }
-        
-        // 禁用 Cmd+Option+I (macOS)
-        if (input.meta && input.alt && input.key === 'I') {
-          event.preventDefault();
-        }
-        
-        // 禁用 Ctrl+Shift+J (Windows/Linux)
-        if (input.control && input.shift && input.key === 'J') {
-          event.preventDefault();
-        }
-        
-        // 禁用 Cmd+Option+J (macOS)
-        if (input.meta && input.alt && input.key === 'J') {
-          event.preventDefault();
-        }
-        
-        // 禁用 Ctrl+U (查看源码)
-        if (input.control && input.key === 'U') {
-          event.preventDefault();
-        }
-        
-        // 禁用 Cmd+U (macOS查看源码)
-        if (input.meta && input.key === 'U') {
-          event.preventDefault();
-        }
-      } catch (error) {
-        // 静默处理快捷键拦截错误，避免在 macOS 上显示错误弹窗
-        console.log('快捷键处理错误（已忽略）:', error.message);
-      }
+        if (input.key === 'F12') event.preventDefault();
+        if (input.control && input.shift && input.key === 'I') event.preventDefault();
+        if (input.meta && input.alt && input.key === 'I') event.preventDefault();
+        if (input.control && input.shift && input.key === 'J') event.preventDefault();
+        if (input.meta && input.alt && input.key === 'J') event.preventDefault();
+        if (input.control && input.key === 'U') event.preventDefault();
+        if (input.meta && input.key === 'U') event.preventDefault();
+      } catch (e) {}
     });
-
-    // 安全地禁用通过 webContents.openDevTools() 打开开发者工具
-    try {
-      webContents.setDevToolsWebContents = null;
-    } catch (error) {
-      // 在某些平台上可能无法设置，静默忽略
-      console.log('禁用开发者工具设置失败（已忽略）:', error.message);
-    }
   }
 }
 
