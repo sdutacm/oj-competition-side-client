@@ -80,6 +80,15 @@ function openNewWindow(url) {
   // 关键：将 homeUrl 作为 home 页面传递给 ShortcutManager
   shortcutManager = new ShortcutManager(contentViewManager, homeUrl, win, false);
   shortcutManager.registerShortcuts();
+  // 新增：内容区页面标题变化时，同步窗口标题
+  if (contentViewManager.getView && typeof contentViewManager.getView === 'function') {
+    const contentView = contentViewManager.getView();
+    if (contentView && contentView.webContents) {
+      contentView.webContents.on('page-title-updated', (event, title) => {
+        win.setTitle(title);
+      });
+    }
+  }
   win.on('closed', () => {
     shortcutManager.unregisterAll();
   });
@@ -171,6 +180,16 @@ app.whenReady().then(() => {
 
     // 创建视图
     createViews();
+
+    // 新增：主窗口内容区页面标题变化时，同步主窗口标题
+    if (contentViewManager && contentViewManager.getView && typeof contentViewManager.getView === 'function') {
+      const contentView = contentViewManager.getView();
+      if (contentView && contentView.webContents) {
+        contentView.webContents.on('page-title-updated', (event, title) => {
+          mainWindow.setTitle(title);
+        });
+      }
+    }
 
     // 设置布局
     setupLayout();
