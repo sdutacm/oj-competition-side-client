@@ -132,6 +132,8 @@ class ToolbarManager {
       infoSVG = defaultSVG;
     }
 
+    // 获取平台快捷键信息
+    const shortcuts = PlatformHelper.getNavigationShortcuts();
     return `
       <!DOCTYPE html>
       <html>
@@ -243,16 +245,16 @@ class ToolbarManager {
       </head>
       <body>
         <div class="toolbar-left">
-          <button class="toolbar-btn" data-action="back" title="后退 (Alt+←)">
+          <button class="toolbar-btn" data-action="back" title="后退 (${shortcuts.backLabel})">
             ${backSVG}
           </button>
-          <button class="toolbar-btn" data-action="forward" title="前进 (Alt+→)">
+          <button class="toolbar-btn" data-action="forward" title="前进 (${shortcuts.forwardLabel})">
             ${forwardSVG}
           </button>
-          <button class="toolbar-btn" data-action="refresh" title="刷新 (Alt+R)">
+          <button class="toolbar-btn" data-action="refresh" title="刷新 (${shortcuts.refreshLabel})">
             ${refreshSVG}
           </button>
-          <button class="toolbar-btn" data-action="home" title="主页 (Alt+H)">
+          <button class="toolbar-btn" data-action="home" title="主页 (${shortcuts.homeLabel})">
             ${homeSVG}
           </button>
         </div>

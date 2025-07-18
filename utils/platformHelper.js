@@ -62,17 +62,23 @@ class PlatformHelper {
   }
 
   /**
-   * 获取平台特定的导航快捷键
+   * 获取平台特定的导航快捷键（返回 accelerator 和可读字符串）
    */
   static getNavigationShortcuts() {
     const isWin = this.isWindows();
     const isMac = this.isMacOS();
-    
+    // accelerator: Electron 菜单用
+    // label: 鼠标悬浮提示用
     return {
       back: isMac ? 'Cmd+Left' : 'Alt+Left',
       forward: isMac ? 'Cmd+Right' : 'Alt+Right',
       refresh: isMac ? 'Cmd+R' : (isWin ? 'F5' : 'Ctrl+R'),
-      home: isMac ? 'Cmd+H' : 'Alt+H'
+      home: isMac ? 'Cmd+H' : 'Alt+H',
+      // 兼容 label 字段，前端可用 shortcuts.backLabel
+      backLabel: isMac ? '⌘+←' : 'Alt+Left',
+      forwardLabel: isMac ? '⌘+→' : 'Alt+Right',
+      refreshLabel: isMac ? '⌘+R' : (isWin ? 'F5' : 'Ctrl+R'),
+      homeLabel: isMac ? '⌘+H' : 'Alt+H'
     };
   }
 
