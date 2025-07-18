@@ -52,9 +52,10 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
 
 // 独立的新窗口创建函数，不放在 APP_CONFIG 内，避免 require 副作用
 function openNewWindow(url) {
+  const width = 1400, height = 900;
   const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width,
+    height,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

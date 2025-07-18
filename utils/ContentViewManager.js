@@ -150,7 +150,8 @@ class ContentViewManager {
       // 白名单域名但与当前窗口域名不同，自动新开窗口访问
       if (targetDomain && targetDomain !== currentDomain && checkDomainAllowed(targetDomain, this.config, false).allowed) {
         event.preventDefault();
-        this.openNewWindow(targetUrl);
+        const mainWinSize = this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800];
+        this.openNewWindow(targetUrl, mainWinSize);
       }
     });
     webContents.on('will-redirect', (event, targetUrl) => {
@@ -163,14 +164,15 @@ class ContentViewManager {
       }
       if (targetDomain && targetDomain !== currentDomain && checkDomainAllowed(targetDomain, this.config, false).allowed) {
         event.preventDefault();
-        this.openNewWindow(targetUrl);
+        const mainWinSize = this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800];
+        this.openNewWindow(targetUrl, mainWinSize);
       }
     });
     contentView.webContents.setWindowOpenHandler(({ url }) => {
       if (!interceptDomain(targetWindow, url, this.config, targetWindow === this.mainWindow)) {
         return { action: 'deny' };
       }
-      this.openNewWindow(url);
+      this.openNewWindow(url, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
       return { action: 'deny' };
     });
   }
