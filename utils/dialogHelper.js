@@ -474,13 +474,13 @@ function showInfoDialog(parentWindow) {
         // 打开外部链接的函数
         function openExternalLink(url) {
           // 通过 console 消息发送到主进程
-          console.log('OPEN_EXTERNAL_LINK:' + url);
+          
         }
         
         // 添加键盘事件监听（ESC键关闭窗口）
         document.addEventListener('keydown', function(event) {
           if (event.key === 'Escape') {
-            console.log('CLOSE_WINDOW');
+            
           }
         });
       </script>

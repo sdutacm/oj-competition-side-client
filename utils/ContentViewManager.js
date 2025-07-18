@@ -278,7 +278,6 @@ class ContentViewManager {
         }
       } catch (error) {
         // 在 macOS 上，可能会出现 API 访问错误，使用默认值
-        console.log('导航状态检查失败（已忽略）:', error.message);
         canGoBack = false;
         canGoForward = false;
       }

@@ -331,11 +331,9 @@ class ToolbarManager {
           }
         `).catch(err => {
           // 静默处理 JavaScript 执行错误，避免在 macOS 上显示弹窗
-          console.log('更新按钮状态失败（已忽略）:', err.message);
         });
       } catch (error) {
         // 静默处理同步错误
-        console.log('执行 JavaScript 失败（已忽略）:', error.message);
       }
     }
   }

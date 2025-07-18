@@ -3,12 +3,10 @@ const { showInfoDialog } = require('./dialogHelper');
 const { globalShortcut } = require('electron');
 
 class ShortcutManager {
-  constructor(contentViewManager, homeUrl, mainWindow = null, isMainWindow = false) {
-    console.log('[快捷键调试] ShortcutManager 构造函数被调用');
+  constructor(contentViewManager, homeUrl, mainWindow = null) {
     this.contentViewManager = contentViewManager;
     this.homeUrl = homeUrl;
     this.mainWindow = mainWindow;
-    this.isMainWindow = isMainWindow;
     // 统一使用 PlatformHelper 默认快捷键
     this.shortcuts = PlatformHelper.getNavigationShortcuts();
     this.keyHandlers = new Map(); // 存储按键处理器
@@ -142,16 +140,12 @@ class ShortcutManager {
     // 刷新
     this.keyHandlers.set(this.shortcuts.refresh, () => {
       const webContents = this.contentViewManager.getWebContents();
-      console.log('[快捷键调试] 刷新操作触发'); // 添加调试日志
       if (webContents) {
         try {
           webContents.reload();
-          console.log('[快捷键调试] 刷新成功'); // 添加调试日志
         } catch (error) {
           console.log('刷新操作失败（已忽略）:', error.message);
         }
-      } else {
-        console.log('[快捷键调试] webContents 不存在'); // 添加调试日志
       }
     });
 

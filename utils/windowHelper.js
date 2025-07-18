@@ -10,8 +10,6 @@ const PlatformHelper = require('./platformHelper');
  * @param {boolean} useSimpleMode - 是否使用简单模式（不带导航栏）
  */
 function createNewWindow(url, options = {}, useSimpleMode = false) {
-  console.log('创建新窗口:', url, useSimpleMode ? '(简单模式)' : '(完整导航栏)');
-  
   // 如果指定使用简单模式，直接创建简单窗口
   if (useSimpleMode) {
     return createSimpleNewWindow(url, options);
@@ -43,7 +41,6 @@ function createNewWindow(url, options = {}, useSimpleMode = false) {
   // 为新窗口添加导航栏
   try {
     setupNavigationForNewWindow(newWin, url);
-    console.log('新窗口导航栏设置成功:', url);
   } catch (error) {
     console.error('设置新窗口导航栏失败:', error);
     // 如果导航栏设置失败，至少让窗口显示内容
@@ -59,7 +56,6 @@ function createNewWindow(url, options = {}, useSimpleMode = false) {
  * @param {string} url - 要加载的URL
  */
 function setupNavigationForNewWindow(window, url) {
-  console.log('开始设置新窗口导航栏:', url);
   const toolbarHeight = 48;
   
   try {
@@ -81,8 +77,6 @@ function setupNavigationForNewWindow(window, url) {
       }
     });
     
-    console.log('BrowserView 创建成功');
-    
     // 设置 User-Agent
     const defaultUserAgent = toolbarView.webContents.getUserAgent();
     const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
@@ -97,21 +91,17 @@ function setupNavigationForNewWindow(window, url) {
     window.addBrowserView(toolbarView);
     window.addBrowserView(contentView);
     
-    console.log('BrowserView 添加到窗口成功');
-    
     // 创建工具栏HTML
     const toolbarHTML = createToolbarHTMLForNewWindow();
     const toolbarDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(toolbarHTML)}`;
     
     // 加载工具栏和内容
     toolbarView.webContents.loadURL(toolbarDataURL).then(() => {
-      console.log('工具栏加载成功');
     }).catch(error => {
       console.error('工具栏加载失败:', error);
     });
     
     contentView.webContents.loadURL(url).then(() => {
-      console.log('内容页面加载成功:', url);
     }).catch(error => {
       console.error('内容页面加载失败:', url, error);
     });
@@ -503,8 +493,6 @@ function createToolbarHTMLForNewWindow() {
  * @param {Object} options - 窗口选项
  */
 function createSimpleNewWindow(url, options = {}) {
-  console.log('创建简单新窗口:', url);
-  
   const defaultOptions = {
     width: 1280,
     height: 800,
@@ -531,7 +519,6 @@ function createSimpleNewWindow(url, options = {}) {
   
   // 直接加载URL
   newWin.loadURL(url).then(() => {
-    console.log('简单新窗口加载成功:', url);
   }).catch(error => {
     console.error('简单新窗口加载失败:', url, error);
   });
