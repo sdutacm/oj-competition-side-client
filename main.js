@@ -124,9 +124,15 @@ app.whenReady().then(() => {
     // 设置布局
     setupLayout();
 
-    // 注册快捷键
+    // 注册快捷键（在所有初始化完成后注册）
     shortcutManager.registerShortcuts();
-    
+
+    // 监听窗口关闭，清理资源
+    mainWindow.on('closed', () => {
+      if (shortcutManager) shortcutManager.unregisterAll();
+      mainWindow = null;
+    });
+
     // 显示窗口
     mainWindow.show();
   } catch (error) {
@@ -143,17 +149,14 @@ function disableDevTools() {
   // 禁用主窗口的开发者工具
   const webContents = mainWindow?.webContents;
   if (webContents) {
-    // 禁用开发者工具快捷键
-    webContents.on('before-input-event', (event, input) => {
-      try {
-        if (input.key === 'F12') event.preventDefault();
-        if (input.control && input.shift && input.key === 'I') event.preventDefault();
-        if (input.meta && input.alt && input.key === 'I') event.preventDefault();
-        if (input.control && input.shift && input.key === 'J') event.preventDefault();
-        if (input.meta && input.alt && input.key === 'J') event.preventDefault();
-        if (input.control && input.key === 'U') event.preventDefault();
-        if (input.meta && input.key === 'U') event.preventDefault();
-      } catch (e) {}
+    // 禁用上下文菜单中的检查元素
+    webContents.on('context-menu', (event) => {
+      event.preventDefault();
+    });
+    
+    // 禁用开发者工具的打开
+    webContents.on('devtools-opened', () => {
+      webContents.closeDevTools();
     });
   }
 }
@@ -163,12 +166,11 @@ function disableDevTools() {
  */
 function initializeManagers() {
   try {
-    // 创建快捷键管理器（需要在其他管理器之前创建）
-    shortcutManager = new ShortcutManager(null, APP_CONFIG.HOME_URL, mainWindow);
-    
     // 创建工具栏管理器
     toolbarManager = new ToolbarManager(mainWindow, (action) => {
-      shortcutManager.handleToolbarAction(action);
+      if (shortcutManager) {
+        shortcutManager.handleToolbarAction(action);
+      }
     });
     
     // 创建内容视图管理器
@@ -177,9 +179,8 @@ function initializeManagers() {
     // 连接工具栏管理器和内容视图管理器
     contentViewManager.setToolbarManager(toolbarManager);
     
-    // 更新快捷键管理器的内容视图引用和主窗口引用
-    shortcutManager.contentViewManager = contentViewManager;
-    shortcutManager.setMainWindow(mainWindow);
+    // 创建快捷键管理器（在内容视图管理器创建后）
+    shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, mainWindow);
     
     // 创建布局管理器
     layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
