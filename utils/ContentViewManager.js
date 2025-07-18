@@ -2,6 +2,13 @@ const { BrowserView } = require('electron');
 const { getHostname } = require('./urlHelper');
 const { showBlockedDialog } = require('./dialogHelper');
 const { checkDomainAllowed, interceptDomain } = require('./domainHelper');
+const fs = require('fs');
+const path = require('path');
+let clientVersion = '1.0.0';
+try {
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+  if (pkg && pkg.version) clientVersion = pkg.version;
+} catch { }
 
 class ContentViewManager {
   constructor(mainWindow, config, openNewWindow) {
@@ -36,13 +43,13 @@ class ContentViewManager {
       }
     });
     targetWindow.addBrowserView(contentView);
-    
+
     // 设置自定义 User-Agent
     const webContents = contentView.webContents;
     const defaultUserAgent = webContents.getUserAgent();
-    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
+    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${clientVersion}`;
     webContents.setUserAgent(customUserAgent);
-    
+
     // 只允许加载白名单主域名
     const hostname = getHostname(url);
     if (!checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).allowed) {
@@ -51,10 +58,10 @@ class ContentViewManager {
     } else {
       contentView.webContents.loadURL(url);
     }
-    
+
     // 禁用内容视图的开发者工具相关功能
     this.disableDevToolsForContentView();
-    
+
     // 设置内容视图的导航监听
     this.setupNavigation(contentView, targetWindow);
     // 记录子窗口视图
@@ -63,7 +70,7 @@ class ContentViewManager {
     } else {
       this.contentView = contentView;
     }
-    
+
     // 临时调试：内容区 BrowserView 覆盖整个窗口，排查鼠标事件问题
     const [width, height] = targetWindow.getContentSize();
     let y = 0;
@@ -185,7 +192,7 @@ class ContentViewManager {
     if (this.toolbarManager && webContents) {
       let canGoBack = false;
       let canGoForward = false;
-      
+
       try {
         // 优先使用新的 navigationHistory API
         if (webContents.navigationHistory) {
@@ -201,7 +208,7 @@ class ContentViewManager {
         canGoBack = false;
         canGoForward = false;
       }
-      
+
       this.toolbarManager.updateNavigationState(canGoBack, canGoForward);
     }
   }
