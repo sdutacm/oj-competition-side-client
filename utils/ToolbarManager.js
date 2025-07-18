@@ -1,6 +1,5 @@
 const { BrowserView } = require('electron');
 const fs = require('fs');
-const path = require('path');
 const PlatformHelper = require('./platformHelper');
 
 class ToolbarManager {

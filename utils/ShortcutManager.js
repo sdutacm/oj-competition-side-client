@@ -3,11 +3,12 @@ const { showInfoDialog } = require('./dialogHelper');
 const { globalShortcut } = require('electron');
 
 class ShortcutManager {
-  constructor(contentViewManager, homeUrl, mainWindow = null) {
+  constructor(contentViewManager, homeUrl, mainWindow = null, isMainWindow = false) {
     console.log('[快捷键调试] ShortcutManager 构造函数被调用');
     this.contentViewManager = contentViewManager;
     this.homeUrl = homeUrl;
     this.mainWindow = mainWindow;
+    this.isMainWindow = isMainWindow;
     // 统一使用 PlatformHelper 默认快捷键
     this.shortcuts = PlatformHelper.getNavigationShortcuts();
     this.keyHandlers = new Map(); // 存储按键处理器
@@ -21,7 +22,7 @@ class ShortcutManager {
   }
 
   /**
-   * 注册所有快捷键（使用 Electron 菜单加速键，避免与系统快捷键冲突）
+   * 注册所有快捷键（每个窗口用 setMenu，快捷键只在当前窗口生效）
    */
   registerShortcuts() {
     if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
@@ -53,17 +54,12 @@ class ShortcutManager {
               label: '主页',
               accelerator: this.shortcuts.home,
               click: () => this.keyHandlers.get(this.shortcuts.home)?.()
-            },
-            {
-              label: '系统信息',
-              accelerator: process.platform === 'darwin' ? 'Cmd+I' : 'Alt+I',
-              click: () => this.keyHandlers.get(process.platform === 'darwin' ? 'Cmd+I' : 'Alt+I')?.()
             }
           ]
         }
       ];
       const menu = Menu.buildFromTemplate(template);
-      Menu.setApplicationMenu(menu);
+      this.mainWindow.setMenu(menu); // 只作用于当前窗口
       // 隐藏菜单栏（Windows/Linux）
       if (this.mainWindow.setMenuBarVisibility) {
         this.mainWindow.setMenuBarVisibility(false);
@@ -78,12 +74,12 @@ class ShortcutManager {
    */
   unregisterAll() {
     this.keyHandlers.clear();
-    // 恢复默认菜单，移除自定义快捷键
-    try {
-      const { Menu } = require('electron');
-      Menu.setApplicationMenu(null);
-    } catch (e) {
-      // 忽略
+    if (this.mainWindow && this._beforeInputHandler) {
+      const webContents = this.mainWindow.webContents;
+      if (webContents) {
+        webContents.removeListener('before-input-event', this._beforeInputHandler);
+      }
+      this._beforeInputHandler = null;
     }
   }
 

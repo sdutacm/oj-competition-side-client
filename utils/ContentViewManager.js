@@ -3,11 +3,14 @@ const { getHostname } = require('./urlHelper');
 const { showBlockedDialog } = require('./dialogHelper');
 
 class ContentViewManager {
-  constructor(mainWindow, config) {
+  constructor(mainWindow, config, openNewWindow) {
     this.mainWindow = mainWindow;
     this.contentView = null;
     this.config = config;
     this.toolbarManager = null;
+    // 记录所有新开的 BrowserView
+    this.childViews = [];
+    this.openNewWindow = openNewWindow; // 注入新窗口函数
   }
 
   /**
@@ -18,34 +21,46 @@ class ContentViewManager {
   }
 
   /**
-   * 创建内容视图
+   * 创建内容视图（支持主窗口和新窗口）
    */
-  createContentView() {
-    this.contentView = new BrowserView({
+  createContentView(targetWindow = this.mainWindow, url = this.config.HOME_URL) {
+    const contentView = new BrowserView({
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        devTools: false, // 禁用开发者工具
+        devTools: false,
       }
     });
-    
-    this.mainWindow.addBrowserView(this.contentView);
+    targetWindow.addBrowserView(contentView);
     
     // 设置自定义 User-Agent
-    const webContents = this.contentView.webContents;
+    const webContents = contentView.webContents;
     const defaultUserAgent = webContents.getUserAgent();
     const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
     webContents.setUserAgent(customUserAgent);
     
-    this.contentView.webContents.loadURL(this.config.HOME_URL);
+    // 只允许加载白名单主域名
+    const hostname = getHostname(url);
+    if (hostname === this.config.MAIN_DOMAIN || this.config.POPUP_WHITELIST.has(hostname)) {
+      contentView.webContents.loadURL(url);
+    } else {
+      // 拦截非法初始加载
+      showBlockedDialog(targetWindow, hostname, '该域名不在允许访问的白名单中');
+      contentView.webContents.loadURL(this.config.HOME_URL);
+    }
     
     // 禁用内容视图的开发者工具相关功能
     this.disableDevToolsForContentView();
     
     // 设置内容视图的导航监听
-    this.setupNavigation();
-
-    return this.contentView;
+    this.setupNavigation(contentView, targetWindow);
+    // 记录子窗口视图
+    if (targetWindow !== this.mainWindow) {
+      this.childViews.push(contentView);
+    } else {
+      this.contentView = contentView;
+    }
+    return contentView;
   }
 
   /**
@@ -171,10 +186,10 @@ class ContentViewManager {
   }
 
   /**
-   * 设置导航监听
+   * 设置导航监听（支持主窗口和新窗口）
    */
-  setupNavigation() {
-    const webContents = this.contentView?.webContents;
+  setupNavigation(contentView, targetWindow) {
+    const webContents = contentView?.webContents;
     if (!webContents) return;
 
     // 监听导航状态变化
@@ -215,38 +230,28 @@ class ContentViewManager {
         event.preventDefault();
         return;
       }
-
-      // 拦截禁止访问的域名
       if (this.config.BLOCKED_DOMAINS.has(hostname)) {
         event.preventDefault();
-        console.log(`⛔ 拦截禁止域名：${hostname}`);
-        showBlockedDialog(this.mainWindow, hostname, '该域名已被明确禁止访问');
+        showBlockedDialog(targetWindow, hostname, '该域名已被明确禁止访问');
         return;
       }
-
       if (hostname === this.config.MAIN_DOMAIN) {
-        // 允许主域名跳转
         return;
       }
-
       if (this.config.POPUP_WHITELIST.has(hostname)) {
-        // 弹出新窗口
         event.preventDefault();
-        this.config.openNewWindow(targetUrl);
+        this.openNewWindow(targetUrl); // 使用注入的函数
         return;
       }
-
-      // 其余一律禁止
       event.preventDefault();
-      showBlockedDialog(this.mainWindow, hostname, '该域名不在允许访问的白名单中');
+      showBlockedDialog(targetWindow, hostname, '该域名不在允许访问的白名单中');
     });
-
     webContents.setWindowOpenHandler(({ url }) => {
       const hostname = getHostname(url);
       if (this.config.POPUP_WHITELIST.has(hostname)) {
-        this.config.openNewWindow(url);
+        this.openNewWindow(url); // 使用注入的函数
       } else {
-        showBlockedDialog(this.mainWindow, hostname, '该域名不在允许访问的白名单中');
+        showBlockedDialog(targetWindow, hostname, '该域名不在允许访问的白名单中');
       }
       return { action: 'deny' };
     });

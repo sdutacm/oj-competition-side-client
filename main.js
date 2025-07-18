@@ -1,11 +1,11 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 
-// 导入工具类和管理器
+// 顶部统一 require 管理器类
 const ToolbarManager = require('./utils/ToolbarManager');
 const ContentViewManager = require('./utils/ContentViewManager');
 const ShortcutManager = require('./utils/ShortcutManager');
-const { createNewWindow, LayoutManager } = require('./utils/windowHelper');
+const { LayoutManager } = require('./utils/windowHelper');
 const PlatformHelper = require('./utils/platformHelper');
 
 let mainWindow = null;
@@ -33,11 +33,53 @@ const APP_CONFIG = {
   // 显式禁止的域名
   BLOCKED_DOMAINS: new Set([
     'oj.sdutacm.cn'
-  ]),
-
-  // 新窗口创建函数
-  openNewWindow: (url) => createNewWindow(url)
+  ])
 };
+
+// 独立的新窗口创建函数，不放在 APP_CONFIG 内，避免 require 副作用
+function openNewWindow(url) {
+  // 不再 require 管理器类，直接用顶部的
+  const win = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      devTools: false,
+    },
+    show: true,
+    autoHideMenuBar: true // 创建时彻底隐藏菜单栏
+  });
+  win.setMenuBarVisibility(false); // 立即隐藏原生菜单栏
+  win.on('ready-to-show', () => {
+    win.setMenuBarVisibility(false); // 再次确保彻底隐藏
+  });
+  // 独立管理器实例
+  const toolbarManager = new ToolbarManager(win, () => {}); // 可根据需要传递 action handler
+  toolbarManager.createToolbarView();
+  const contentViewManager = new ContentViewManager(win, APP_CONFIG, openNewWindow);
+  contentViewManager.setToolbarManager(toolbarManager);
+  const view = contentViewManager.createContentView(win, url);
+  if (view) {
+    const resizeView = () => {
+      const [width, height] = win.getContentSize();
+      view.setBounds({ x: 0, y: 0, width, height });
+    };
+    resizeView();
+    view.setAutoResize({ width: true, height: true });
+    win.on('resize', resizeView);
+  }
+  // 新窗口
+  const shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, win, false);
+  shortcutManager.registerShortcuts();
+  win.on('closed', () => {
+    shortcutManager.unregisterAll();
+  });
+  win._toolbarManager = toolbarManager;
+  win._contentViewManager = contentViewManager;
+  win._shortcutManager = shortcutManager;
+  return win;
+}
 
 app.whenReady().then(() => {
   // Windows 兼容性设置
@@ -174,13 +216,13 @@ function initializeManagers() {
     });
     
     // 创建内容视图管理器
-    contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG);
+    contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
     
     // 连接工具栏管理器和内容视图管理器
     contentViewManager.setToolbarManager(toolbarManager);
     
     // 创建快捷键管理器（在内容视图管理器创建后）
-    shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, mainWindow);
+    shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, mainWindow, true);
     
     // 创建布局管理器
     layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);

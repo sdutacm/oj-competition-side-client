@@ -117,6 +117,30 @@ class PlatformHelper {
       electronVersion: process.versions.electron
     };
   }
+
+  /**
+   * 辅助函数，判断 input 是否匹配 accelerator
+   */
+  static matchShortcut(input, accelerator) {
+    // accelerator 形如 'CmdOrCtrl+Left'、'Alt+I' 等
+    const parts = accelerator.split('+');
+    let ctrl = false, alt = false, shift = false, meta = false, key = '';
+    for (const part of parts) {
+      const p = part.toLowerCase();
+      if (p === 'cmd' || p === 'command' || p === 'meta' || p === 'cmdorctrl') meta = true;
+      else if (p === 'ctrl' || p === 'control') ctrl = true;
+      else if (p === 'alt' || p === 'option') alt = true;
+      else if (p === 'shift') shift = true;
+      else key = part;
+    }
+    // Electron input 结构
+    if (ctrl !== !!input.control) return false;
+    if (alt !== !!input.alt) return false;
+    if (shift !== !!input.shift) return false;
+    if (meta !== !!input.meta) return false;
+    if (key && key.toLowerCase() !== input.key.toLowerCase()) return false;
+    return true;
+  }
 }
 
 module.exports = PlatformHelper;
