@@ -1,11 +1,14 @@
 const PlatformHelper = require('./platformHelper');
 const { showInfoDialog } = require('./dialogHelper');
+const { globalShortcut } = require('electron');
 
 class ShortcutManager {
   constructor(contentViewManager, homeUrl, mainWindow = null) {
+    console.log('[快捷键调试] ShortcutManager 构造函数被调用');
     this.contentViewManager = contentViewManager;
     this.homeUrl = homeUrl;
     this.mainWindow = mainWindow;
+    // 统一使用 PlatformHelper 默认快捷键
     this.shortcuts = PlatformHelper.getNavigationShortcuts();
     this.keyHandlers = new Map(); // 存储按键处理器
   }
@@ -18,57 +21,76 @@ class ShortcutManager {
   }
 
   /**
-   * 注册所有快捷键（窗口级别）
+   * 注册所有快捷键（使用 Electron 菜单加速键，避免与系统快捷键冲突）
    */
   registerShortcuts() {
-    if (!this.mainWindow || !this.mainWindow.webContents || this.mainWindow.isDestroyed() || this.mainWindow.webContents.isDestroyed()) return;
-
+    if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
     try {
-      // 设置按键处理器映射
+      this.unregisterAll();
       this.setupKeyHandlers();
-      
-      // 先移除可能存在的监听器，避免重复注册
-      this.mainWindow.webContents.removeAllListeners('before-input-event');
-      
-      // 监听按键事件
-      this.mainWindow.webContents.on('before-input-event', (event, input) => {
-        if (!this.mainWindow || this.mainWindow.isDestroyed() || !this.mainWindow.webContents || this.mainWindow.webContents.isDestroyed()) return;
-        this.handleKeyInput(event, input);
-      });
+      // 构建菜单模板，使用 Electron 菜单加速键
+      const { Menu } = require('electron');
+      const template = [
+        {
+          label: '导航',
+          submenu: [
+            {
+              label: '后退',
+              accelerator: this.shortcuts.back,
+              click: () => this.keyHandlers.get(this.shortcuts.back)?.()
+            },
+            {
+              label: '前进',
+              accelerator: this.shortcuts.forward,
+              click: () => this.keyHandlers.get(this.shortcuts.forward)?.()
+            },
+            {
+              label: '刷新',
+              accelerator: this.shortcuts.refresh,
+              click: () => this.keyHandlers.get(this.shortcuts.refresh)?.()
+            },
+            {
+              label: '主页',
+              accelerator: this.shortcuts.home,
+              click: () => this.keyHandlers.get(this.shortcuts.home)?.()
+            },
+            {
+              label: '系统信息',
+              accelerator: process.platform === 'darwin' ? 'Cmd+I' : 'Alt+I',
+              click: () => this.keyHandlers.get(process.platform === 'darwin' ? 'Cmd+I' : 'Alt+I')?.()
+            }
+          ]
+        }
+      ];
+      const menu = Menu.buildFromTemplate(template);
+      Menu.setApplicationMenu(menu);
+      // 隐藏菜单栏（Windows/Linux）
+      if (this.mainWindow.setMenuBarVisibility) {
+        this.mainWindow.setMenuBarVisibility(false);
+      }
     } catch (error) {
       console.log('注册快捷键失败（已忽略）:', error.message);
     }
   }
 
   /**
-   * 处理按键输入
+   * 取消注册所有快捷键
    */
-  handleKeyInput(event, input) {
+  unregisterAll() {
+    this.keyHandlers.clear();
+    // 恢复默认菜单，移除自定义快捷键
     try {
-      // 先检查是否是开发者工具相关的快捷键，如果是则直接阻止
-      if (this.isDevToolsShortcut(input)) {
-        event.preventDefault();
-        return;
-      }
-
-      // 只在窗口聚焦时处理快捷键
-      if (!this.mainWindow.isFocused()) {
-        return;
-      }
-
-      const shortcutKey = this.getShortcutKey(input);
-      // 调试日志，输出当前快捷键信息和所有已注册快捷键
-      console.log('[快捷键调试] 按下:', shortcutKey, '已注册:', Array.from(this.keyHandlers.keys()));
-      console.log('[快捷键调试] 原始input:', input);
-      if (shortcutKey && this.keyHandlers.has(shortcutKey)) {
-        event.preventDefault();
-        const handler = this.keyHandlers.get(shortcutKey);
-        handler();
-      }
-    } catch (error) {
-      console.log('处理快捷键失败（已忽略）:', error.message);
+      const { Menu } = require('electron');
+      Menu.setApplicationMenu(null);
+    } catch (e) {
+      // 忽略
     }
   }
+
+  /**
+   * 处理按键输入
+   */
+  handleKeyInput() {}
 
   /**
    * 检查是否是开发者工具快捷键
@@ -124,12 +146,16 @@ class ShortcutManager {
     // 刷新
     this.keyHandlers.set(this.shortcuts.refresh, () => {
       const webContents = this.contentViewManager.getWebContents();
+      console.log('[快捷键调试] 刷新操作触发'); // 添加调试日志
       if (webContents) {
         try {
           webContents.reload();
+          console.log('[快捷键调试] 刷新成功'); // 添加调试日志
         } catch (error) {
           console.log('刷新操作失败（已忽略）:', error.message);
         }
+      } else {
+        console.log('[快捷键调试] webContents 不存在'); // 添加调试日志
       }
     });
 
@@ -188,18 +214,6 @@ class ShortcutManager {
     }
     
     return keys.join('+');
-  }
-
-  /**
-   * 取消注册所有快捷键
-   */
-  unregisterAll() {
-    // 清空按键处理器
-    this.keyHandlers.clear();
-    // 彻底防御：只要有任何一方已销毁，直接跳过
-    if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
-    if (!this.mainWindow.webContents || this.mainWindow.webContents.isDestroyed()) return;
-    this.mainWindow.webContents.removeAllListeners('before-input-event');
   }
 
   /**
