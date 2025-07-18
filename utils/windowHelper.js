@@ -202,49 +202,6 @@ function disableDevToolsForWindow(window) {
   if (webContents) {
     // 隐藏菜单栏
     window.setMenuBarVisibility(false);
-    
-    // 禁用右键菜单
-    webContents.on('context-menu', (event) => {
-      event.preventDefault();
-    });
-
-    // 禁用开发者工具快捷键
-    webContents.on('before-input-event', (event, input) => {
-      // 禁用 F12
-      if (input.key === 'F12') {
-        event.preventDefault();
-      }
-      
-      // 禁用 Ctrl+Shift+I (Windows/Linux)
-      if (input.control && input.shift && input.key === 'I') {
-        event.preventDefault();
-      }
-      
-      // 禁用 Cmd+Option+I (macOS)
-      if (input.meta && input.alt && input.key === 'I') {
-        event.preventDefault();
-      }
-      
-      // 禁用 Ctrl+Shift+J (Windows/Linux)
-      if (input.control && input.shift && input.key === 'J') {
-        event.preventDefault();
-      }
-      
-      // 禁用 Cmd+Option+J (macOS)
-      if (input.meta && input.alt && input.key === 'J') {
-        event.preventDefault();
-      }
-      
-      // 禁用 Ctrl+U (查看源码)
-      if (input.control && input.key === 'U') {
-        event.preventDefault();
-      }
-      
-      // 禁用 Cmd+U (macOS查看源码)
-      if (input.meta && input.key === 'U') {
-        event.preventDefault();
-      }
-    });
   }
 }
 
@@ -255,48 +212,7 @@ function disableDevToolsForWindow(window) {
 function disableDevToolsForBrowserView(view) {
   const webContents = view?.webContents;
   if (webContents) {
-    // 禁用右键菜单
-    webContents.on('context-menu', (event) => {
-      event.preventDefault();
-    });
-
-    // 禁用开发者工具快捷键
-    webContents.on('before-input-event', (event, input) => {
-      // 禁用 F12
-      if (input.key === 'F12') {
-        event.preventDefault();
-      }
-      
-      // 禁用 Ctrl+Shift+I (Windows/Linux)
-      if (input.control && input.shift && input.key === 'I') {
-        event.preventDefault();
-      }
-      
-      // 禁用 Cmd+Option+I (macOS)
-      if (input.meta && input.alt && input.key === 'I') {
-        event.preventDefault();
-      }
-      
-      // 禁用 Ctrl+Shift+J (Windows/Linux)
-      if (input.control && input.shift && input.key === 'J') {
-        event.preventDefault();
-      }
-      
-      // 禁用 Cmd+Option+J (macOS)
-      if (input.meta && input.alt && input.key === 'J') {
-        event.preventDefault();
-      }
-      
-      // 禁用 Ctrl+U (查看源码)
-      if (input.control && input.key === 'U') {
-        event.preventDefault();
-      }
-      
-      // 禁用 Cmd+U (macOS查看源码)
-      if (input.meta && input.key === 'U') {
-        event.preventDefault();
-      }
-    });
+    // 移除禁止右键菜单的监听，恢复系统默认行为
   }
 }
 

@@ -22,8 +22,11 @@ class ContentViewManager {
 
   /**
    * 创建内容视图（支持主窗口和新窗口）
+   * @param {BrowserWindow} targetWindow
+   * @param {string} url
+   * @param {boolean} allowToolbarOverlap 是否允许内容区覆盖工具栏，默认 false
    */
-  createContentView(targetWindow = this.mainWindow, url = this.config.HOME_URL) {
+  createContentView(targetWindow = this.mainWindow, url = this.config.HOME_URL, allowToolbarOverlap = false) {
     const contentView = new BrowserView({
       webPreferences: {
         nodeIntegration: false,
@@ -60,128 +63,40 @@ class ContentViewManager {
     } else {
       this.contentView = contentView;
     }
+    
+    // 临时调试：内容区 BrowserView 覆盖整个窗口，排查鼠标事件问题
+    const [width, height] = targetWindow.getContentSize();
+    let y = 0;
+    let h = height;
+    if (!allowToolbarOverlap && this.toolbarManager && this.toolbarManager.toolbarView) {
+      // 工具栏高度 48px
+      y = 48;
+      h = height - 48;
+    }
+    contentView.setBounds({ x: 0, y, width, height: h });
+    contentView.setAutoResize({ width: true, height: true });
+
     return contentView;
   }
 
   /**
    * 禁用内容视图的开发者工具
    */
-  disableDevToolsForContentView() {
-    const webContents = this.contentView?.webContents;
+  disableDevToolsForContentView(contentView = this.contentView) {
+    const webContents = contentView?.webContents;
     if (webContents) {
-      // 创建自定义右键菜单，提供导航功能
-      webContents.on('context-menu', (event, params) => {
-        event.preventDefault();
-        
-        const { Menu } = require('electron');
-        const contextMenuTemplate = [
-          {
-            label: '后退',
-            enabled: webContents.canGoBack(),
-            click: () => {
-              if (webContents.canGoBack()) {
-                webContents.goBack();
-                // 更新工具栏状态
-                if (this.toolbarManager) {
-                  this.toolbarManager.updateNavigationButtons();
-                }
-              }
-            }
-          },
-          {
-            label: '前进',
-            enabled: webContents.canGoForward(),
-            click: () => {
-              if (webContents.canGoForward()) {
-                webContents.goForward();
-                // 更新工具栏状态
-                if (this.toolbarManager) {
-                  this.toolbarManager.updateNavigationButtons();
-                }
-              }
-            }
-          },
-          {
-            type: 'separator'
-          },
-          {
-            label: '刷新',
-            click: () => {
-              webContents.reload();
-              // 更新工具栏状态
-              if (this.toolbarManager) {
-                this.toolbarManager.updateNavigationButtons();
-              }
-            }
-          },
-          {
-            label: '返回主页',
-            click: () => {
-              webContents.loadURL(this.config.HOME_URL);
-              // 更新工具栏状态
-              if (this.toolbarManager) {
-                this.toolbarManager.updateNavigationButtons();
-              }
-            }
-          },
-          {
-            type: 'separator'
-          },
-          {
-            label: '系统信息',
-            click: () => {
-              const { showInfoDialog } = require('./dialogHelper');
-              showInfoDialog();
-            }
-          }
-        ];
-        
-        // 创建并显示右键菜单
-        const contextMenu = Menu.buildFromTemplate(contextMenuTemplate);
-        contextMenu.popup({
-          window: this.mainWindow,
-          x: params.x,
-          y: params.y
-        });
-      });
-
-      // 禁用开发者工具快捷键
+      webContents.removeAllListeners('before-input-event');
+      // 只保留禁用开发者工具快捷键
       webContents.on('before-input-event', (event, input) => {
-        // 禁用 F12
-        if (input.key === 'F12') {
-          event.preventDefault();
-        }
-        
-        // 禁用 Ctrl+Shift+I (Windows/Linux)
-        if (input.control && input.shift && input.key === 'I') {
-          event.preventDefault();
-        }
-        
-        // 禁用 Cmd+Option+I (macOS)
-        if (input.meta && input.alt && input.key === 'I') {
-          event.preventDefault();
-        }
-        
-        // 禁用 Ctrl+Shift+J (Windows/Linux)
-        if (input.control && input.shift && input.key === 'J') {
-          event.preventDefault();
-        }
-        
-        // 禁用 Cmd+Option+J (macOS)
-        if (input.meta && input.alt && input.key === 'J') {
-          event.preventDefault();
-        }
-        
-        // 禁用 Ctrl+U (查看源码)
-        if (input.control && input.key === 'U') {
-          event.preventDefault();
-        }
-        
-        // 禁用 Cmd+U (macOS查看源码)
-        if (input.meta && input.key === 'U') {
-          event.preventDefault();
-        }
+        if (input.key === 'F12') event.preventDefault();
+        if (input.control && input.shift && input.key === 'I') event.preventDefault();
+        if (input.meta && input.alt && input.key === 'I') event.preventDefault();
+        if (input.control && input.shift && input.key === 'J') event.preventDefault();
+        if (input.meta && input.alt && input.key === 'J') event.preventDefault();
+        if (input.control && input.key === 'U') event.preventDefault();
+        if (input.meta && input.key === 'U') event.preventDefault();
       });
+      // 如需自定义右键菜单可在此添加，否则不做任何 context-menu 监听
     }
   }
 

@@ -59,43 +59,32 @@ class ToolbarManager {
   disableDevToolsForToolbar() {
     const webContents = this.toolbarView?.webContents;
     if (webContents) {
-      // 禁用右键菜单
-      webContents.on('context-menu', (event) => {
-        event.preventDefault();
-      });
-
-      // 禁用开发者工具快捷键
+      // 仅保留禁用开发者工具快捷键
       webContents.on('before-input-event', (event, input) => {
         // 禁用 F12
         if (input.key === 'F12') {
           event.preventDefault();
         }
-        
         // 禁用 Ctrl+Shift+I (Windows/Linux)
         if (input.control && input.shift && input.key === 'I') {
           event.preventDefault();
         }
-        
         // 禁用 Cmd+Option+I (macOS)
         if (input.meta && input.alt && input.key === 'I') {
           event.preventDefault();
         }
-        
         // 禁用 Ctrl+Shift+J (Windows/Linux)
         if (input.control && input.shift && input.key === 'J') {
           event.preventDefault();
         }
-        
         // 禁用 Cmd+Option+J (macOS)
         if (input.meta && input.alt && input.key === 'J') {
           event.preventDefault();
         }
-        
         // 禁用 Ctrl+U (查看源码)
         if (input.control && input.key === 'U') {
           event.preventDefault();
         }
-        
         // 禁用 Cmd+U (macOS查看源码)
         if (input.meta && input.key === 'U') {
           event.preventDefault();
@@ -269,18 +258,13 @@ class ToolbarManager {
           document.addEventListener('click', (e) => {
             const btn = e.target.closest('.toolbar-btn');
             if (!btn || btn.disabled) return;
-            
             const action = btn.getAttribute('data-action');
-            
-            // 为刷新和主页按钮添加动画效果
             if (action === 'refresh' || action === 'home') {
               btn.classList.add('animate');
               setTimeout(() => {
                 btn.classList.remove('animate');
               }, 600);
             }
-            
-            // 使用 console 消息发送动作（安全且兼容所有平台）
             console.log('TOOLBAR_ACTION:' + action);
           });
 
@@ -288,7 +272,6 @@ class ToolbarManager {
           window.updateButtonStates = function(canGoBack, canGoForward) {
             const backBtn = document.querySelector('[data-action="back"]');
             const forwardBtn = document.querySelector('[data-action="forward"]');
-            
             if (backBtn) {
               backBtn.disabled = !canGoBack;
             }

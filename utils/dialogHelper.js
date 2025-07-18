@@ -101,10 +101,7 @@ function showInfoDialog(parentWindow) {
   // 禁用信息窗口的开发者工具相关功能
   const webContents = infoWindow?.webContents;
   if (webContents) {
-    // 禁用右键菜单
-    webContents.on('context-menu', (event) => {
-      event.preventDefault();
-    });
+    // 移除禁止右键菜单的监听，恢复系统默认行为
 
     // 禁用开发者工具快捷键
     webContents.on('before-input-event', (event, input) => {

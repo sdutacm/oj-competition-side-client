@@ -59,16 +59,12 @@ function openNewWindow(url) {
   toolbarManager.createToolbarView();
   const contentViewManager = new ContentViewManager(win, APP_CONFIG, openNewWindow);
   contentViewManager.setToolbarManager(toolbarManager);
-  const view = contentViewManager.createContentView(win, url);
-  if (view) {
-    const resizeView = () => {
-      const [width, height] = win.getContentSize();
-      view.setBounds({ x: 0, y: 0, width, height });
-    };
-    resizeView();
-    view.setAutoResize({ width: true, height: true });
-    win.on('resize', resizeView);
-  }
+  // 新增 LayoutManager 实现分区布局
+  const layoutManager = new LayoutManager(win, toolbarManager, contentViewManager);
+  layoutManager.layoutViews();
+  layoutManager.setupResizeListener();
+  // 创建内容区视图
+  contentViewManager.createContentView(win, url);
   // 新窗口
   const shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, win, false);
   shortcutManager.registerShortcuts();
@@ -78,6 +74,7 @@ function openNewWindow(url) {
   win._toolbarManager = toolbarManager;
   win._contentViewManager = contentViewManager;
   win._shortcutManager = shortcutManager;
+  win._layoutManager = layoutManager;
   return win;
 }
 
@@ -191,10 +188,7 @@ function disableDevTools() {
   // 禁用主窗口的开发者工具
   const webContents = mainWindow?.webContents;
   if (webContents) {
-    // 禁用上下文菜单中的检查元素
-    webContents.on('context-menu', (event) => {
-      event.preventDefault();
-    });
+    // 移除禁止右键菜单的监听，恢复系统默认行为
     
     // 禁用开发者工具的打开
     webContents.on('devtools-opened', () => {
