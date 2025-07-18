@@ -24,7 +24,7 @@
   },
   "build": {
     "appId": "org.sdutacm.OJContestClient",
-    "productName": "SDUT_OJ_Contest_Client",
+    "productName": "SDUTOJContestClient",
     "directories": {
       "output": "dist"
     },
@@ -46,7 +46,7 @@
           "arch": ["x64", "arm64"]
         }
       ],
-      "artifactName": "${productName}_${version}_${arch}.${ext}"
+      "artifactName": "${productName}_${version}_mac_${arch}.${ext}"
     },
     "win": {
       "icon": "public/favicon.ico",
@@ -62,7 +62,7 @@
       ],
       "forceCodeSigning": false,
       "signAndEditExecutable": false,
-      "artifactName": "${productName}_${version}_${arch}.${ext}"
+      "artifactName": "${productName}_${version}_win_${arch}.${ext}"
     },
     "linux": {
       "icon": "public/favicon.png",
@@ -77,7 +77,7 @@
           "arch": ["x64"]
         }
       ],
-      "artifactName": "${productName}_${version}_${arch}.${ext}"
+      "artifactName": "${productName}_${version}_linux_${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
