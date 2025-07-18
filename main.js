@@ -7,6 +7,7 @@ const ContentViewManager = require('./utils/ContentViewManager');
 const ShortcutManager = require('./utils/ShortcutManager');
 const { LayoutManager } = require('./utils/windowHelper');
 const PlatformHelper = require('./utils/platformHelper');
+const { checkDomainAllowed, interceptDomain } = require('./utils/domainHelper');
 
 let mainWindow = null;
 let toolbarManager = null;
@@ -35,6 +36,19 @@ const APP_CONFIG = {
     'oj.sdutacm.cn'
   ])
 };
+
+// 重定向拦截器，应用于任意 BrowserView
+function applyRedirectInterceptor(view, win, isMainWindow = false) {
+  if (view && view.webContents) {
+    view.webContents.on('did-navigate', (event, url) => {
+      if (!interceptDomain(win, url, APP_CONFIG, isMainWindow)) {
+        // 已拦截并提示，弹窗已自动关闭
+        return;
+      }
+      // 允许访问，无需额外处理
+    });
+  }
+}
 
 // 独立的新窗口创建函数，不放在 APP_CONFIG 内，避免 require 副作用
 function openNewWindow(url) {
@@ -80,13 +94,16 @@ function openNewWindow(url) {
   // 关键：将 homeUrl 作为 home 页面传递给 ShortcutManager
   shortcutManager = new ShortcutManager(contentViewManager, homeUrl, win, false);
   shortcutManager.registerShortcuts();
-  // 新增：内容区页面标题变化时，同步窗口标题
+  // 新增：内容区页面标题变化时，同步窗口标题、重定向拦截
   if (contentViewManager.getView && typeof contentViewManager.getView === 'function') {
     const contentView = contentViewManager.getView();
     if (contentView && contentView.webContents) {
+      // 标题同步
       contentView.webContents.on('page-title-updated', (event, title) => {
         win.setTitle(title);
       });
+      // 应用重定向拦截（弹窗 isMainWindow 传 false）
+      applyRedirectInterceptor(contentView, win, false);
     }
   }
   win.on('closed', () => {
@@ -181,13 +198,15 @@ app.whenReady().then(() => {
     // 创建视图
     createViews();
 
-    // 新增：主窗口内容区页面标题变化时，同步主窗口标题
+    // 新增：主窗口内容区页面标题变化时，同步主窗口标题、重定向拦截
     if (contentViewManager && contentViewManager.getView && typeof contentViewManager.getView === 'function') {
       const contentView = contentViewManager.getView();
       if (contentView && contentView.webContents) {
         contentView.webContents.on('page-title-updated', (event, title) => {
           mainWindow.setTitle(title);
         });
+        // 应用重定向拦截（主窗口只拦截黑名单）
+        applyRedirectInterceptor(contentView, mainWindow, true);
       }
     }
 

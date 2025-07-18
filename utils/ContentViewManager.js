@@ -1,6 +1,7 @@
 const { BrowserView } = require('electron');
 const { getHostname } = require('./urlHelper');
 const { showBlockedDialog } = require('./dialogHelper');
+const { checkDomainAllowed, interceptDomain } = require('./domainHelper');
 
 class ContentViewManager {
   constructor(mainWindow, config, openNewWindow) {
@@ -44,12 +45,11 @@ class ContentViewManager {
     
     // 只允许加载白名单主域名
     const hostname = getHostname(url);
-    if (hostname === this.config.MAIN_DOMAIN || this.config.POPUP_WHITELIST.has(hostname)) {
-      contentView.webContents.loadURL(url);
-    } else {
-      // 拦截非法初始加载
-      showBlockedDialog(targetWindow, hostname, '该域名不在允许访问的白名单中');
+    if (!checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).allowed) {
+      showBlockedDialog(targetWindow, hostname, checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).reason);
       contentView.webContents.loadURL(this.config.HOME_URL);
+    } else {
+      contentView.webContents.loadURL(url);
     }
     
     // 禁用内容视图的开发者工具相关功能
@@ -140,34 +140,22 @@ class ContentViewManager {
     }
 
     webContents.on('will-navigate', (event, targetUrl) => {
-      const hostname = getHostname(targetUrl);
-      if (!hostname) {
-        event.preventDefault();
-        return;
+      const allow = interceptDomain(targetWindow, targetUrl, this.config, targetWindow === this.mainWindow);
+      if (!allow) {
+        event.preventDefault(); // 只弹窗，不跳转，页面停留原地
       }
-      if (this.config.BLOCKED_DOMAINS.has(hostname)) {
-        event.preventDefault();
-        showBlockedDialog(targetWindow, hostname, '该域名已被明确禁止访问');
-        return;
-      }
-      if (hostname === this.config.MAIN_DOMAIN) {
-        return;
-      }
-      if (this.config.POPUP_WHITELIST.has(hostname)) {
-        event.preventDefault();
-        this.openNewWindow(targetUrl); // 使用注入的函数
-        return;
-      }
-      event.preventDefault();
-      showBlockedDialog(targetWindow, hostname, '该域名不在允许访问的白名单中');
     });
-    webContents.setWindowOpenHandler(({ url }) => {
-      const hostname = getHostname(url);
-      if (this.config.POPUP_WHITELIST.has(hostname)) {
-        this.openNewWindow(url); // 使用注入的函数
-      } else {
-        showBlockedDialog(targetWindow, hostname, '该域名不在允许访问的白名单中');
+    webContents.on('will-redirect', (event, targetUrl) => {
+      const allow = interceptDomain(targetWindow, targetUrl, this.config, targetWindow === this.mainWindow);
+      if (!allow) {
+        event.preventDefault(); // 拦截重定向跳转，页面停留原地
       }
+    });
+    contentView.webContents.setWindowOpenHandler(({ url }) => {
+      if (!interceptDomain(targetWindow, url, this.config, targetWindow === this.mainWindow)) {
+        return { action: 'deny' };
+      }
+      this.openNewWindow(url);
       return { action: 'deny' };
     });
   }
