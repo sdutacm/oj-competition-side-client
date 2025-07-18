@@ -28,8 +28,8 @@ SDUT OJ 竞赛客户端是一个基于 Electron 的专业在线评测系统客�
 
 1. **克隆项目**
    ```bash
-   git clone https://github.com/ATRIOR-LCL/oj-client.git
-   cd oj-client
+   git clone https://github.com/ATRIOR-LCL/oj-competition-side-client.git
+   cd oj-competition-side-client
    ```
 
 2. **安装依赖**
@@ -55,7 +55,7 @@ SDUT OJ 竞赛客户端是一个基于 Electron 的专业在线评测系统客�
 ## 📁 项目结构
 
 ```
-oj-client/
+oj-competition-side-client/
 ├── main.js                   # 主进程入口文件
 ├── package.json              # 项目配置和依赖
 ├── public/                   # 静态资源目录
@@ -168,15 +168,16 @@ oj-client/
 
 ```javascript
 const APP_CONFIG = {
-  HOME_URL: 'https://oj.sdutacm.cn/onlinejudge3/',
-  MAIN_DOMAIN: 'oj.sdutacm.cn',
+  HOME_URL: 'https://op.sdutacm.cn/',
+  MAIN_DOMAIN: 'op.sdutacm.cn',
   POPUP_WHITELIST: new Set([
-    'oj.sdutacm.cn',
-    'op.sdutacm.cn'
+    'rl.algoux.cn',
+    'rl.algoux.org',
+    'rank.ac',
+    'acm.sdut.edu.cn'
   ]),
   BLOCKED_DOMAINS: new Set([
-    'baidu.com',
-    'google.com'
+    'oj.sdutacm.cn'
   ])
 };
 ```
@@ -220,8 +221,8 @@ npm test
 
 ## 📧 联系方式
 
-- **项目主页**: [GitHub Repository](https://github.com/ATRIOR-LCL/oj-client)
-- **SDUT OJ**: [https://oj.sdutacm.cn/onlinejudge3/](https://oj.sdutacm.cn/onlinejudge3/)
+- **项目主页**: [GitHub Repository](https://github.com/ATRIOR-LCL/oj-competition-side-client)
+- **SDUT OJ**: [https://op.sdutacm.cn/](https://op.sdutacm.cn/)
 - **问题反馈**: 请在 GitHub Issues 中提交问题和建议
 
 ---

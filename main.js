@@ -106,6 +106,9 @@ app.whenReady().then(() => {
     const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
     mainWindow.webContents.setUserAgent(customUserAgent);
 
+    // 设置窗口标题
+    mainWindow.setTitle('SDUT OJ 竞赛客户端');
+
     // 隐藏默认菜单栏
     mainWindow.setMenuBarVisibility(false);
 
