@@ -96,13 +96,17 @@ class ContentViewManager {
       webContents.removeAllListeners('before-input-event');
       // 只保留禁用开发者工具快捷键
       webContents.on('before-input-event', (event, input) => {
-        if (input.key === 'F12') event.preventDefault();
-        if (input.control && input.shift && input.key === 'I') event.preventDefault();
-        if (input.meta && input.alt && input.key === 'I') event.preventDefault();
-        if (input.control && input.shift && input.key === 'J') event.preventDefault();
-        if (input.meta && input.alt && input.key === 'J') event.preventDefault();
-        if (input.control && input.key === 'U') event.preventDefault();
-        if (input.meta && input.key === 'U') event.preventDefault();
+        if (
+          input.key === 'F12' ||
+          (input.control && input.shift && input.key === 'I') ||
+          (input.meta && input.alt && input.key === 'I') ||
+          (input.control && input.shift && input.key === 'J') ||
+          (input.meta && input.alt && input.key === 'J') ||
+          (input.control && input.key === 'U') ||
+          (input.meta && input.key === 'U')
+        ) {
+          event.preventDefault();
+        }
       });
       // 如需自定义右键菜单可在此添加，否则不做任何 context-menu 监听
     }
