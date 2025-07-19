@@ -192,8 +192,13 @@ app.whenReady().then(() => {
     // 设置窗口标题
     mainWindow.setTitle('SDUT OJ 竞赛客户端');
 
-    // 隐藏默认菜单栏
-    mainWindow.setMenuBarVisibility(false);
+    // 菜单栏设置：macOS 使用系统默认菜单栏，其它平台隐藏
+    if (process.platform === 'darwin') {
+      // 移除自定义菜单栏和 setMenuBarVisibility，使用系统默认
+      Menu.setApplicationMenu(null); // 可选：如需完全无菜单栏可保留，否则注释掉此行
+    } else {
+      mainWindow.setMenuBarVisibility(false);
+    }
 
     // 禁用开发者工具相关功能
     disableDevTools();
