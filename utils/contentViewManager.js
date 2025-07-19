@@ -252,16 +252,21 @@ class ContentViewManager {
     webContents.on('will-navigate', (event, targetUrl) => {
       const targetDomain = getHostname(targetUrl);
       const currentDomain = getHostname(webContents.getURL());
-      // 新增：白名单但非主域名，主窗口内跳转需新开窗口
-      if (isWhiteListButNotMainDomain(targetDomain, currentDomain, this.config)) {
-        event.preventDefault();
-        this.openNewWindow(targetUrl, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
-        return;
-      }
-      if (!checkDomainAllowed(targetDomain, this.config, false).allowed) {
+      // 1. 不在白名单/主域名，直接拦截
+      if (!isInWhiteList(targetDomain, this.config)) {
         event.preventDefault();
         console.log('[拦截] will-navigate 弹窗提示', targetDomain);
         showBlockedDialog(targetWindow, targetDomain, checkDomainAllowed(targetDomain, this.config, false).reason, 'default');
+        return;
+      }
+      // 2. 在白名单但不是主域名，且当前页面是主窗口，且 targetUrl !== 当前页面
+      if (
+        targetWindow === this.mainWindow &&
+        isWhiteListButNotMainDomain(targetDomain, currentDomain, this.config) &&
+        targetUrl !== webContents.getURL()
+      ) {
+        event.preventDefault();
+        this.openNewWindow(targetUrl, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
         return;
       }
       // 允许跳转，无需额外处理
@@ -269,15 +274,21 @@ class ContentViewManager {
     webContents.on('will-redirect', (event, targetUrl) => {
       const targetDomain = getHostname(targetUrl);
       const currentDomain = getHostname(webContents.getURL());
-      if (isWhiteListButNotMainDomain(targetDomain, currentDomain, this.config)) {
-        event.preventDefault();
-        this.openNewWindow(targetUrl, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
-        return;
-      }
-      if (!checkDomainAllowed(targetDomain, this.config, false).allowed) {
+      // 1. 不在白名单/主域名，直接拦截
+      if (!isInWhiteList(targetDomain, this.config)) {
         event.preventDefault();
         console.log('[拦截] will-redirect 弹窗提示', targetDomain);
         showBlockedDialog(targetWindow, targetDomain, checkDomainAllowed(targetDomain, this.config, false).reason, 'redirect');
+        return;
+      }
+      // 2. 在白名单但不是主域名，且当前页面是主窗口，且 targetUrl !== 当前页面
+      if (
+        targetWindow === this.mainWindow &&
+        isWhiteListButNotMainDomain(targetDomain, currentDomain, this.config) &&
+        targetUrl !== webContents.getURL()
+      ) {
+        event.preventDefault();
+        // 不立即 openNewWindow，等 will-navigate 触发时再处理
         return;
       }
       // 允许跳转，无需额外处理
@@ -319,6 +330,19 @@ class ContentViewManager {
         targetDomain !== currentDomain
       ) {
         return true;
+      }
+      return false;
+    }
+    // 辅助函数：判断是否在主域名/主域名子域名/白名单/白名单子域名
+    function isInWhiteList(domain, config) {
+      // 主域名及其子域名
+      if (domain === config.MAIN_DOMAIN || domain.endsWith('.' + config.MAIN_DOMAIN)) return true;
+      // 白名单及其子域名
+      if (config.POPUP_WHITELIST && config.POPUP_WHITELIST.size > 0) {
+        if (config.POPUP_WHITELIST.has(domain)) return true;
+        for (const d of config.POPUP_WHITELIST) {
+          if (domain.endsWith('.' + d)) return true;
+        }
       }
       return false;
     }
