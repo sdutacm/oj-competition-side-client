@@ -194,33 +194,136 @@ app.whenReady().then(() => {
     // 设置窗口标题
     mainWindow.setTitle('SDUT OJ 竞赛客户端');
 
-    // Mac 下移除 View 菜单的 Toggle Developer Tools（兼容 Node16/Electron 旧版）
+    // Mac 下主窗口 webContents 监听快捷键，确保快捷键生效
     if (process.platform === 'darwin') {
-      let menu = Menu.getApplicationMenu();
-      if (menu) {
-        // 移除 Toggle Developer Tools
-        const viewMenu = menu.items.find(item => item.role === 'viewmenu' || item.label === 'View');
-        if (viewMenu && viewMenu.submenu && viewMenu.submenu.items) {
-          viewMenu.submenu.items = viewMenu.submenu.items.filter(
-            item => !(item.role === 'toggleDevTools' || item.label === 'Toggle Developer Tools')
-          );
+      mainWindow.webContents.on('before-input-event', (event, input) => {
+        // 导航快捷键
+        const wc = contentViewManager?.getWebContents();
+        if (!wc) return;
+        // 后退 Cmd+Left
+        if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Left') {
+          if (wc.canGoBack()) wc.goBack();
         }
-        // 自定义 About 菜单项
-        const appMenu = menu.items.find(item => item.role === 'app' || item.label === app.name);
-        if (appMenu && appMenu.submenu && appMenu.submenu.items) {
-          const aboutItem = appMenu.submenu.items.find(item => item.role === 'about' || item.label === '关于 SDUT OJ 竞赛客户端' || item.label === 'About');
-          if (aboutItem) {
-            aboutItem.click = () => {
-              // 延迟以确保主窗口已初始化
-              setTimeout(() => {
-                // 动态 require，避免循环依赖
-                require('./utils/dialogHelper').showInfoDialog(mainWindow);
-              }, 100);
-            };
-          }
+        // 前进 Cmd+Right
+        else if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Right') {
+          if (wc.canGoForward()) wc.goForward();
         }
-        Menu.setApplicationMenu(menu);
-      }
+        // 刷新 Cmd+R
+        else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'R') {
+          wc.reload();
+        }
+        // 主页 Cmd+Shift+H
+        else if (input.meta && input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'H') {
+          wc.loadURL(APP_CONFIG.HOME_URL);
+        }
+        // 系统信息 Cmd+I
+        else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'I') {
+          require('./utils/dialogHelper').showInfoDialog(mainWindow);
+        }
+      });
+    }
+
+    // Mac 下自定义菜单栏，About 菜单项弹出 info，View 菜单项功能全部手动实现
+    if (process.platform === 'darwin') {
+      const { showInfoDialog } = require('./utils/dialogHelper');
+      const template = [
+        {
+          label: app.name,
+          submenu: [
+            {
+              label: '关于 SDUT OJ 竞赛客户端',
+              click: () => showInfoDialog(mainWindow)
+            },
+            { type: 'separator' },
+            { role: 'services' },
+            { type: 'separator' },
+            { role: 'hide' },
+            { role: 'hideothers' },
+            { role: 'unhide' },
+            { type: 'separator' },
+            { role: 'quit' }
+          ]
+        },
+        {
+          label: '文件',
+          submenu: [
+            { role: 'close' }
+          ]
+        },
+        {
+          label: '编辑',
+          submenu: [
+            { role: 'undo' },
+            { role: 'redo' },
+            { type: 'separator' },
+            { role: 'cut' },
+            { role: 'copy' },
+            { role: 'paste' },
+            { role: 'selectAll' }
+          ]
+        },
+        {
+          label: '视图',
+          submenu: [
+            {
+              label: '后退',
+              accelerator: 'Cmd+Left',
+              click: () => {
+                const wc = contentViewManager?.getWebContents();
+                if (wc && wc.canGoBack()) wc.goBack();
+              }
+            },
+            {
+              label: '前进',
+              accelerator: 'Cmd+Right',
+              click: () => {
+                const wc = contentViewManager?.getWebContents();
+                if (wc && wc.canGoForward()) wc.goForward();
+              }
+            },
+            {
+              label: '刷新',
+              accelerator: 'Cmd+R',
+              click: () => {
+                const wc = contentViewManager?.getWebContents();
+                if (wc) wc.reload();
+              }
+            },
+            {
+              label: '主页',
+              accelerator: 'Cmd+Shift+H',
+              click: () => {
+                const wc = contentViewManager?.getWebContents();
+                if (wc) wc.loadURL(APP_CONFIG.HOME_URL);
+              }
+            },
+            { type: 'separator' },
+            { role: 'togglefullscreen' }
+          ]
+        },
+        {
+          label: '窗口',
+          role: 'window',
+          submenu: [
+            { role: 'minimize' },
+            { role: 'zoom' },
+            { role: 'front' }
+          ]
+        },
+        {
+          label: '帮助',
+          role: 'help',
+          submenu: [
+            {
+              label: '系统信息',
+              accelerator: 'Cmd+I',
+              click: () => showInfoDialog(mainWindow)
+            }
+          ]
+        }
+      ];
+      const menu = Menu.buildFromTemplate(template);
+      Menu.setApplicationMenu(menu);
     } else {
       mainWindow.setMenuBarVisibility(false);
     }
