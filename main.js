@@ -437,6 +437,15 @@ function setupLayout() {
   }
 }
 
+// 全局防御：确保所有新建窗口都隐藏菜单栏，彻底移除 accelerator 干扰
+app.on('browser-window-created', (event, win) => {
+  try {
+    win.setMenuBarVisibility(false);
+    win.setMenu(null);
+  } catch {}
+});
+Menu.setApplicationMenu(null);
+
 app.on('will-quit', () => {
   // 取消注册所有快捷键
   if (shortcutManager) {
