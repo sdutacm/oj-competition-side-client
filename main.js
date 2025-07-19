@@ -194,16 +194,26 @@ app.whenReady().then(() => {
     // 设置窗口标题
     mainWindow.setTitle('SDUT OJ 竞赛客户端');
 
-    // Mac 下移除 View 菜单的 Toggle Developer Tools
+    // Mac 下移除 View 菜单的 Toggle Developer Tools（官方推荐写法）
     if (process.platform === 'darwin') {
-      const menu = Menu.getApplicationMenu() || Menu.buildFromTemplate(Menu.getApplicationMenu ? Menu.getApplicationMenu().items : Menu.getDefaultApplicationMenu());
-      const viewMenu = menu.items.find(item => item.role === 'viewmenu' || item.label === 'View');
-      if (viewMenu && viewMenu.submenu) {
-        viewMenu.submenu.items = viewMenu.submenu.items.filter(
-          item => !(item.role === 'toggleDevTools' || item.label === 'Toggle Developer Tools')
-        );
+      let template = Menu.getApplicationMenu()
+        ? Menu.getApplicationMenu().items.map(item => item.toJSON())
+        : Menu.getDefaultApplicationMenu();
+      // 兼容 Electron 版本，确保 template 是数组
+      if (!Array.isArray(template)) {
+        template = Menu.getDefaultApplicationMenu();
       }
-      Menu.setApplicationMenu(menu);
+      for (const menu of template) {
+        if (menu.role === 'viewmenu' || menu.label === 'View') {
+          if (menu.submenu && Array.isArray(menu.submenu)) {
+            menu.submenu = menu.submenu.filter(
+              item => !(item.role === 'toggleDevTools' || item.label === 'Toggle Developer Tools')
+            );
+          }
+        }
+      }
+      const menuObj = Menu.buildFromTemplate(template);
+      Menu.setApplicationMenu(menuObj);
     } else {
       mainWindow.setMenuBarVisibility(false);
     }
