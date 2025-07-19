@@ -122,6 +122,9 @@ class ToolbarManager {
 
     // 获取平台快捷键信息
     const shortcuts = PlatformHelper.getNavigationShortcuts();
+    // 判断是否为 macOS 且为 About 弹窗场景，隐藏 info 按钮
+    const isMac = process.platform === 'darwin';
+    const isAboutDialog = !!global._aboutDialogMode;
     return `
       <!DOCTYPE html>
       <html>
@@ -246,13 +249,9 @@ class ToolbarManager {
             ${homeSVG}
           </button>
         </div>
-        
         <div class="toolbar-right">
-          <button class="toolbar-btn" data-action="info" title="系统信息 (Alt+I)">
-            ${infoSVG}
-          </button>
+          ${(!isMac || !isAboutDialog) ? `<button class="toolbar-btn" data-action="info" title="系统信息 (Alt+I)">${infoSVG}</button>` : ''}
         </div>
-        
         <script>
           // 工具栏按钮点击处理
           document.addEventListener('click', (e) => {
