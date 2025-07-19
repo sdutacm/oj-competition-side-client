@@ -248,15 +248,11 @@ app.whenReady().then(() => {
       }
     }
 
-    // 设置布局
-    if (process.platform !== 'darwin') {
-      setupLayout();
-    }
+    // 设置布局（所有平台都调用，确保 toolbar 正常显示）
+    setupLayout();
 
     // 注册快捷键（在所有初始化完成后注册）
-    if (process.platform !== 'darwin') {
-      shortcutManager.registerShortcuts();
-    }
+    shortcutManager.registerShortcuts();
 
     // 监听窗口关闭，清理资源
     mainWindow.on('closed', () => {
