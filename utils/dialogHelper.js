@@ -98,11 +98,10 @@ function showInfoDialog(parentWindow) {
     show: false,
     autoHideMenuBar: true, // 自动隐藏菜单栏
     icon: iconPath,
-    // 确保窗口有标题栏和关闭按钮
-    titleBarStyle: 'default',
+    titleBarStyle: process.platform === 'darwin' ? 'default' : undefined,
     closable: true, // 确保窗口可以关闭
-    minimizable: false, // 禁用最小化按钮
-    maximizable: false, // 禁用最大化按钮
+    minimizable: process.platform === 'darwin' ? false : false, // 禁用最小化按钮
+    maximizable: process.platform === 'darwin' ? false : false, // 禁用最大化按钮
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
