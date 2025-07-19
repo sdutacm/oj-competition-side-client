@@ -140,6 +140,14 @@ function showInfoDialog(parentWindow) {
         (input.meta && input.key === 'U')
       ) {
         event.preventDefault();
+        return;
+      }
+      // Mac 下处理 info 快捷键，且只在 infoWindow 聚焦时生效
+      if (process.platform === 'darwin' && webContents.isFocused && webContents.isFocused()) {
+        // 系统信息 Cmd+I
+        if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'I') {
+          require('./dialogHelper').showInfoDialog(infoWindow);
+        }
       }
     });
   }

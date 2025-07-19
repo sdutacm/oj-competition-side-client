@@ -96,6 +96,7 @@ class ContentViewManager {
       webContents.removeAllListeners('before-input-event');
       // 只保留禁用开发者工具快捷键
       webContents.on('before-input-event', (event, input) => {
+        // 开发者工具快捷键拦截
         if (
           input.key === 'F12' ||
           (input.control && input.shift && input.key === 'I') ||
@@ -106,6 +107,30 @@ class ContentViewManager {
           (input.meta && input.key === 'U')
         ) {
           event.preventDefault();
+          return;
+        }
+        // Mac 下处理导航/刷新/主页/info快捷键，且只在当前 BrowserView 聚焦时生效
+        if (process.platform === 'darwin' && webContents.isFocused && webContents.isFocused()) {
+          // 后退 Cmd+Left
+          if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Left') {
+            if (webContents.canGoBack()) webContents.goBack();
+          }
+          // 前进 Cmd+Right
+          else if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Right') {
+            if (webContents.canGoForward()) webContents.goForward();
+          }
+          // 刷新 Cmd+R
+          else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'R') {
+            webContents.reload();
+          }
+          // 主页 Cmd+Shift+H
+          else if (input.meta && input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'H') {
+            webContents.loadURL(this.config.HOME_URL);
+          }
+          // 系统信息 Cmd+I
+          else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'I') {
+            require('./dialogHelper').showInfoDialog(this.mainWindow);
+          }
         }
       });
       // 如需自定义右键菜单可在此添加，否则不做任何 context-menu 监听

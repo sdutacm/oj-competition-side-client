@@ -71,6 +71,30 @@ class ToolbarManager {
           (input.meta && input.key === 'U')
         ) {
           event.preventDefault();
+          return;
+        }
+        // Mac 下处理导航/刷新/主页/info快捷键，且只在 toolbarView 聚焦时生效
+        if (process.platform === 'darwin' && webContents.isFocused && webContents.isFocused()) {
+          // 主页 Cmd+Shift+H
+          if (input.meta && input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'H') {
+            if (this.onActionCallback) this.onActionCallback('home');
+          }
+          // 刷新 Cmd+R
+          else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'R') {
+            if (this.onActionCallback) this.onActionCallback('refresh');
+          }
+          // 后退 Cmd+Left
+          else if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Left') {
+            if (this.onActionCallback) this.onActionCallback('back');
+          }
+          // 前进 Cmd+Right
+          else if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Right') {
+            if (this.onActionCallback) this.onActionCallback('forward');
+          }
+          // 系统信息 Cmd+I
+          else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'I') {
+            if (this.onActionCallback) this.onActionCallback('info');
+          }
         }
       });
     }
