@@ -126,6 +126,109 @@ function openNewWindow(url) {
   win._contentViewManager = contentViewManager;
   win._shortcutManager = shortcutManager;
   win._layoutManager = layoutManager;
+
+  // 新增：为每个新弹窗设置独立菜单栏和快捷键
+  if (process.platform === 'darwin') {
+    const { showInfoDialog } = require('./utils/dialogHelper');
+    const template = [
+      {
+        label: app.name,
+        submenu: [
+          {
+            label: '关于 SDUT OJ 竞赛客户端',
+            click: () => showInfoDialog(win)
+          },
+          { type: 'separator' },
+          { role: 'services' },
+          { type: 'separator' },
+          { role: 'hide' },
+          { role: 'hideothers' },
+          { role: 'unhide' },
+          { type: 'separator' },
+          { role: 'quit' }
+        ]
+      },
+      {
+        label: '文件',
+        submenu: [
+          { role: 'close' }
+        ]
+      },
+      {
+        label: '编辑',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { role: 'selectAll' }
+        ]
+      },
+      {
+        label: '视图',
+        submenu: [
+          {
+            label: '后退',
+            accelerator: 'Cmd+Left',
+            click: () => {
+              const wc = contentViewManager?.getWebContents();
+              if (wc && wc.canGoBack()) wc.goBack();
+            }
+          },
+          {
+            label: '前进',
+            accelerator: 'Cmd+Right',
+            click: () => {
+              const wc = contentViewManager?.getWebContents();
+              if (wc && wc.canGoForward()) wc.goForward();
+            }
+          },
+          {
+            label: '刷新',
+            accelerator: 'Cmd+R',
+            click: () => {
+              const wc = contentViewManager?.getWebContents();
+              if (wc) wc.reload();
+            }
+          },
+          {
+            label: '主页',
+            accelerator: 'Cmd+Shift+H',
+            click: () => {
+              const wc = contentViewManager?.getWebContents();
+              if (wc) wc.loadURL(homeUrl);
+            }
+          },
+          { type: 'separator' },
+          { role: 'togglefullscreen' }
+        ]
+      },
+      {
+        label: '窗口',
+        role: 'window',
+        submenu: [
+          { role: 'minimize' },
+          { role: 'zoom' },
+          { role: 'front' }
+        ]
+      },
+      {
+        label: '帮助',
+        role: 'help',
+        submenu: [
+          {
+            label: '系统信息',
+            accelerator: 'Cmd+I',
+            click: () => showInfoDialog(win)
+          }
+        ]
+      }
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    win.setMenu(menu);
+  }
   return win;
 }
 
