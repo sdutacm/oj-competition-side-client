@@ -73,12 +73,12 @@ class PlatformHelper {
       back: isMac ? 'Cmd+Left' : 'Alt+Left',
       forward: isMac ? 'Cmd+Right' : 'Alt+Right',
       refresh: isMac ? 'Cmd+R' : (isWin ? 'F5' : 'Ctrl+R'),
-      home: isMac ? 'Cmd+H' : 'Alt+H',
+      home: isMac ? 'Cmd+Shift+H' : 'Alt+H', // 避免 Cmd+H 冲突
       // 兼容 label 字段，前端可用 shortcuts.backLabel
       backLabel: isMac ? '⌘+←' : 'Alt+Left',
       forwardLabel: isMac ? '⌘+→' : 'Alt+Right',
       refreshLabel: isMac ? '⌘+R' : (isWin ? 'F5' : 'Ctrl+R'),
-      homeLabel: isMac ? '⌘+H' : 'Alt+H'
+      homeLabel: isMac ? '⌘+⇧+H' : 'Alt+H' // 动态悬浮提示
     };
   }
 

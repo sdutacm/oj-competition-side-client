@@ -194,8 +194,17 @@ app.whenReady().then(() => {
     // 设置窗口标题
     mainWindow.setTitle('SDUT OJ 竞赛客户端');
 
-    // 彻底移除 macOS 下自定义菜单栏，恢复原生菜单和快捷键
-    if (process.platform !== 'darwin') {
+    // Mac 下移除 View 菜单的 Toggle Developer Tools
+    if (process.platform === 'darwin') {
+      const menu = Menu.getApplicationMenu() || Menu.buildFromTemplate(Menu.getApplicationMenu ? Menu.getApplicationMenu().items : Menu.getDefaultApplicationMenu());
+      const viewMenu = menu.items.find(item => item.role === 'viewmenu' || item.label === 'View');
+      if (viewMenu && viewMenu.submenu) {
+        viewMenu.submenu.items = viewMenu.submenu.items.filter(
+          item => !(item.role === 'toggleDevTools' || item.label === 'Toggle Developer Tools')
+        );
+      }
+      Menu.setApplicationMenu(menu);
+    } else {
       mainWindow.setMenuBarVisibility(false);
     }
     // 禁用开发者工具相关功能
