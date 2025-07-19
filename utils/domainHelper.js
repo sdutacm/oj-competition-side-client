@@ -20,36 +20,21 @@ function checkDomainAllowed(domain, config, isMainWindow = false) {
       }
     }
   }
-  // 主窗口允许主域名及其子域名、白名单及其子域名
-  if (isMainWindow) {
-    const mainDomain = config.MAIN_DOMAIN;
-    if (domain === mainDomain || domain.endsWith('.' + mainDomain)) {
-      return { allowed: true, reason: null };
-    }
-    if (config.POPUP_WHITELIST && config.POPUP_WHITELIST.size > 0) {
-      for (const allowedDomain of config.POPUP_WHITELIST) {
-        if (domain === allowedDomain || domain.endsWith('.' + allowedDomain)) {
-          return { allowed: true, reason: null };
-        }
-      }
-    }
-    // 其它域名不允许
-    return { allowed: false, reason: '该域名不在主窗口允许访问范围' };
+  // 主域名及其子域名始终允许（无论主窗口还是弹窗）
+  const mainDomain = config.MAIN_DOMAIN;
+  if (domain === mainDomain || domain.endsWith('.' + mainDomain)) {
+    return { allowed: true, reason: null };
   }
-  // 弹窗严格校验白名单
+  // 白名单域名及其子域名允许
   if (config.POPUP_WHITELIST && config.POPUP_WHITELIST.size > 0) {
-    let allowed = false;
     for (const allowedDomain of config.POPUP_WHITELIST) {
       if (domain === allowedDomain || domain.endsWith('.' + allowedDomain)) {
-        allowed = true;
-        break;
+        return { allowed: true, reason: null };
       }
     }
-    if (!allowed) {
-      return { allowed: false, reason: '该域名不在允许访问的白名单中' };
-    }
   }
-  return { allowed: true, reason: null };
+  // 其它域名不允许
+  return { allowed: false, reason: '该域名不在允许访问范围' };
 }
 
 /**
