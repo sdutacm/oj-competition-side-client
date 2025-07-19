@@ -217,10 +217,14 @@ app.whenReady().then(() => {
     }
 
     // 设置布局
-    setupLayout();
+    if (process.platform !== 'darwin') {
+      setupLayout();
+    }
 
     // 注册快捷键（在所有初始化完成后注册）
-    shortcutManager.registerShortcuts();
+    if (process.platform !== 'darwin') {
+      shortcutManager.registerShortcuts();
+    }
 
     // 监听窗口关闭，清理资源
     mainWindow.on('closed', () => {
