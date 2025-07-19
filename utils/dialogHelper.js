@@ -89,16 +89,16 @@ function showInfoDialog(parentWindow) {
   }
 
   // 创建一个新的信息窗口
+  const isMac = process.platform === 'darwin';
   const infoWindow = new BrowserWindow({
     width: 500,
     height: 580, // 增加高度以适应链接部分
-    parent: parentWindow,
-    modal: true,
+    ...(isMac ? {} : { parent: parentWindow, modal: true }),
     resizable: false,
     show: false,
     icon: iconPath,
     frame: true, // 强制有原生边框和按钮
-    titleBarStyle: process.platform === 'darwin' ? 'default' : undefined,
+    titleBarStyle: isMac ? 'default' : undefined,
     closable: true, // 确保窗口可以关闭
     minimizable: false, // 禁用最小化按钮
     maximizable: false, // 禁用最大化按钮
