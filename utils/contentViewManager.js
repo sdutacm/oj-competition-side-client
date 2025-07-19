@@ -85,6 +85,13 @@ class ContentViewManager {
     contentView.setAutoResize({ width: true, height: true });
 
     // 新建内容视图自动获得焦点，确保快捷键生效
+    // 关键：弹窗/子窗口必须获得系统焦点，否则 before-input-event 不会触发
+    if (targetWindow && targetWindow !== this.mainWindow) {
+      try {
+        targetWindow.show(); // 确保窗口显示
+        targetWindow.focus(); // 系统级窗口焦点
+      } catch {}
+    }
     if (contentView.webContents && contentView.webContents.focus) {
       setTimeout(() => {
         try { contentView.webContents.focus(); } catch {}
