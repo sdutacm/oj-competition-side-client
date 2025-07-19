@@ -251,6 +251,13 @@ class ContentViewManager {
 
     webContents.on('will-navigate', (event, targetUrl) => {
       const targetDomain = getHostname(targetUrl);
+      const currentDomain = getHostname(webContents.getURL());
+      // 新增：白名单但非主域名，主窗口内跳转需新开窗口
+      if (isWhiteListButNotMainDomain(targetDomain, currentDomain, this.config)) {
+        event.preventDefault();
+        this.openNewWindow(targetUrl, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
+        return;
+      }
       if (!checkDomainAllowed(targetDomain, this.config, false).allowed) {
         event.preventDefault();
         console.log('[拦截] will-navigate 弹窗提示', targetDomain);
@@ -261,6 +268,12 @@ class ContentViewManager {
     });
     webContents.on('will-redirect', (event, targetUrl) => {
       const targetDomain = getHostname(targetUrl);
+      const currentDomain = getHostname(webContents.getURL());
+      if (isWhiteListButNotMainDomain(targetDomain, currentDomain, this.config)) {
+        event.preventDefault();
+        this.openNewWindow(targetUrl, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
+        return;
+      }
       if (!checkDomainAllowed(targetDomain, this.config, false).allowed) {
         event.preventDefault();
         console.log('[拦截] will-redirect 弹窗提示', targetDomain);
@@ -271,15 +284,44 @@ class ContentViewManager {
     });
     contentView.webContents.setWindowOpenHandler(({ url }) => {
       const targetDomain = getHostname(url);
-      if (!checkDomainAllowed(targetDomain, this.config, false).allowed) {
-        console.log('[拦截] setWindowOpenHandler 弹窗提示', targetDomain);
+      const currentDomain = getHostname(contentView.webContents.getURL());
+      // 判断是否主域名或白名单及其子域名
+      const isWhite = (() => {
+        if (targetDomain === this.config.MAIN_DOMAIN || targetDomain.endsWith('.' + this.config.MAIN_DOMAIN)) return true;
+        if (this.config.POPUP_WHITELIST && this.config.POPUP_WHITELIST.size > 0) {
+          for (const allowedDomain of this.config.POPUP_WHITELIST) {
+            if (targetDomain === allowedDomain || targetDomain.endsWith('.' + allowedDomain)) return true;
+          }
+        }
+        return false;
+      })();
+      // 只有目标域名和当前域名不一致且目标域名在白名单内才新开窗口
+      if (isWhite && targetDomain !== currentDomain) {
+        this.openNewWindow(url, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
+        return { action: 'deny' };
+      }
+      // 非白名单，弹窗拦截
+      if (!isWhite) {
         showBlockedDialog(targetWindow, targetDomain, checkDomainAllowed(targetDomain, this.config, false).reason, 'default');
         return { action: 'deny' };
       }
-      // 允许新开窗口访问
-      this.openNewWindow(url, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
-      return { action: 'deny' };
+      // 允许主窗口跳转
+      return { action: 'allow' };
     });
+
+    // 辅助函数：判断是否白名单但不是主域名
+    function isWhiteListButNotMainDomain(targetDomain, currentDomain, config) {
+      if (!config.POPUP_WHITELIST || !config.POPUP_WHITELIST.size) return false;
+      // 目标域名在白名单内，且不是主域名或主域名子域名，且与当前域名不同
+      if (
+        (config.POPUP_WHITELIST.has(targetDomain) || [...config.POPUP_WHITELIST].some(d => targetDomain.endsWith('.' + d))) &&
+        !(targetDomain === config.MAIN_DOMAIN || targetDomain.endsWith('.' + config.MAIN_DOMAIN)) &&
+        targetDomain !== currentDomain
+      ) {
+        return true;
+      }
+      return false;
+    }
   }
 
   /**
