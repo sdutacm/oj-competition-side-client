@@ -71,10 +71,12 @@ class ShortcutManager {
         }
       ];
       const menu = Menu.buildFromTemplate(template);
-      this.mainWindow.setMenu(menu); // 只作用于当前窗口
-      // 隐藏菜单栏（Windows/Linux）
-      if (!isMac && this.mainWindow.setMenuBarVisibility) {
-        this.mainWindow.setMenuBarVisibility(false);
+      // 仅非 macOS 设置自定义菜单和隐藏菜单栏
+      if (!isMac) {
+        this.mainWindow.setMenu(menu); // 只作用于当前窗口
+        if (this.mainWindow.setMenuBarVisibility) {
+          this.mainWindow.setMenuBarVisibility(false);
+        }
       }
     } catch (error) {
       console.log('注册快捷键失败（已忽略）:', error.message);
