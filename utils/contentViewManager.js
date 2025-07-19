@@ -141,20 +141,40 @@ class ContentViewManager {
             input.meta && !input.shift && !input.alt && !input.control &&
             (input.key === 'Left' || input.key === 'ArrowLeft')
           ) {
-            if (!webContents.isDestroyed() && isWinAlive && webContents.canGoBack()) {
-              webContents.goBack();
-              event.preventDefault();
-            }
+            // 判断是否聚焦在输入框/表单
+            webContents.executeJavaScript(`(() => {
+              const el = document.activeElement;
+              if (!el) return false;
+              const tag = el.tagName.toLowerCase();
+              if (tag === 'input' || tag === 'textarea') return true;
+              if (el.isContentEditable) return true;
+              return false;
+            })()`, true).then(isInput => {
+              if (!isInput && !webContents.isDestroyed() && isWinAlive && webContents.canGoBack()) {
+                webContents.goBack();
+                event.preventDefault();
+              }
+              // 如果聚焦输入框则不处理，交给系统
+            });
           }
           // 前进 Cmd+Right/Cmd+ArrowRight
           else if (
             input.meta && !input.shift && !input.alt && !input.control &&
             (input.key === 'Right' || input.key === 'ArrowRight')
           ) {
-            if (!webContents.isDestroyed() && isWinAlive && webContents.canGoForward()) {
-              webContents.goForward();
-              event.preventDefault();
-            }
+            webContents.executeJavaScript(`(() => {
+              const el = document.activeElement;
+              if (!el) return false;
+              const tag = el.tagName.toLowerCase();
+              if (tag === 'input' || tag === 'textarea') return true;
+              if (el.isContentEditable) return true;
+              return false;
+            })()`, true).then(isInput => {
+              if (!isInput && !webContents.isDestroyed() && isWinAlive && webContents.canGoForward()) {
+                webContents.goForward();
+                event.preventDefault();
+              }
+            });
           }
           // 刷新 Cmd+R
           else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'R') {
