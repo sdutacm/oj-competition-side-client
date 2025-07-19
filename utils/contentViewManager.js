@@ -54,8 +54,9 @@ class ContentViewManager {
     // 只允许加载白名单主域名
     const hostname = getHostname(url);
     if (!checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).allowed) {
-      showBlockedDialog(targetWindow, hostname, checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).reason);
-      contentView.webContents.loadURL(this.config.HOME_URL);
+      console.log('[拦截] 首次加载，弹窗提示', hostname);
+      showBlockedDialog(targetWindow, hostname, checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).reason, 'default');
+      // 不跳转首页，内容区停留在原页面
     } else {
       contentView.webContents.loadURL(url);
     }
@@ -250,9 +251,10 @@ class ContentViewManager {
 
     webContents.on('will-navigate', (event, targetUrl) => {
       const targetDomain = getHostname(targetUrl);
-      // 只要目标域名在白名单就允许跳转，不再新开窗口
       if (!checkDomainAllowed(targetDomain, this.config, false).allowed) {
         event.preventDefault();
+        console.log('[拦截] will-navigate 弹窗提示', targetDomain);
+        showBlockedDialog(targetWindow, targetDomain, checkDomainAllowed(targetDomain, this.config, false).reason, 'default');
         return;
       }
       // 允许跳转，无需额外处理
@@ -261,6 +263,8 @@ class ContentViewManager {
       const targetDomain = getHostname(targetUrl);
       if (!checkDomainAllowed(targetDomain, this.config, false).allowed) {
         event.preventDefault();
+        console.log('[拦截] will-redirect 弹窗提示', targetDomain);
+        showBlockedDialog(targetWindow, targetDomain, checkDomainAllowed(targetDomain, this.config, false).reason, 'redirect');
         return;
       }
       // 允许跳转，无需额外处理
@@ -268,6 +272,8 @@ class ContentViewManager {
     contentView.webContents.setWindowOpenHandler(({ url }) => {
       const targetDomain = getHostname(url);
       if (!checkDomainAllowed(targetDomain, this.config, false).allowed) {
+        console.log('[拦截] setWindowOpenHandler 弹窗提示', targetDomain);
+        showBlockedDialog(targetWindow, targetDomain, checkDomainAllowed(targetDomain, this.config, false).reason, 'default');
         return { action: 'deny' };
       }
       // 允许新开窗口访问

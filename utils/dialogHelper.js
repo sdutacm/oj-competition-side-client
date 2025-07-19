@@ -7,8 +7,9 @@ const path = require('path');
  * @param {string} hostname - 被拦截的域名
  * @param {string} reason - 拦截原因
  * @param {string} type - 拦截类型（可选：'redirect' | 'default'）
+ * @param {Function} [callback] - 弹窗关闭后的回调
  */
-function showBlockedDialog(parentWindow, hostname, reason, type = 'default') {
+function showBlockedDialog(parentWindow, hostname, reason, type = 'default', callback) {
   const messages = {
     default: [
       '哎呀~ 🚫 比赛期间不能访问这个网站哦！',
@@ -77,6 +78,7 @@ function showBlockedDialog(parentWindow, hostname, reason, type = 'default') {
     if (parentWindow && process.platform === 'darwin') {
       try { parentWindow.focus(); } catch {}
     }
+    if (typeof callback === 'function') callback();
   });
 }
 
