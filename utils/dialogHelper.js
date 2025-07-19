@@ -171,19 +171,9 @@ function showInfoDialog(parentWindow) {
   async function getBase64Image() {
     try {
       const fs = require('fs');
-      const os = require('os');
-      const platform = os.platform();
-
-      let imagePath;
-      if (platform === 'linux') {
-        imagePath = path.join(__dirname, '../public/favicon.png');
-      } else if (platform === 'darwin') {
-        imagePath = path.join(__dirname, '../public/favicon.icns');
-      } else {
-        // Windows 使用 .ico 文件
-        imagePath = path.join(__dirname, '../public/favicon.ico');
-      }
-
+      const path = require('path');
+      // 强制使用 favicon.png 作为 logo
+      const imagePath = path.join(__dirname, '../public/favicon.png');
       const imageBuffer = fs.readFileSync(imagePath);
       return imageBuffer.toString('base64');
     } catch (error) {
@@ -199,14 +189,7 @@ function showInfoDialog(parentWindow) {
     const isLinux = platform === 'linux';
     const isDarwin = platform === 'darwin';
 
-    let mimeType;
-    if (isLinux) {
-      mimeType = 'image/png';
-    } else if (isDarwin) {
-      mimeType = 'image/x-icon'; // .icns 文件使用相同的 MIME 类型
-    } else {
-      mimeType = 'image/x-icon';
-    }
+    let mimeType = 'image/png'; // 强制 png
 
     const logoImg = base64Image ?
       `<img src="data:${mimeType};base64,${base64Image}" alt="Logo" class="logo">` :
