@@ -58,7 +58,8 @@ function showBlockedDialog(parentWindow, hostname, reason, type = 'default') {
     '系统提示 ℹ️'
   ];
   const randomTitle = titles[Math.floor(Math.random() * titles.length)];
-  dialog.showMessageBox(parentWindow, {
+  // Mac 下弹窗需 alwaysOnTop 并聚焦，防止被主窗口遮挡
+  const opts = {
     type: 'info',
     title: randomTitle,
     message: randomMessage,
@@ -66,6 +67,16 @@ function showBlockedDialog(parentWindow, hostname, reason, type = 'default') {
     buttons: [randomButton],
     defaultId: 0,
     icon: null
+  };
+  if (process.platform === 'darwin') {
+    opts.message = '🚦 ' + randomMessage;
+    opts.modal = true;
+    opts.noLink = true;
+  }
+  dialog.showMessageBox(parentWindow, opts).then(() => {
+    if (parentWindow && process.platform === 'darwin') {
+      try { parentWindow.focus(); } catch {}
+    }
   });
 }
 
