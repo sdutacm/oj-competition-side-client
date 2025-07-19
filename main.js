@@ -194,34 +194,7 @@ app.whenReady().then(() => {
     // 设置窗口标题
     mainWindow.setTitle('SDUT OJ 竞赛客户端');
 
-    // Mac 下主窗口 webContents 监听快捷键，确保快捷键生效
-    if (process.platform === 'darwin') {
-      mainWindow.webContents.on('before-input-event', (event, input) => {
-        // 导航快捷键
-        const wc = contentViewManager?.getWebContents();
-        if (!wc) return;
-        // 后退 Cmd+Left
-        if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Left') {
-          if (wc.canGoBack()) wc.goBack();
-        }
-        // 前进 Cmd+Right
-        else if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Right') {
-          if (wc.canGoForward()) wc.goForward();
-        }
-        // 刷新 Cmd+R
-        else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'R') {
-          wc.reload();
-        }
-        // 主页 Cmd+Shift+H
-        else if (input.meta && input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'H') {
-          wc.loadURL(APP_CONFIG.HOME_URL);
-        }
-        // 系统信息 Cmd+I
-        else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'I') {
-          require('./utils/dialogHelper').showInfoDialog(mainWindow);
-        }
-      });
-    }
+    // （已移除主窗口全局快捷键监听，快捷键只在各自窗口 webContents 上监听）
 
     // Mac 下自定义菜单栏，About 菜单项弹出 info，View 菜单项功能全部手动实现
     if (process.platform === 'darwin') {
