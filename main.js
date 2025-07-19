@@ -201,13 +201,8 @@ app.whenReady().then(() => {
           submenu: [
             {
               label: `关于 ${appName}`,
-              role: 'about',
               click: () => {
-                // 触发自定义关于窗口，带 toolbar
-                if (toolbarManager && toolbarManager.createToolbarView) {
-                  // 先显示工具栏（如果未显示）
-                  toolbarManager.createToolbarView();
-                }
+                // 只弹出 info 内容，不弹新窗口、不显示 toolbar
                 if (global.showInfoDialog) {
                   global.showInfoDialog(mainWindow);
                 } else if (shortcutManager && shortcutManager.handleToolbarAction) {
