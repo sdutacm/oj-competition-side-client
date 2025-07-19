@@ -194,14 +194,11 @@ app.whenReady().then(() => {
     // 设置窗口标题
     mainWindow.setTitle('SDUT OJ 竞赛客户端');
 
-    // Mac 下移除 View 菜单的 Toggle Developer Tools（官方推荐写法）
+    // Mac 下移除 View 菜单的 Toggle Developer Tools（官方推荐写法，避免 toJSON 报错）
     if (process.platform === 'darwin') {
-      let template = Menu.getApplicationMenu()
-        ? Menu.getApplicationMenu().items.map(item => item.toJSON())
-        : Menu.getDefaultApplicationMenu();
-      // 兼容 Electron 版本，确保 template 是数组
+      let template = Menu.getDefaultApplicationMenu();
       if (!Array.isArray(template)) {
-        template = Menu.getDefaultApplicationMenu();
+        template = [];
       }
       for (const menu of template) {
         if (menu.role === 'viewmenu' || menu.label === 'View') {
