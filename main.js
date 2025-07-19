@@ -2,9 +2,9 @@ const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 
 // 顶部统一 require 管理器类
-const ToolbarManager = require('./utils/ToolbarManager');
-const ContentViewManager = require('./utils/ContentViewManager');
-const ShortcutManager = require('./utils/ShortcutManager');
+const ToolbarManager = require('./utils/toolbarManager');
+const ContentViewManager = require('./utils/contentViewManager');
+const ShortcutManager = require('./utils/shortcutManager');
 const { LayoutManager } = require('./utils/windowHelper');
 const PlatformHelper = require('./utils/platformHelper');
 const { checkDomainAllowed, interceptDomain } = require('./utils/domainHelper');
