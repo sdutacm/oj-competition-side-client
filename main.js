@@ -7,7 +7,7 @@ const ContentViewManager = require('./utils/contentViewManager');
 const ShortcutManager = require('./utils/shortcutManager');
 const { LayoutManager } = require('./utils/windowHelper');
 const PlatformHelper = require('./utils/platformHelper');
-const { checkDomainAllowed, interceptDomain } = require('./utils/domainHelper');
+const { interceptDomain } = require('./utils/domainHelper');
 
 let mainWindow = null;
 let toolbarManager = null;

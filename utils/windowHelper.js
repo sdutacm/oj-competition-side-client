@@ -1,7 +1,6 @@
 const { BrowserWindow, BrowserView } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const PlatformHelper = require('./platformHelper');
 
 /**
  * 创建新窗口

@@ -1,6 +1,5 @@
 const PlatformHelper = require('./platformHelper');
 const { showInfoDialog } = require('./dialogHelper');
-const { globalShortcut } = require('electron');
 
 class ShortcutManager {
   constructor(contentViewManager, homeUrl, mainWindow = null) {

@@ -11,46 +11,56 @@ const path = require('path');
 function showBlockedDialog(parentWindow, hostname, reason, type = 'default') {
   const messages = {
     default: [
-      '哎呀~ (´･ω･`) 比赛期间不能访问这个网站呢！',
-      '诶？！(°ロ°) 这里在比赛模式下不能打开哦~',
-      '呜呜~ (｡•́︿•̀｡) 比赛规则限制了这个网站！',
-      '欸嘿~ (＾◡＾) 选手大人，专心比赛不要分心哦！',
-      '咦？(⊙_⊙) 比赛环境下只能访问指定网站呢~',
-      '啊哈~ (◉‿◉) 比赛模式已开启，请专注答题！'
+      '哎呀~ 🚫 比赛期间不能访问这个网站哦！',
+      '注意 ⚠️ 这里在比赛模式下无法打开。',
+      '抱歉，比赛规则限制了该网站的访问。🛡️',
+      '请专注比赛，暂时无法访问此页面。🏆',
+      '当前环境仅允许访问指定网站。🔒',
+      '比赛模式已开启，请专心答题！😊'
     ],
     redirect: [
-      '检测到页面发生重定向，目标网站不在允许范围，已为你拦截！(｡•̀ᴗ-)✧',
-      '页面重定向被拦截，保护你的比赛环境！(ง •_•)ง'
+      '检测到页面发生重定向，目标网站不在允许范围，已为你拦截！🚫',
+      '页面重定向被拦截，保护你的比赛环境！🛡️'
     ]
   };
   const details = {
     default: [
-      `目标网站：${hostname} ✨\n拦截原因：${reason}\n\n(｡♥‿♥｡) 比赛期间只能访问指定网站哦~ 专心答题吧！`,
-      `被拦截的网站：${hostname} 🌸\n详细说明：${reason}\n\n(◕‿◕) 这是比赛规则呢！让我们把注意力集中在题目上吧~`,
-      `无法访问：${hostname} 🎀\n原因说明：${reason}\n\n(´∀｀) 比赛模式下只能使用允许的网站呢，加油做题吧！`,
-      `访问限制：${hostname} 🎯\n限制说明：${reason}\n\n(＾▽＾) 专注比赛才能发挥最佳水平哦~ 继续努力！`,
-      `网站屏蔽：${hostname} 💫\n屏蔽原因：${reason}\n\n(◡ ‿ ◡) 比赛环境需要保持纯净呢，回到题目页面继续加油吧！`
+      `目标网站：${hostname}  \n拦截原因：${reason}\n\n比赛期间只能访问指定网站，祝你取得好成绩！🏆`,
+      `被拦截的网站：${hostname}  \n详细说明：${reason}\n\n请将注意力集中在比赛题目上，加油！💪`,
+      `无法访问：${hostname}  \n原因说明：${reason}\n\n比赛模式下仅可使用允许的网站。😊`,
+      `访问限制：${hostname}  \n限制说明：${reason}\n\n专注比赛才能发挥最佳水平！🎯`,
+      `网站屏蔽：${hostname}  \n屏蔽原因：${reason}\n\n比赛环境需要保持纯净，回到题目页面继续努力吧！✨`
     ],
     redirect: [
-      `检测到页面发生重定向，目标网站：${hostname} 已被系统拦截！\n原因：${reason}\n\n(ง •_•)ง 比赛期间请勿访问非指定网站，祝你取得好成绩！`,
-      `页面重定向到 ${hostname} 已被拦截，保护你的比赛环境！\n原因：${reason}\n\n(｡•̀ᴗ-)✧ 继续加油！`
+      `检测到页面发生重定向，目标网站：${hostname} 已被系统拦截！\n原因：${reason}\n\n比赛期间请勿访问非指定网站，祝你取得好成绩！🏆`,
+      `页面重定向到 ${hostname} 已被拦截，保护你的比赛环境！\n原因：${reason}\n\n继续加油！💪`
     ]
   };
   const buttons = [
-    '好的，专心比赛！(´▽`)',
-    '了解~ 继续答题！(◡ ‿ ◡)',
-    '明白啦！回去做题~(•‿•)',
-    '收到~ 加油比赛！(＾▽＾)',
-    '知道了！Focus！(◕‿◕)✨'
+    '好的，专心比赛！',
+    '了解，继续答题！',
+    '明白啦，回去做题！',
+    '收到，加油比赛！',
+    '知道了，Focus！'
   ];
   const msgArr = messages[type] || messages.default;
   const detArr = details[type] || details.default;
   const randomMessage = msgArr[Math.floor(Math.random() * msgArr.length)];
   const randomDetail = detArr[Math.floor(Math.random() * detArr.length)];
   const randomButton = buttons[Math.floor(Math.random() * buttons.length)];
+  // 优化 title，使用主流 emoji，兼容三系统
+  const titles = [
+    '比赛模式提醒 🏅',
+    '访问限制通知 🚦',
+    '安全提示 🔒',
+    '访问被拦截 🚫',
+    '专注比赛 🏆',
+    '系统提示 ℹ️'
+  ];
+  const randomTitle = titles[Math.floor(Math.random() * titles.length)];
   dialog.showMessageBox(parentWindow, {
     type: 'info',
-    title: '比赛模式提醒 (◕‿◕)🏆',
+    title: randomTitle,
     message: randomMessage,
     detail: randomDetail,
     buttons: [randomButton],
