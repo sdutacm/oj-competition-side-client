@@ -99,6 +99,11 @@ function openNewWindow(url) {
   layoutManager.layoutViews();
   layoutManager.setupResizeListener();
   contentViewManager.createContentView(win, url);
+  // 新增：确保新窗口内容区获得焦点，快捷键才生效
+  const view = contentViewManager.getView && contentViewManager.getView();
+  if (view && view.webContents && view.webContents.focus) {
+    view.webContents.focus();
+  }
   // 关键：将 homeUrl 作为 home 页面传递给 ShortcutManager
   shortcutManager = new ShortcutManager(contentViewManager, homeUrl, win, false);
   shortcutManager.registerShortcuts();
