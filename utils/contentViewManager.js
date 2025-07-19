@@ -203,38 +203,28 @@ class ContentViewManager {
     }
 
     webContents.on('will-navigate', (event, targetUrl) => {
-      const currentDomain = getHostname(webContents.getURL());
       const targetDomain = getHostname(targetUrl);
-      const allow = interceptDomain(targetWindow, targetUrl, this.config, targetWindow === this.mainWindow, 'default');
-      if (!allow) {
+      // 只要目标域名在白名单就允许跳转，不再新开窗口
+      if (!checkDomainAllowed(targetDomain, this.config, false).allowed) {
         event.preventDefault();
         return;
       }
-      // 白名单域名但与当前窗口域名不同，自动新开窗口访问
-      if (targetDomain && targetDomain !== currentDomain && checkDomainAllowed(targetDomain, this.config, false).allowed) {
-        event.preventDefault();
-        const mainWinSize = this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800];
-        this.openNewWindow(targetUrl, mainWinSize);
-      }
+      // 允许跳转，无需额外处理
     });
     webContents.on('will-redirect', (event, targetUrl) => {
-      const currentDomain = getHostname(webContents.getURL());
       const targetDomain = getHostname(targetUrl);
-      const allow = interceptDomain(targetWindow, targetUrl, this.config, targetWindow === this.mainWindow, 'redirect');
-      if (!allow) {
+      if (!checkDomainAllowed(targetDomain, this.config, false).allowed) {
         event.preventDefault();
         return;
       }
-      if (targetDomain && targetDomain !== currentDomain && checkDomainAllowed(targetDomain, this.config, false).allowed) {
-        event.preventDefault();
-        const mainWinSize = this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800];
-        this.openNewWindow(targetUrl, mainWinSize);
-      }
+      // 允许跳转，无需额外处理
     });
     contentView.webContents.setWindowOpenHandler(({ url }) => {
-      if (!interceptDomain(targetWindow, url, this.config, targetWindow === this.mainWindow)) {
+      const targetDomain = getHostname(url);
+      if (!checkDomainAllowed(targetDomain, this.config, false).allowed) {
         return { action: 'deny' };
       }
+      // 允许新开窗口访问
       this.openNewWindow(url, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
       return { action: 'deny' };
     });
