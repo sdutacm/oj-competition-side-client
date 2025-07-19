@@ -151,7 +151,15 @@ class ContentViewManager {
           }
           // 主页 Cmd+Shift+H
           else if (input.meta && input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'H') {
-            if (!webContents.isDestroyed() && isWinAlive) webContents.loadURL(this.config.HOME_URL);
+            if (!webContents.isDestroyed() && isWinAlive) {
+              let homeUrl = this.config.HOME_URL;
+              try {
+                const currentUrl = webContents.getURL();
+                const u = new URL(currentUrl);
+                homeUrl = u.origin + '/';
+              } catch {}
+              webContents.loadURL(homeUrl);
+            }
           }
           // 系统信息 Cmd+I
           else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'I') {
