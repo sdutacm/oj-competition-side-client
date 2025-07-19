@@ -194,41 +194,10 @@ app.whenReady().then(() => {
     // 设置窗口标题
     mainWindow.setTitle('SDUT OJ 竞赛客户端');
 
-    // 菜单栏设置：macOS 保留自定义导航栏，但自定义 About 菜单项
-    if (process.platform === 'darwin') {
-      const appName = app.getName();
-      const template = [
-        {
-          label: appName,
-          submenu: [
-            {
-              label: `关于 ${appName}`,
-              click: () => {
-                // 只弹出 info 内容，不弹新窗口、不显示 toolbar
-                if (global.showInfoDialog) {
-                  global.showInfoDialog(mainWindow);
-                } else if (shortcutManager && shortcutManager.handleToolbarAction) {
-                  shortcutManager.handleToolbarAction('info');
-                }
-              }
-            },
-            { type: 'separator' },
-            { role: 'services' },
-            { type: 'separator' },
-            { role: 'hide' },
-            { role: 'hideothers' },
-            { role: 'unhide' },
-            { type: 'separator' },
-            { role: 'quit' }
-          ]
-        }
-      ];
-      const menu = Menu.buildFromTemplate(template);
-      Menu.setApplicationMenu(menu);
-    } else {
+    // 彻底移除 macOS 下自定义菜单栏，恢复原生菜单和快捷键
+    if (process.platform !== 'darwin') {
       mainWindow.setMenuBarVisibility(false);
     }
-
     // 禁用开发者工具相关功能
     disableDevTools();
 
