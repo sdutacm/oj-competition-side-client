@@ -86,10 +86,10 @@ class ContentViewManager {
 
     // 新建内容视图自动获得焦点，确保快捷键生效
     // 关键：弹窗/子窗口必须获得系统焦点，否则 before-input-event 不会触发
-    if (targetWindow && targetWindow !== this.mainWindow) {
+    if (targetWindow) {
       try {
-        targetWindow.show(); // 确保窗口显示
-        targetWindow.focus(); // 系统级窗口焦点
+        targetWindow.show();
+        targetWindow.focus();
       } catch {}
     }
     if (contentView.webContents && contentView.webContents.focus) {
@@ -98,13 +98,11 @@ class ContentViewManager {
       }, 0);
     }
 
-    // 新弹窗/子窗口彻底隐藏菜单栏，避免 accelerator 污染
-    if (targetWindow !== this.mainWindow) {
-      try {
-        targetWindow.setMenuBarVisibility(false);
-        targetWindow.setMenu(null);
-      } catch {}
-    }
+    // 所有窗口都彻底隐藏菜单栏，避免 accelerator 干扰
+    try {
+      targetWindow.setMenuBarVisibility(false);
+      targetWindow.setMenu(null);
+    } catch {}
 
     return contentView;
   }

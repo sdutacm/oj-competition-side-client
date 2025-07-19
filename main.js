@@ -310,109 +310,20 @@ app.whenReady().then(() => {
     // （已移除主窗口全局快捷键监听，快捷键只在各自窗口 webContents 上监听）
 
     // Mac 下自定义菜单栏，About 菜单项弹出 info，View 菜单项功能全部手动实现
-    if (process.platform === 'darwin') {
-      const { showInfoDialog } = require('./utils/dialogHelper');
-      const template = [
-        {
-          label: app.name,
-          submenu: [
-            {
-              label: '关于 SDUT OJ 竞赛客户端',
-              click: () => showInfoDialog(mainWindow)
-            },
-            { type: 'separator' },
-            { role: 'services' },
-            { type: 'separator' },
-            { role: 'hide' },
-            { role: 'hideothers' },
-            { role: 'unhide' },
-            { type: 'separator' },
-            { role: 'quit' }
-          ]
-        },
-        {
-          label: '文件',
-          submenu: [
-            { role: 'close' }
-          ]
-        },
-        {
-          label: '编辑',
-          submenu: [
-            { role: 'undo' },
-            { role: 'redo' },
-            { type: 'separator' },
-            { role: 'cut' },
-            { role: 'copy' },
-            { role: 'paste' },
-            { role: 'selectAll' }
-          ]
-        },
-        {
-          label: '视图',
-          submenu: [
-            {
-              label: '后退',
-              accelerator: 'Cmd+Left',
-              click: () => {
-                const wc = contentViewManager?.getWebContents();
-                if (wc && wc.canGoBack()) wc.goBack();
-              }
-            },
-            {
-              label: '前进',
-              accelerator: 'Cmd+Right',
-              click: () => {
-                const wc = contentViewManager?.getWebContents();
-                if (wc && wc.canGoForward()) wc.goForward();
-              }
-            },
-            {
-              label: '刷新',
-              accelerator: 'Cmd+R',
-              click: () => {
-                const wc = contentViewManager?.getWebContents();
-                if (wc) wc.reload();
-              }
-            },
-            {
-              label: '主页',
-              accelerator: 'Cmd+Shift+H',
-              click: () => {
-                const wc = contentViewManager?.getWebContents();
-                if (wc) wc.loadURL(APP_CONFIG.HOME_URL);
-              }
-            },
-            { type: 'separator' },
-            { role: 'togglefullscreen' }
-          ]
-        },
-        {
-          label: '窗口',
-          role: 'window',
-          submenu: [
-            { role: 'minimize' },
-            { role: 'zoom' },
-            { role: 'front' }
-          ]
-        },
-        {
-          label: '帮助',
-          role: 'help',
-          submenu: [
-            {
-              label: '系统信息',
-              accelerator: 'Cmd+I',
-              click: () => showInfoDialog(mainWindow)
-            }
-          ]
-        }
-      ];
-      const menu = Menu.buildFromTemplate(template);
-      Menu.setApplicationMenu(menu);
-    } else {
+    // if (process.platform === 'darwin') {
+    //   const { showInfoDialog } = require('./utils/dialogHelper');
+    //   const template = [ ... ];
+    //   const menu = Menu.buildFromTemplate(template);
+    //   Menu.setApplicationMenu(menu);
+    // } else {
+    //   mainWindow.setMenuBarVisibility(false);
+    // }
+    // 统一所有平台都隐藏菜单栏，彻底禁用 accelerator
+    try {
       mainWindow.setMenuBarVisibility(false);
-    }
+      mainWindow.setMenu(null);
+    } catch {}
+
     // 禁用开发者工具相关功能
     disableDevTools();
 
