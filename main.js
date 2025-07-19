@@ -69,7 +69,9 @@ function openNewWindow(url) {
     show: true,
     autoHideMenuBar: true
   });
-  win.setMenuBarVisibility(false);
+  if (process.platform !== 'darwin') {
+    win.setMenuBarVisibility(false);
+  }
   win.on('ready-to-show', () => {
     win.setMenuBarVisibility(false);
   });
