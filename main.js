@@ -53,9 +53,14 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
 // 独立的新窗口创建函数，不放在 APP_CONFIG 内，避免 require 副作用
 function openNewWindow(url) {
   const width = 1400, height = 900;
+  let iconPath = undefined;
+  if (process.platform === 'win32') {
+    iconPath = path.join(__dirname, 'public/favicon.ico');
+  }
   const win = new BrowserWindow({
     width,
     height,
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
