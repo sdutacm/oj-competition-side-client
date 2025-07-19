@@ -28,29 +28,44 @@ class ShortcutManager {
       this.setupKeyHandlers();
       // 构建菜单模板，使用 Electron 菜单加速键
       const { Menu } = require('electron');
+      // 针对 macOS 设计专属快捷键，避免系统冲突
+      const isMac = process.platform === 'darwin';
+      const macShortcuts = {
+        back: 'Ctrl+Alt+Left',    // 避免 Cmd+Left
+        forward: 'Ctrl+Alt+Right',// 避免 Cmd+Right
+        refresh: 'Ctrl+Alt+R',    // 避免 Cmd+R
+        home: 'Ctrl+Alt+H',       // 避免 Cmd+H/Cmd+Shift+H
+        info: 'Ctrl+Alt+I'        // 避免 Cmd+I/Cmd+Option+I
+      };
+      const shortcuts = isMac ? macShortcuts : this.shortcuts;
       const template = [
         {
           label: '导航',
           submenu: [
             {
-              label: '后退',
-              accelerator: this.shortcuts.back,
-              click: () => this.keyHandlers.get(this.shortcuts.back)?.()
+              label: isMac ? '后退（^⌥←）' : '后退 (Ctrl+Alt+Left)',
+              accelerator: shortcuts.back,
+              click: () => this.keyHandlers.get(shortcuts.back)?.()
             },
             {
-              label: '前进',
-              accelerator: this.shortcuts.forward,
-              click: () => this.keyHandlers.get(this.shortcuts.forward)?.()
+              label: isMac ? '前进（^⌥→）' : '前进 (Ctrl+Alt+Right)',
+              accelerator: shortcuts.forward,
+              click: () => this.keyHandlers.get(shortcuts.forward)?.()
             },
             {
-              label: '刷新',
-              accelerator: this.shortcuts.refresh,
-              click: () => this.keyHandlers.get(this.shortcuts.refresh)?.()
+              label: isMac ? '刷新（^⌥R）' : '刷新 (Ctrl+Alt+R)',
+              accelerator: shortcuts.refresh,
+              click: () => this.keyHandlers.get(shortcuts.refresh)?.()
             },
             {
-              label: '主页',
-              accelerator: this.shortcuts.home,
-              click: () => this.keyHandlers.get(this.shortcuts.home)?.()
+              label: isMac ? '主页（^⌥H）' : '主页 (Ctrl+Alt+H)',
+              accelerator: shortcuts.home,
+              click: () => this.keyHandlers.get(shortcuts.home)?.()
+            },
+            {
+              label: isMac ? '系统信息（^⌥I）' : '系统信息 (Ctrl+Alt+I)',
+              accelerator: shortcuts.info,
+              click: () => this.keyHandlers.get(shortcuts.info)?.()
             }
           ]
         }
@@ -58,7 +73,7 @@ class ShortcutManager {
       const menu = Menu.buildFromTemplate(template);
       this.mainWindow.setMenu(menu); // 只作用于当前窗口
       // 隐藏菜单栏（Windows/Linux）
-      if (this.mainWindow.setMenuBarVisibility) {
+      if (!isMac && this.mainWindow.setMenuBarVisibility) {
         this.mainWindow.setMenuBarVisibility(false);
       }
     } catch (error) {
@@ -104,8 +119,17 @@ class ShortcutManager {
    * 设置按键处理器映射
    */
   setupKeyHandlers() {
+    const isMac = process.platform === 'darwin';
+    const macShortcuts = {
+      back: 'Ctrl+Alt+Left',
+      forward: 'Ctrl+Alt+Right',
+      refresh: 'Ctrl+Alt+R',
+      home: 'Ctrl+Alt+H',
+      info: 'Ctrl+Alt+I'
+    };
+    const shortcuts = isMac ? macShortcuts : this.shortcuts;
     // 后退
-    this.keyHandlers.set(this.shortcuts.back, () => {
+    this.keyHandlers.set(shortcuts.back, () => {
       const webContents = this.contentViewManager.getWebContents();
       if (webContents) {
         try {
@@ -119,9 +143,8 @@ class ShortcutManager {
         }
       }
     });
-
     // 前进
-    this.keyHandlers.set(this.shortcuts.forward, () => {
+    this.keyHandlers.set(shortcuts.forward, () => {
       const webContents = this.contentViewManager.getWebContents();
       if (webContents) {
         try {
@@ -135,9 +158,8 @@ class ShortcutManager {
         }
       }
     });
-
     // 刷新
-    this.keyHandlers.set(this.shortcuts.refresh, () => {
+    this.keyHandlers.set(shortcuts.refresh, () => {
       const webContents = this.contentViewManager.getWebContents();
       if (webContents) {
         try {
@@ -147,9 +169,8 @@ class ShortcutManager {
         }
       }
     });
-
     // 主页
-    this.keyHandlers.set(this.shortcuts.home, () => {
+    this.keyHandlers.set(shortcuts.home, () => {
       const webContents = this.contentViewManager.getWebContents();
       if (webContents) {
         try {
@@ -159,10 +180,8 @@ class ShortcutManager {
         }
       }
     });
-
-    // 系统信息 - 根据平台使用不同快捷键
-    const infoShortcut = process.platform === 'darwin' ? 'Cmd+I' : 'Alt+I';
-    this.keyHandlers.set(infoShortcut, () => {
+    // 系统信息
+    this.keyHandlers.set(shortcuts.info, () => {
       if (this.mainWindow) {
         try {
           showInfoDialog(this.mainWindow);
