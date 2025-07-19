@@ -198,11 +198,26 @@ app.whenReady().then(() => {
     if (process.platform === 'darwin') {
       let menu = Menu.getApplicationMenu();
       if (menu) {
+        // 移除 Toggle Developer Tools
         const viewMenu = menu.items.find(item => item.role === 'viewmenu' || item.label === 'View');
         if (viewMenu && viewMenu.submenu && viewMenu.submenu.items) {
           viewMenu.submenu.items = viewMenu.submenu.items.filter(
             item => !(item.role === 'toggleDevTools' || item.label === 'Toggle Developer Tools')
           );
+        }
+        // 自定义 About 菜单项
+        const appMenu = menu.items.find(item => item.role === 'app' || item.label === app.name);
+        if (appMenu && appMenu.submenu && appMenu.submenu.items) {
+          const aboutItem = appMenu.submenu.items.find(item => item.role === 'about' || item.label === '关于 SDUT OJ 竞赛客户端' || item.label === 'About');
+          if (aboutItem) {
+            aboutItem.click = () => {
+              // 延迟以确保主窗口已初始化
+              setTimeout(() => {
+                // 动态 require，避免循环依赖
+                require('./utils/dialogHelper').showInfoDialog(mainWindow);
+              }, 100);
+            };
+          }
         }
         Menu.setApplicationMenu(menu);
       }
