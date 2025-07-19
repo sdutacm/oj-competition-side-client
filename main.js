@@ -194,8 +194,8 @@ app.whenReady().then(() => {
 
     // 菜单栏设置：macOS 使用系统默认菜单栏，其它平台隐藏
     if (process.platform === 'darwin') {
-      // 移除自定义菜单栏和 setMenuBarVisibility，使用系统默认
-      Menu.setApplicationMenu(null); // 可选：如需完全无菜单栏可保留，否则注释掉此行
+      // 不设置 setMenuBarVisibility，不设置 Menu.setApplicationMenu(null)
+      // 让 Electron 使用默认菜单栏（如需自定义菜单栏内容，可在其它地方设置）
     } else {
       mainWindow.setMenuBarVisibility(false);
     }
