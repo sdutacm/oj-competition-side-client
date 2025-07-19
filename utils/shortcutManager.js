@@ -26,58 +26,50 @@ class ShortcutManager {
     try {
       this.unregisterAll();
       this.setupKeyHandlers();
-      // 构建菜单模板，使用 Electron 菜单加速键
       const { Menu } = require('electron');
-      // 针对 macOS 设计专属快捷键，避免系统冲突
       const isMac = process.platform === 'darwin';
-      const macShortcuts = {
-        back: 'Ctrl+Alt+Left',    // 避免 Cmd+Left
-        forward: 'Ctrl+Alt+Right',// 避免 Cmd+Right
-        refresh: 'Ctrl+Alt+R',    // 避免 Cmd+R
-        home: 'Ctrl+Alt+H',       // 避免 Cmd+H/Cmd+Shift+H
-        info: 'Ctrl+Alt+I'        // 避免 Cmd+I/Cmd+Option+I
-      };
-      const shortcuts = isMac ? macShortcuts : this.shortcuts;
-      const template = [
-        {
-          label: '导航',
-          submenu: [
-            {
-              label: isMac ? '后退（^⌥←）' : '后退 (Ctrl+Alt+Left)',
-              accelerator: shortcuts.back,
-              click: () => this.keyHandlers.get(shortcuts.back)?.()
-            },
-            {
-              label: isMac ? '前进（^⌥→）' : '前进 (Ctrl+Alt+Right)',
-              accelerator: shortcuts.forward,
-              click: () => this.keyHandlers.get(shortcuts.forward)?.()
-            },
-            {
-              label: isMac ? '刷新（^⌥R）' : '刷新 (Ctrl+Alt+R)',
-              accelerator: shortcuts.refresh,
-              click: () => this.keyHandlers.get(shortcuts.refresh)?.()
-            },
-            {
-              label: isMac ? '主页（^⌥H）' : '主页 (Ctrl+Alt+H)',
-              accelerator: shortcuts.home,
-              click: () => this.keyHandlers.get(shortcuts.home)?.()
-            },
-            {
-              label: isMac ? '系统信息（^⌥I）' : '系统信息 (Ctrl+Alt+I)',
-              accelerator: shortcuts.info,
-              click: () => this.keyHandlers.get(shortcuts.info)?.()
-            }
-          ]
-        }
-      ];
-      const menu = Menu.buildFromTemplate(template);
-      // 仅非 macOS 设置自定义菜单和隐藏菜单栏
       if (!isMac) {
-        this.mainWindow.setMenu(menu); // 只作用于当前窗口
+        // 仅非 Mac 下自定义菜单和快捷键
+        const shortcuts = this.shortcuts;
+        const template = [
+          {
+            label: '导航',
+            submenu: [
+              {
+                label: '后退 (Ctrl+Alt+Left)',
+                accelerator: shortcuts.back,
+                click: () => this.keyHandlers.get(shortcuts.back)?.()
+              },
+              {
+                label: '前进 (Ctrl+Alt+Right)',
+                accelerator: shortcuts.forward,
+                click: () => this.keyHandlers.get(shortcuts.forward)?.()
+              },
+              {
+                label: '刷新 (Ctrl+Alt+R)',
+                accelerator: shortcuts.refresh,
+                click: () => this.keyHandlers.get(shortcuts.refresh)?.()
+              },
+              {
+                label: '主页 (Ctrl+Alt+H)',
+                accelerator: shortcuts.home,
+                click: () => this.keyHandlers.get(shortcuts.home)?.()
+              },
+              {
+                label: '系统信息 (Ctrl+Alt+I)',
+                accelerator: shortcuts.info,
+                click: () => this.keyHandlers.get(shortcuts.info)?.()
+              }
+            ]
+          }
+        ];
+        const menu = Menu.buildFromTemplate(template);
+        this.mainWindow.setMenu(menu);
         if (this.mainWindow.setMenuBarVisibility) {
           this.mainWindow.setMenuBarVisibility(false);
         }
       }
+      // Mac 下不做任何菜单和快捷键处理，保留原生
     } catch (error) {
       console.log('注册快捷键失败（已忽略）:', error.message);
     }
@@ -100,7 +92,7 @@ class ShortcutManager {
   /**
    * 处理按键输入
    */
-  handleKeyInput() { }
+  handleKeyInput() {}
 
   /**
    * 检查是否是开发者工具快捷键
