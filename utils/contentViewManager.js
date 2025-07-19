@@ -131,25 +131,31 @@ class ContentViewManager {
         }
         // Mac 下导航/刷新/主页/info 快捷键只在当前聚焦 BrowserView 生效
         if (process.platform === 'darwin' && webContents.isFocused && webContents.isFocused()) {
+          // 获取宿主窗口对象
+          let win = null;
+          try {
+            win = webContents.hostWebContents ? webContents.hostWebContents : require('electron').remote ? require('electron').remote.getCurrentWindow() : null;
+          } catch {}
+          const isWinAlive = !win || (win && !win.isDestroyed());
           // 后退 Cmd+Left
           if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Left') {
-            if (!webContents.isDestroyed() && webContents.canGoBack()) webContents.goBack();
+            if (!webContents.isDestroyed() && isWinAlive && webContents.canGoBack()) webContents.goBack();
           }
           // 前进 Cmd+Right
           else if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Right') {
-            if (!webContents.isDestroyed() && webContents.canGoForward()) webContents.goForward();
+            if (!webContents.isDestroyed() && isWinAlive && webContents.canGoForward()) webContents.goForward();
           }
           // 刷新 Cmd+R
           else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'R') {
-            if (!webContents.isDestroyed()) webContents.reload();
+            if (!webContents.isDestroyed() && isWinAlive) webContents.reload();
           }
           // 主页 Cmd+Shift+H
           else if (input.meta && input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'H') {
-            if (!webContents.isDestroyed()) webContents.loadURL(this.config.HOME_URL);
+            if (!webContents.isDestroyed() && isWinAlive) webContents.loadURL(this.config.HOME_URL);
           }
           // 系统信息 Cmd+I
           else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'I') {
-            if (!webContents.isDestroyed()) require('./dialogHelper').showInfoDialog(this.mainWindow);
+            if (!webContents.isDestroyed() && isWinAlive) require('./dialogHelper').showInfoDialog(this.mainWindow);
           }
         }
       });
