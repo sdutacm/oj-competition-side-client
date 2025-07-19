@@ -229,6 +229,11 @@ function openNewWindow(url) {
     const menu = Menu.buildFromTemplate(template);
     win.setMenu(menu);
   }
+  // 新增：所有新弹窗/子窗口全部隐藏菜单栏，彻底避免菜单栏 accelerator 污染
+  if (process.platform === 'darwin') {
+    win.setMenuBarVisibility(false);
+    win.setMenu(null);
+  }
   return win;
 }
 

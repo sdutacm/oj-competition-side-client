@@ -60,8 +60,8 @@ class ContentViewManager {
       contentView.webContents.loadURL(url);
     }
 
-    // 禁用内容视图的开发者工具相关功能
-    this.disableDevToolsForContentView();
+    // 禁用内容视图的开发者工具相关功能和快捷键，仅拦截开发者工具快捷键
+    this.disableDevToolsForContentView(contentView);
 
     // 设置内容视图的导航监听
     this.setupNavigation(contentView, targetWindow);
@@ -72,7 +72,7 @@ class ContentViewManager {
       this.contentView = contentView;
     }
 
-    // 临时调试：内容区 BrowserView 覆盖整个窗口，排查鼠标事件问题
+    // 设置内容区 BrowserView 大小
     const [width, height] = targetWindow.getContentSize();
     let y = 0;
     let h = height;
@@ -84,26 +84,34 @@ class ContentViewManager {
     contentView.setBounds({ x: 0, y, width, height: h });
     contentView.setAutoResize({ width: true, height: true });
 
-    // 新增：确保每次新建内容视图都自动获得焦点，快捷键才生效
+    // 新建内容视图自动获得焦点，确保快捷键生效
     if (contentView.webContents && contentView.webContents.focus) {
       setTimeout(() => {
         try { contentView.webContents.focus(); } catch {}
       }, 0);
     }
 
+    // 新弹窗/子窗口彻底隐藏菜单栏，避免 accelerator 污染
+    if (targetWindow !== this.mainWindow) {
+      try {
+        targetWindow.setMenuBarVisibility(false);
+        targetWindow.setMenu(null);
+      } catch {}
+    }
+
     return contentView;
   }
 
   /**
-   * 禁用内容视图的开发者工具
+   * 禁用内容视图的开发者工具，仅拦截开发者工具快捷键，其他快捷键全部放行
+   * 导航/刷新/主页/info 等快捷键只在当前聚焦 BrowserView 生效
    */
   disableDevToolsForContentView(contentView = this.contentView) {
     const webContents = contentView?.webContents;
     if (webContents) {
       webContents.removeAllListeners('before-input-event');
-      // 只保留禁用开发者工具快捷键
       webContents.on('before-input-event', (event, input) => {
-        // 开发者工具快捷键拦截
+        // 拦截开发者工具快捷键
         if (
           input.key === 'F12' ||
           (input.control && input.shift && input.key === 'I') ||
@@ -116,7 +124,7 @@ class ContentViewManager {
           event.preventDefault();
           return;
         }
-        // Mac 下处理导航/刷新/主页/info快捷键，且只在当前 BrowserView 聚焦时生效
+        // Mac 下导航/刷新/主页/info 快捷键只在当前聚焦 BrowserView 生效
         if (process.platform === 'darwin' && webContents.isFocused && webContents.isFocused()) {
           // 后退 Cmd+Left
           if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Left') {
