@@ -84,6 +84,13 @@ class ContentViewManager {
     contentView.setBounds({ x: 0, y, width, height: h });
     contentView.setAutoResize({ width: true, height: true });
 
+    // 新增：确保每次新建内容视图都自动获得焦点，快捷键才生效
+    if (contentView.webContents && contentView.webContents.focus) {
+      setTimeout(() => {
+        try { contentView.webContents.focus(); } catch {}
+      }, 0);
+    }
+
     return contentView;
   }
 
