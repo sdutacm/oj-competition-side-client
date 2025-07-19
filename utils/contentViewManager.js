@@ -129,25 +129,39 @@ class ContentViewManager {
           event.preventDefault();
           return;
         }
-        // Mac 下导航/刷新/主页/info 快捷键只在当前聚焦 BrowserView 生效
-        if (process.platform === 'darwin' && webContents.isFocused && webContents.isFocused()) {
-          // 获取宿主窗口对象
+        // Mac 下导航/刷新/主页/info 快捷键优化：不再强依赖 isFocused，提升兼容性
+        if (process.platform === 'darwin') {
           let win = null;
           try {
             win = webContents.hostWebContents ? webContents.hostWebContents : require('electron').remote ? require('electron').remote.getCurrentWindow() : null;
           } catch {}
           const isWinAlive = !win || (win && !win.isDestroyed());
-          // 后退 Cmd+Left
-          if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Left') {
-            if (!webContents.isDestroyed() && isWinAlive && webContents.canGoBack()) webContents.goBack();
+          // 后退 Cmd+Left/Cmd+ArrowLeft
+          if (
+            input.meta && !input.shift && !input.alt && !input.control &&
+            (input.key === 'Left' || input.key === 'ArrowLeft')
+          ) {
+            if (!webContents.isDestroyed() && isWinAlive && webContents.canGoBack()) {
+              webContents.goBack();
+              event.preventDefault();
+            }
           }
-          // 前进 Cmd+Right
-          else if (input.meta && !input.shift && !input.alt && !input.control && input.key === 'Right') {
-            if (!webContents.isDestroyed() && isWinAlive && webContents.canGoForward()) webContents.goForward();
+          // 前进 Cmd+Right/Cmd+ArrowRight
+          else if (
+            input.meta && !input.shift && !input.alt && !input.control &&
+            (input.key === 'Right' || input.key === 'ArrowRight')
+          ) {
+            if (!webContents.isDestroyed() && isWinAlive && webContents.canGoForward()) {
+              webContents.goForward();
+              event.preventDefault();
+            }
           }
           // 刷新 Cmd+R
           else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'R') {
-            if (!webContents.isDestroyed() && isWinAlive) webContents.reload();
+            if (!webContents.isDestroyed() && isWinAlive) {
+              webContents.reload();
+              event.preventDefault();
+            }
           }
           // 主页 Cmd+Shift+H
           else if (input.meta && input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'H') {
@@ -159,11 +173,15 @@ class ContentViewManager {
                 homeUrl = u.origin + '/';
               } catch {}
               webContents.loadURL(homeUrl);
+              event.preventDefault();
             }
           }
           // 系统信息 Cmd+I
           else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'I') {
-            if (!webContents.isDestroyed() && isWinAlive) require('./dialogHelper').showInfoDialog(this.mainWindow);
+            if (!webContents.isDestroyed() && isWinAlive) {
+              require('./dialogHelper').showInfoDialog(this.mainWindow);
+              event.preventDefault();
+            }
           }
         }
       });
