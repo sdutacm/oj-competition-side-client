@@ -192,10 +192,38 @@ app.whenReady().then(() => {
     // 设置窗口标题
     mainWindow.setTitle('SDUT OJ 竞赛客户端');
 
-    // 菜单栏设置：macOS 使用系统默认菜单栏，其它平台隐藏
+    // 菜单栏设置：macOS 保留自定义导航栏，但自定义 About 菜单项
     if (process.platform === 'darwin') {
-      // 不设置 setMenuBarVisibility，不设置 Menu.setApplicationMenu(null)
-      // 让 Electron 使用默认菜单栏（如需自定义菜单栏内容，可在其它地方设置）
+      const appName = app.getName();
+      const template = [
+        {
+          label: appName,
+          submenu: [
+            {
+              label: `关于 ${appName}`,
+              role: 'about',
+              click: () => {
+                // 触发自定义关于窗口
+                if (global.showInfoDialog) {
+                  global.showInfoDialog(mainWindow);
+                } else if (shortcutManager && shortcutManager.handleToolbarAction) {
+                  shortcutManager.handleToolbarAction('info');
+                }
+              }
+            },
+            { type: 'separator' },
+            { role: 'services' },
+            { type: 'separator' },
+            { role: 'hide' },
+            { role: 'hideothers' },
+            { role: 'unhide' },
+            { type: 'separator' },
+            { role: 'quit' }
+          ]
+        }
+      ];
+      const menu = Menu.buildFromTemplate(template);
+      Menu.setApplicationMenu(menu);
     } else {
       mainWindow.setMenuBarVisibility(false);
     }
