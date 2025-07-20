@@ -258,15 +258,40 @@ class ContentViewManager {
         showBlockedDialog(targetWindow, targetDomain, checkDomainAllowed(targetDomain, this.config, false).reason, 'default');
         return;
       }
-      // 2. 在白名单但不是主域名，且当前页面是主窗口，且目标域名和当前域名不同，且 targetUrl !== 当前页面
+      // 2. 只有最终落地页在白名单/主域名时才新开窗口，否则主窗口直接拦截弹窗，不新开窗口
       if (
         targetWindow === this.mainWindow &&
         isWhiteListButNotMainDomain(targetDomain, currentDomain, this.config) &&
         targetDomain !== currentDomain &&
         targetUrl !== webContents.getURL()
       ) {
+        // 先预加载目标页面，判断最终落地页是否在白名单/主域名
         event.preventDefault();
-        this.openNewWindow(targetUrl, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
+        const { session } = webContents;
+        session.resolveProxy(targetUrl).then(() => {
+          // 用一个隐藏的 BrowserView 预加载目标页面
+          const testView = new BrowserView({
+            webPreferences: {
+              nodeIntegration: false,
+              contextIsolation: true,
+              devTools: false,
+            }
+          });
+          testView.webContents.once('did-finish-load', () => {
+            const finalUrl = testView.webContents.getURL();
+            const finalDomain = getHostname(finalUrl);
+            if (isInWhiteList(finalDomain, this.config)) {
+              this.openNewWindow(finalUrl, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
+            } else {
+              showBlockedDialog(targetWindow, finalDomain, checkDomainAllowed(finalDomain, this.config, false).reason, 'default');
+            }
+            testView.webContents.destroy();
+          });
+          testView.webContents.once('did-fail-load', () => {
+            testView.webContents.destroy();
+          });
+          testView.webContents.loadURL(targetUrl);
+        });
         return;
       }
       // 允许跳转
@@ -280,7 +305,7 @@ class ContentViewManager {
         showBlockedDialog(targetWindow, targetDomain, checkDomainAllowed(targetDomain, this.config, false).reason, 'redirect');
         return;
       }
-      // 2. 在白名单但不是主域名，且当前页面是主窗口，且目标域名和当前域名不同，且 targetUrl !== 当前页面
+      // 2. 只有最终落地页在白名单/主域名时才新开窗口，否则主窗口直接拦截弹窗，不新开窗口
       if (
         targetWindow === this.mainWindow &&
         isWhiteListButNotMainDomain(targetDomain, currentDomain, this.config) &&
@@ -288,7 +313,30 @@ class ContentViewManager {
         targetUrl !== webContents.getURL()
       ) {
         event.preventDefault();
-        this.openNewWindow(targetUrl, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
+        const { session } = webContents;
+        session.resolveProxy(targetUrl).then(() => {
+          const testView = new BrowserView({
+            webPreferences: {
+              nodeIntegration: false,
+              contextIsolation: true,
+              devTools: false,
+            }
+          });
+          testView.webContents.once('did-finish-load', () => {
+            const finalUrl = testView.webContents.getURL();
+            const finalDomain = getHostname(finalUrl);
+            if (isInWhiteList(finalDomain, this.config)) {
+              this.openNewWindow(finalUrl, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
+            } else {
+              showBlockedDialog(targetWindow, finalDomain, checkDomainAllowed(finalDomain, this.config, false).reason, 'redirect');
+            }
+            testView.webContents.destroy();
+          });
+          testView.webContents.once('did-fail-load', () => {
+            testView.webContents.destroy();
+          });
+          testView.webContents.loadURL(targetUrl);
+        });
         return;
       }
       // 允许跳转
