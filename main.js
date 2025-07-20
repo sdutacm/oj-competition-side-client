@@ -306,18 +306,6 @@ app.whenReady().then(() => {
 
     // 设置窗口标题
     mainWindow.setTitle('SDUT OJ 竞赛客户端');
-
-    // （已移除主窗口全局快捷键监听，快捷键只在各自窗口 webContents 上监听）
-
-    // Mac 下自定义菜单栏，About 菜单项弹出 info，View 菜单项功能全部手动实现
-    // if (process.platform === 'darwin') {
-    //   const { showInfoDialog } = require('./utils/dialogHelper');
-    //   const template = [ ... ];
-    //   const menu = Menu.buildFromTemplate(template);
-    //   Menu.setApplicationMenu(menu);
-    // } else {
-    //   mainWindow.setMenuBarVisibility(false);
-    // }
     // 统一所有平台都隐藏菜单栏，彻底禁用 accelerator
     try {
       mainWindow.setMenuBarVisibility(false);
