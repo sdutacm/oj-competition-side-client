@@ -251,22 +251,11 @@ class ContentViewManager {
 
     webContents.on('will-navigate', (event, targetUrl) => {
       const targetDomain = getHostname(targetUrl);
-      const currentDomain = getHostname(webContents.getURL());
       // 1. 不在白名单/主域名，直接拦截
       if (!isInWhiteList(targetDomain, this.config)) {
         event.preventDefault();
         console.log('[拦截] will-navigate 弹窗提示', targetDomain);
         showBlockedDialog(targetWindow, targetDomain, checkDomainAllowed(targetDomain, this.config, false).reason, 'default');
-        return;
-      }
-      // 2. 在白名单但不是主域名，且当前页面是主窗口，且 targetUrl !== 当前页面
-      if (
-        targetWindow === this.mainWindow &&
-        isWhiteListButNotMainDomain(targetDomain, currentDomain, this.config) &&
-        targetUrl !== webContents.getURL()
-      ) {
-        event.preventDefault();
-        this.openNewWindow(targetUrl, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
         return;
       }
       // 允许跳转，无需额外处理
@@ -284,11 +273,11 @@ class ContentViewManager {
       // 2. 在白名单但不是主域名，且当前页面是主窗口，且 targetUrl !== 当前页面
       if (
         targetWindow === this.mainWindow &&
-        isWhiteListButNotMainDomain(targetDomain, currentDomain, this.config) &&
+        isWhiteListButNotMainDomain(targetDomain, getHostname(webContents.getURL()), this.config) &&
         targetUrl !== webContents.getURL()
       ) {
         event.preventDefault();
-        // 不立即 openNewWindow，等 will-navigate 触发时再处理
+        this.openNewWindow(targetUrl, this.mainWindow.getSize ? this.mainWindow.getSize() : [1200, 800]);
         return;
       }
       // 允许跳转，无需额外处理
