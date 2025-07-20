@@ -1,9 +1,7 @@
 const { BrowserView } = require('electron');
 const { getHostname } = require('./urlHelper');
 const { showBlockedDialog } = require('./dialogHelper');
-const { checkDomainAllowed, interceptDomain } = require('./domainHelper');
-const fs = require('fs');
-const path = require('path');
+const { checkDomainAllowed } = require('./domainHelper');
 const { getCustomUserAgent } = require('./uaHelper');
 
 class ContentViewManager {

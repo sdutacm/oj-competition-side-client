@@ -1,7 +1,5 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
-
-// 顶部统一 require 管理器类
 const ToolbarManager = require('./utils/toolbarManager');
 const ContentViewManager = require('./utils/contentViewManager');
 const ShortcutManager = require('./utils/shortcutManager');
