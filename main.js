@@ -300,8 +300,15 @@ app.whenReady().then(() => {
     });
 
     // 设置自定义 User-Agent
+    const fs = require('fs');
+    const path = require('path');
+    let pkgVersion = '1.0.0';
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+      if (pkg && pkg.version) pkgVersion = pkg.version;
+    } catch {}
     const defaultUserAgent = mainWindow.webContents.getUserAgent();
-    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
+    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${pkgVersion}`;
     mainWindow.webContents.setUserAgent(customUserAgent);
 
     // 设置窗口标题
