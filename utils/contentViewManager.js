@@ -4,12 +4,7 @@ const { showBlockedDialog } = require('./dialogHelper');
 const { checkDomainAllowed, interceptDomain } = require('./domainHelper');
 const fs = require('fs');
 const path = require('path');
-let clientVersion = '1.0.0';
-
-try {
-  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
-  if (pkg && pkg.version) clientVersion = pkg.version;
-} catch { }
+const { getCustomUserAgent } = require('./uaHelper');
 
 class ContentViewManager {
   constructor(mainWindow, config, openNewWindow) {
@@ -48,7 +43,7 @@ class ContentViewManager {
     // 设置自定义 User-Agent
     const webContents = contentView.webContents;
     const defaultUserAgent = webContents.getUserAgent();
-    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${clientVersion}`;
+    const customUserAgent = getCustomUserAgent(defaultUserAgent);
     webContents.setUserAgent(customUserAgent);
 
     // 只允许加载白名单主域名

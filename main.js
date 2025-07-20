@@ -8,6 +8,7 @@ const ShortcutManager = require('./utils/shortcutManager');
 const { LayoutManager } = require('./utils/windowHelper');
 const PlatformHelper = require('./utils/platformHelper');
 const { interceptDomain } = require('./utils/domainHelper');
+const { getCustomUserAgent } = require('./utils/uaHelper');
 
 let mainWindow = null;
 let toolbarManager = null;
@@ -300,13 +301,8 @@ app.whenReady().then(() => {
     });
 
     // 设置自定义 User-Agent
-    let pkgVersion = '1.0.0';
-    try {
-      const pkg = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
-      if (pkg && pkg.version) pkgVersion = pkg.version;
-    } catch {}
     const defaultUserAgent = mainWindow.webContents.getUserAgent();
-    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${pkgVersion}`;
+    const customUserAgent = getCustomUserAgent(defaultUserAgent);
     mainWindow.webContents.setUserAgent(customUserAgent);
 
     // 设置窗口标题
