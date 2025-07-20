@@ -300,11 +300,9 @@ app.whenReady().then(() => {
     });
 
     // 设置自定义 User-Agent
-    const fs = require('fs');
-    const path = require('path');
     let pkgVersion = '1.0.0';
     try {
-      const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+      const pkg = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
       if (pkg && pkg.version) pkgVersion = pkg.version;
     } catch {}
     const defaultUserAgent = mainWindow.webContents.getUserAgent();
