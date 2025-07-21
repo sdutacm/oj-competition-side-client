@@ -60,62 +60,231 @@ function showBlockedDialog(parentWindow, hostname, reason, type = 'default', cal
   ];
   const randomTitle = titles[Math.floor(Math.random() * titles.length)];
   
-  // Windows 系统 emoji 优化处理
+  // Windows 系统使用自定义弹窗以支持彩色 emoji
   const isWindows = process.platform === 'win32';
-  let finalMessage = randomMessage;
-  let finalDetail = randomDetail;
-  let finalTitle = randomTitle;
   
   if (isWindows) {
-    // Windows 系统使用更兼容的 emoji 或者文字替代
-    const windowsMessages = {
-      default: [
-        '比赛期间不能访问这个网站哦！ 🚫',
-        '注意：这里在比赛模式下无法打开 ⚠️',
-        '抱歉，比赛规则限制了该网站的访问 🛡️',
-        '请专注比赛，暂时无法访问此页面 🏆',
-        '当前环境仅允许访问指定网站 🔒',
-        '比赛模式已开启，请专心答题！ 😊'
-      ],
-      redirect: [
-        '检测到页面重定向，目标网站不在允许范围！ 🚫',
-        '页面重定向被拦截，保护你的比赛环境！ 🛡️'
-      ]
+    // Windows 使用自定义 HTML 弹窗
+    showCustomBlockedDialog(parentWindow, randomTitle, randomMessage, randomDetail, randomButton, callback);
+  } else {
+    // Mac/Linux 使用原生弹窗
+    const opts = {
+      type: 'info',
+      title: randomTitle,
+      message: randomMessage,
+      detail: randomDetail,
+      buttons: [randomButton],
+      defaultId: 0,
+      icon: null
     };
-    const windowsTitles = [
-      '比赛模式提醒 🏅',
-      '访问限制通知 🚦', 
-      '安全提示 🔒',
-      '访问被拦截 🚫',
-      '专注比赛 🏆',
-      '系统提示 ℹ️'
-    ];
-    const winMsgArr = windowsMessages[type] || windowsMessages.default;
-    finalMessage = winMsgArr[Math.floor(Math.random() * winMsgArr.length)];
-    finalTitle = windowsTitles[Math.floor(Math.random() * windowsTitles.length)];
-  }
-  
-  // Mac 下弹窗需 alwaysOnTop 并聚焦，防止被主窗口遮挡
-  const opts = {
-    type: 'info',
-    title: finalTitle,
-    message: finalMessage,
-    detail: finalDetail,
-    buttons: [randomButton],
-    defaultId: 0,
-    icon: null
-  };
-  if (process.platform === 'darwin') {
-    opts.message = '🚦 ' + finalMessage;
-    opts.modal = true;
-    opts.noLink = true;
-  }
-  dialog.showMessageBox(parentWindow, opts).then(() => {
-    if (parentWindow && process.platform === 'darwin') {
-      try { parentWindow.focus(); } catch {}
+    if (process.platform === 'darwin') {
+      opts.message = '🚦 ' + randomMessage;
+      opts.modal = true;
+      opts.noLink = true;
     }
+    dialog.showMessageBox(parentWindow, opts).then(() => {
+      if (parentWindow && process.platform === 'darwin') {
+        try { parentWindow.focus(); } catch {}
+      }
+      if (typeof callback === 'function') callback();
+    });
+  }
+}
+
+/**
+ * Windows 专用的自定义拦截弹窗（支持彩色 emoji）
+ */
+function showCustomBlockedDialog(parentWindow, title, message, detail, buttonText, callback) {
+  // 创建自定义弹窗窗口
+  const dialogWindow = new BrowserWindow({
+    width: 450,
+    height: 280,
+    parent: parentWindow,
+    modal: true,
+    resizable: false,
+    show: false,
+    frame: true,
+    titleBarStyle: 'default',
+    closable: true,
+    minimizable: false,
+    maximizable: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      devTools: false,
+    }
+  });
+
+  // 隐藏菜单栏
+  dialogWindow.setMenuBarVisibility(false);
+
+  // 创建 HTML 内容
+  const htmlContent = `<!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: "Segoe UI", "Segoe UI Emoji", "Microsoft YaHei", "Noto Color Emoji", "Apple Color Emoji", sans-serif;
+        background: #f5f5f5;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+        /* 强制彩色 emoji */
+        font-variant-emoji: emoji;
+      }
+      
+      .dialog-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      
+      .dialog-header {
+        padding: 20px 20px 10px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      
+      .dialog-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .dialog-body {
+        padding: 20px;
+        flex: 1;
+        overflow-y: auto;
+      }
+      
+      .dialog-message {
+        font-size: 14px;
+        color: #444;
+        margin-bottom: 15px;
+        line-height: 1.5;
+      }
+      
+      .dialog-detail {
+        font-size: 13px;
+        color: #666;
+        line-height: 1.6;
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 6px;
+        white-space: pre-line;
+      }
+      
+      .dialog-footer {
+        padding: 15px 20px;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: flex-end;
+      }
+      
+      .dialog-button {
+        background: #007acc;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 4px;
+        font-size: 13px;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background-color 0.2s;
+      }
+      
+      .dialog-button:hover {
+        background: #005a9e;
+      }
+      
+      .dialog-button:active {
+        transform: translateY(1px);
+      }
+      
+      /* 确保 emoji 显示为彩色 */
+      .emoji {
+        font-family: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif;
+        font-variant-emoji: emoji;
+      }
+      
+      /* Windows 10/11 emoji 优化 */
+      @media screen and (-ms-high-contrast: none) {
+        body, .dialog-title, .dialog-message, .dialog-detail {
+          font-family: "Segoe UI", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dialog-container">
+      <div class="dialog-header">
+        <div class="dialog-title">${title}</div>
+      </div>
+      <div class="dialog-body">
+        <div class="dialog-message">${message}</div>
+        <div class="dialog-detail">${detail}</div>
+      </div>
+      <div class="dialog-footer">
+        <button class="dialog-button" onclick="closeDialog()">${buttonText}</button>
+      </div>
+    </div>
+    
+    <script>
+      function closeDialog() {
+        console.log('CLOSE_DIALOG');
+      }
+      
+      // ESC 键关闭
+      document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+          closeDialog();
+        }
+      });
+      
+      // 自动聚焦按钮
+      window.addEventListener('load', function() {
+        document.querySelector('.dialog-button').focus();
+      });
+    </script>
+  </body>
+  </html>`;
+
+  const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+  dialogWindow.loadURL(dataURL);
+
+  // 监听控制台消息
+  dialogWindow.webContents.on('console-message', (event, level, message) => {
+    if (message === 'CLOSE_DIALOG') {
+      dialogWindow.close();
+    }
+  });
+
+  // 窗口关闭时的回调
+  dialogWindow.on('closed', () => {
     if (typeof callback === 'function') callback();
   });
+
+  dialogWindow.once('ready-to-show', () => {
+    dialogWindow.show();
+  });
+
+  return dialogWindow;
 }
 
 /**
