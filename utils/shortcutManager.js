@@ -117,6 +117,15 @@ class ShortcutManager {
         const menu = Menu.buildFromTemplate(template);
         this.mainWindow.setMenu(menu);
         // 不隐藏菜单栏，保留原生体验
+        // 主动聚焦内容区，确保快捷键可用
+        try {
+          const webContents = this.contentViewManager.getWebContents();
+          if (webContents && webContents.focus) {
+            webContents.focus();
+          }
+        } catch (e) {
+          // 忽略聚焦异常
+        }
       }
     } catch (error) {
       console.log('注册快捷键失败（已忽略）:', error.message);
