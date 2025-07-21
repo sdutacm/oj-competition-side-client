@@ -247,7 +247,7 @@ class ShortcutManager {
       const webContents = this.contentViewManager.getWebContents();
       if (webContents) {
         try {
-          webContents.loadURL(this.initialUrl);
+          webContents.loadURL(this.initialUrl); // 统一使用 initialUrl
         } catch (error) {
           console.log('主页跳转失败（已忽略）:', error.message);
         }
