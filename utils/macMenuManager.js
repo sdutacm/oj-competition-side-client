@@ -74,7 +74,7 @@ class MacMenuManager {
           },
           { type: 'separator' },
           {
-            label: i18n.t('menu.hide', { appName }),
+            label: i18n.t('menu.hide', { appName: appName }),
             accelerator: 'Cmd+H',
             role: 'hide'
           },
@@ -89,7 +89,7 @@ class MacMenuManager {
           },
           { type: 'separator' },
           {
-            label: i18n.t('menu.quit', { appName }),
+            label: i18n.t('menu.quit', { appName: appName }),
             accelerator: 'Cmd+Q',
             click: () => {
               if (this.mainWindow) {
@@ -123,42 +123,42 @@ class MacMenuManager {
           {
             label: i18n.t('menu.undo'),
             accelerator: 'Cmd+Z',
-            role: 'undo'
+            click: () => this.executeEditAction('undo')
           },
           {
             label: i18n.t('menu.redo'),
             accelerator: 'Shift+Cmd+Z',
-            role: 'redo'
+            click: () => this.executeEditAction('redo')
           },
           { type: 'separator' },
           {
             label: i18n.t('menu.cut'),
             accelerator: 'Cmd+X',
-            role: 'cut'
+            click: () => this.executeEditAction('cut')
           },
           {
             label: i18n.t('menu.copy'),
             accelerator: 'Cmd+C',
-            role: 'copy'
+            click: () => this.executeEditAction('copy')
           },
           {
             label: i18n.t('menu.paste'),
             accelerator: 'Cmd+V',
-            role: 'paste'
+            click: () => this.executeEditAction('paste')
           },
           {
             label: i18n.t('menu.pasteAndMatchStyle'),
             accelerator: 'Shift+Cmd+V',
-            role: 'pasteandmatchstyle'
+            click: () => this.executeEditAction('pasteAndMatchStyle')
           },
           {
             label: i18n.t('menu.delete'),
-            role: 'delete'
+            click: () => this.executeEditAction('delete')
           },
           {
             label: i18n.t('menu.selectAll'),
             accelerator: 'Cmd+A',
-            role: 'selectall'
+            click: () => this.executeEditAction('selectAll')
           },
           { type: 'separator' },
           {
@@ -250,11 +250,23 @@ class MacMenuManager {
           {
             label: i18n.t('menu.minimize'),
             accelerator: 'Cmd+M',
-            role: 'minimize'
+            click: () => {
+              if (this.mainWindow) {
+                this.mainWindow.minimize();
+              }
+            }
           },
           {
             label: i18n.t('menu.zoom'),
-            role: 'zoom'
+            click: () => {
+              if (this.mainWindow) {
+                if (this.mainWindow.isMaximized()) {
+                  this.mainWindow.unmaximize();
+                } else {
+                  this.mainWindow.maximize();
+                }
+              }
+            }
           },
           { type: 'separator' },
           {
@@ -397,6 +409,45 @@ class MacMenuManager {
       const wc = this.mainWindow._contentViewManager.getWebContents();
       if (wc) {
         wc.reloadIgnoringCache();
+      }
+    }
+  }
+
+  /**
+   * 执行编辑操作
+   */
+  executeEditAction(action) {
+    if (this.mainWindow && this.mainWindow._contentViewManager) {
+      const wc = this.mainWindow._contentViewManager.getWebContents();
+      if (wc) {
+        switch (action) {
+          case 'undo':
+            wc.undo();
+            break;
+          case 'redo':
+            wc.redo();
+            break;
+          case 'cut':
+            wc.cut();
+            break;
+          case 'copy':
+            wc.copy();
+            break;
+          case 'paste':
+            wc.paste();
+            break;
+          case 'pasteAndMatchStyle':
+            wc.pasteAndMatchStyle();
+            break;
+          case 'delete':
+            wc.delete();
+            break;
+          case 'selectAll':
+            wc.selectAll();
+            break;
+          default:
+            console.warn('未知的编辑操作:', action);
+        }
       }
     }
   }
