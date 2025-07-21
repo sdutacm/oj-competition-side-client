@@ -353,7 +353,7 @@ class ShortcutManager {
           break;
         case 'home':
           try {
-            webContents.loadURL(this.homeUrl);
+            webContents.loadURL(this.initialUrl); // 统一使用 initialUrl
           } catch (error) {
             console.log('主页跳转失败（已忽略）:', error.message);
           }
