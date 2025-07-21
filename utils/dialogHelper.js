@@ -59,18 +59,54 @@ function showBlockedDialog(parentWindow, hostname, reason, type = 'default', cal
     '系统提示 ℹ️'
   ];
   const randomTitle = titles[Math.floor(Math.random() * titles.length)];
+  
+  // Windows 系统 emoji 优化处理
+  const isWindows = process.platform === 'win32';
+  let finalMessage = randomMessage;
+  let finalDetail = randomDetail;
+  let finalTitle = randomTitle;
+  
+  if (isWindows) {
+    // Windows 系统使用更兼容的 emoji 或者文字替代
+    const windowsMessages = {
+      default: [
+        '比赛期间不能访问这个网站哦！ 🚫',
+        '注意：这里在比赛模式下无法打开 ⚠️',
+        '抱歉，比赛规则限制了该网站的访问 🛡️',
+        '请专注比赛，暂时无法访问此页面 🏆',
+        '当前环境仅允许访问指定网站 🔒',
+        '比赛模式已开启，请专心答题！ 😊'
+      ],
+      redirect: [
+        '检测到页面重定向，目标网站不在允许范围！ 🚫',
+        '页面重定向被拦截，保护你的比赛环境！ 🛡️'
+      ]
+    };
+    const windowsTitles = [
+      '比赛模式提醒 🏅',
+      '访问限制通知 🚦', 
+      '安全提示 🔒',
+      '访问被拦截 🚫',
+      '专注比赛 🏆',
+      '系统提示 ℹ️'
+    ];
+    const winMsgArr = windowsMessages[type] || windowsMessages.default;
+    finalMessage = winMsgArr[Math.floor(Math.random() * winMsgArr.length)];
+    finalTitle = windowsTitles[Math.floor(Math.random() * windowsTitles.length)];
+  }
+  
   // Mac 下弹窗需 alwaysOnTop 并聚焦，防止被主窗口遮挡
   const opts = {
     type: 'info',
-    title: randomTitle,
-    message: randomMessage,
-    detail: randomDetail,
+    title: finalTitle,
+    message: finalMessage,
+    detail: finalDetail,
     buttons: [randomButton],
     defaultId: 0,
     icon: null
   };
   if (process.platform === 'darwin') {
-    opts.message = '🚦 ' + randomMessage;
+    opts.message = '🚦 ' + finalMessage;
     opts.modal = true;
     opts.noLink = true;
   }
@@ -206,7 +242,7 @@ function showInfoDialog(parentWindow) {
         }
         
         body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Emoji', Roboto, 'Microsoft YaHei', 'Noto Color Emoji', 'Apple Color Emoji', sans-serif;
           background: var(--bg-color);
           color: var(--text-color);
           line-height: 1.6;
@@ -216,6 +252,40 @@ function showInfoDialog(parentWindow) {
           display: flex;
           flex-direction: column;
           overflow: hidden; /* 隐藏滚动条 */
+          /* 强制使用彩色 emoji */
+          font-variant-emoji: emoji;
+        }
+
+        /* Windows 系统 emoji 字体优化 */
+        .emoji, .emoji-text {
+          font-family: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", "Twemoji Mozilla", sans-serif;
+          font-feature-settings: "liga" off;
+        }
+        
+        /* 强制所有 emoji 使用彩色字体 */
+        * {
+          font-variant-emoji: emoji;
+        }
+        
+        /* Windows 特定的 emoji 优化 */
+        @media (min-width: 0) {
+          .app-name, .app-version, .app-description, .links-title, .copyright {
+            font-family: "Segoe UI", "Segoe UI Emoji", "Microsoft YaHei", "Apple Color Emoji", sans-serif;
+          }
+        }
+        
+        /* 针对 Windows 的额外 emoji 渲染优化 */
+        @supports (font-variant-emoji: emoji) {
+          * {
+            font-variant-emoji: emoji;
+          }
+        }
+        
+        /* 为旧版 Windows 提供备用方案 */
+        @media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+          * {
+            font-family: "Segoe UI", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+          }
         }
 
         /* 主题变量 */
