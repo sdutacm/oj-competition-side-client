@@ -62,11 +62,6 @@ class MacMenuManager {
           },
           { type: 'separator' },
           {
-            label: i18n.t('menu.services'),
-            submenu: []
-          },
-          { type: 'separator' },
-          {
             label: i18n.t('menu.hide', { appName: appName }),
             accelerator: 'Cmd+H',
             click: () => {
@@ -226,7 +221,7 @@ class MacMenuManager {
           },
           {
             label: i18n.t('menu.zoomIn'),
-            accelerator: 'Cmd+Plus',
+            accelerator: 'Cmd+=',
             click: () => this.zoomIn()
           },
           {
@@ -239,12 +234,6 @@ class MacMenuManager {
             label: i18n.t('menu.toggleFullscreen'),
             accelerator: 'Ctrl+Cmd+F',
             click: () => this.toggleFullscreen()
-          },
-          { type: 'separator' },
-          {
-            label: i18n.t('menu.toggleDevTools'),
-            accelerator: 'Alt+Cmd+I',
-            click: () => this.toggleDevTools()
           }
         ]
       },
@@ -566,7 +555,7 @@ class MacMenuManager {
   }
 
   reportIssue() {
-    shell.openExternal('https://github.com/ATRIOR-LCL/oj-client/issues');
+    shell.openExternal('https://github.com/ATRIOR-LCL/oj-competition-side-client/issues');
   }
 
   learnMore() {
