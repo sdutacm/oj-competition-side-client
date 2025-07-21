@@ -366,10 +366,13 @@ app.whenReady().then(() => {
 
     // 设置窗口标题
     mainWindow.setTitle('SDUT OJ 竞赛客户端');
-    // 统一所有平台都隐藏菜单栏，彻底禁用 accelerator
+    // 隐藏菜单栏，但保留菜单以支持快捷键（除 Mac 外）
     try {
       mainWindow.setMenuBarVisibility(false);
-      mainWindow.setMenu(null);
+      // 只在 Mac 系统上清除菜单，其他系统保留菜单以支持快捷键
+      if (process.platform === 'darwin') {
+        mainWindow.setMenu(null);
+      }
     } catch {}
 
     // 禁用开发者工具相关功能
@@ -534,10 +537,16 @@ function setupLayout() {
 app.on('browser-window-created', (event, win) => {
   try {
     win.setMenuBarVisibility(false);
-    win.setMenu(null);
+    // 只对新弹窗清除菜单，主窗口需要保留菜单以支持快捷键
+    if (win !== mainWindow) {
+      win.setMenu(null);
+    }
   } catch {}
 });
-Menu.setApplicationMenu(null);
+// 只在 Mac 系统上清除全局应用菜单，其他系统保留以支持快捷键
+if (process.platform === 'darwin') {
+  Menu.setApplicationMenu(null);
+}
 
 app.on('will-quit', () => {
   // 取消注册所有快捷键

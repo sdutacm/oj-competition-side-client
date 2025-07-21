@@ -36,27 +36,27 @@ class ShortcutManager {
             label: '导航',
             submenu: [
               {
-                label: '后退 (Ctrl+Alt+Left)',
+                label: '后退 (Alt+Left)',
                 accelerator: shortcuts.back,
                 click: () => this.keyHandlers.get(shortcuts.back)?.()
               },
               {
-                label: '前进 (Ctrl+Alt+Right)',
+                label: '前进 (Alt+Right)',
                 accelerator: shortcuts.forward,
                 click: () => this.keyHandlers.get(shortcuts.forward)?.()
               },
               {
-                label: '刷新 (Ctrl+Alt+R)',
+                label: '刷新 (F5/Ctrl+R)',
                 accelerator: shortcuts.refresh,
                 click: () => this.keyHandlers.get(shortcuts.refresh)?.()
               },
               {
-                label: '主页 (Ctrl+Alt+H)',
+                label: '主页 (Alt+H)',
                 accelerator: shortcuts.home,
                 click: () => this.keyHandlers.get(shortcuts.home)?.()
               },
               {
-                label: '系统信息 (Ctrl+Alt+I)',
+                label: '系统信息 (Alt+I)',
                 accelerator: shortcuts.info,
                 click: () => this.keyHandlers.get(shortcuts.info)?.()
               }
@@ -115,11 +115,11 @@ class ShortcutManager {
   setupKeyHandlers() {
     const isMac = process.platform === 'darwin';
     const macShortcuts = {
-      back: 'Ctrl+Alt+Left',
-      forward: 'Ctrl+Alt+Right',
-      refresh: 'Ctrl+Alt+R',
-      home: 'Ctrl+Alt+H',
-      info: 'Ctrl+Alt+I'
+      back: 'Cmd+Left',
+      forward: 'Cmd+Right',
+      refresh: 'Cmd+R',
+      home: 'Cmd+Shift+H',
+      info: 'Cmd+I'
     };
     const shortcuts = isMac ? macShortcuts : this.shortcuts;
     // 后退
