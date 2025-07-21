@@ -39,6 +39,7 @@ class ShortcutManager {
             // 只有同站点且路径不同才更新
             if (oldUrl.origin === newUrl.origin && oldUrl.pathname !== newUrl.pathname) {
               this.initialUrl = url;
+              console.log('智能更新 initialUrl:', url);
             }
           } catch {}
         });

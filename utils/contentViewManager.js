@@ -185,13 +185,23 @@ class ContentViewManager {
           // 主页 Cmd+Shift+H
           else if (input.meta && input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'H') {
             if (!webContents.isDestroyed() && isWinAlive) {
-              let homeUrl = this.config.HOME_URL;
+              // 尝试获取关联窗口的 ShortcutManager 中的 initialUrl
+              let initialUrl = this.config.HOME_URL;
               try {
-                const currentUrl = webContents.getURL();
-                const u = new URL(currentUrl);
-                homeUrl = u.origin + '/';
-              } catch {}
-              webContents.loadURL(homeUrl);
+                // 通过 webContents 获取窗口引用
+                const win = webContents.hostWebContents ? 
+                  require('electron').BrowserWindow.fromWebContents(webContents.hostWebContents) : 
+                  require('electron').BrowserWindow.getFocusedWindow();
+                
+                if (win && win._shortcutManager && win._shortcutManager.initialUrl) {
+                  initialUrl = win._shortcutManager.initialUrl;
+                  console.log('ContentViewManager 使用 ShortcutManager.initialUrl:', initialUrl);
+                }
+              } catch (e) {
+                console.log('获取 initialUrl 失败:', e);
+              }
+              
+              webContents.loadURL(initialUrl);
               event.preventDefault();
             }
           }

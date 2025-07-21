@@ -140,17 +140,9 @@ function openNewWindow(url) {
   
   // 使用完整的 initialUrl 初始化 ShortcutManager
   shortcutManager = new ShortcutManager(contentViewManager, initialUrl, win, false);
-  // 强制确保两个 url 都设置为完整初始 url
-  Object.defineProperties(shortcutManager, {
-    initialUrl: {
-      value: initialUrl,
-      writable: false  // 设为只读，防止被修改
-    },
-    homeUrl: {
-      value: initialUrl,
-      writable: false  // 设为只读，防止被修改
-    }
-  });
+  // 设置初始 url
+  shortcutManager.initialUrl = initialUrl;
+  shortcutManager.homeUrl = initialUrl;
   shortcutManager.registerShortcuts();
   // 新增：重定向拦截，非白名单自动回退到 homeUrl
   if (contentViewManager.getView && typeof contentViewManager.getView === 'function') {
@@ -255,11 +247,15 @@ function openNewWindow(url) {
             label: '主页',
             accelerator: 'Cmd+Shift+H',
             click: () => {
-              const wc = contentViewManager?.getWebContents();
-              // 统一跳转到窗口创建时的完整初始 url
-              const initialUrl = win._shortcutManager?.initialUrl;
-              if (wc && initialUrl) {
-                wc.loadURL(initialUrl);
+              const win = BrowserWindow.getFocusedWindow();
+              if (win && win._shortcutManager) {
+                const wc = win._contentViewManager?.getWebContents();
+                // 直接使用 shortcutManager 的 initialUrl
+                const initialUrl = win._shortcutManager.initialUrl;
+                console.log('主页跳转使用URL:', initialUrl);
+                if (wc && initialUrl) {
+                  wc.loadURL(initialUrl);
+                }
               }
             }
           },
@@ -494,17 +490,9 @@ function initializeManagers() {
 
     // 创建快捷键管理器（在内容视图管理器创建后）
     shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, mainWindow, true);
-    // 主窗口也设置只读的 initialUrl 和 homeUrl
-    Object.defineProperties(shortcutManager, {
-      initialUrl: {
-        value: APP_CONFIG.HOME_URL,
-        writable: false
-      },
-      homeUrl: {
-        value: APP_CONFIG.HOME_URL,
-        writable: false
-      }
-    });
+  // 设置主窗口的初始 url
+  shortcutManager.initialUrl = APP_CONFIG.HOME_URL;
+  shortcutManager.homeUrl = APP_CONFIG.HOME_URL;
 
     // 创建布局管理器
     layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
@@ -631,7 +619,9 @@ if (process.platform === 'darwin') {
             const win = BrowserWindow.getFocusedWindow();
             if (win && win._shortcutManager) {
               const wc = win._contentViewManager?.getWebContents();
+              // 直接使用 shortcutManager 的 initialUrl
               const initialUrl = win._shortcutManager.initialUrl;
+              console.log('全局菜单主页跳转使用URL:', initialUrl);
               if (wc && initialUrl) {
                 wc.loadURL(initialUrl);
               }
