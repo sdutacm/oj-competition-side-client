@@ -291,11 +291,8 @@ function openNewWindow(url) {
     const menu = Menu.buildFromTemplate(template);
     win.setMenu(menu);
   }
-  // 新增：所有新弹窗/子窗口全部隐藏菜单栏，彻底避免菜单栏 accelerator 污染
-  if (process.platform === 'darwin') {
-    win.setMenuBarVisibility(false);
-    win.setMenu(null);
-  }
+  // 新增：所有新弹窗/子窗口隐藏菜单栏，但保留菜单以支持快捷键
+  win.setMenuBarVisibility(false);
   return win;
 }
 
@@ -369,13 +366,9 @@ app.whenReady().then(() => {
 
     // 设置窗口标题
     mainWindow.setTitle('SDUT OJ 竞赛客户端');
-    // 隐藏菜单栏，但保留菜单以支持快捷键（除 Mac 外）
+    // 隐藏菜单栏，但保留菜单以支持快捷键
     try {
       mainWindow.setMenuBarVisibility(false);
-      // 只在 Mac 系统上清除菜单，其他系统保留菜单以支持快捷键
-      if (process.platform === 'darwin') {
-        mainWindow.setMenu(null);
-      }
     } catch {}
 
     // 禁用开发者工具相关功能
@@ -557,9 +550,127 @@ app.on('browser-window-created', (event, win) => {
     }
   } catch {}
 });
-// 只在 Mac 系统上清除全局应用菜单，其他系统保留以支持快捷键
+// 在 Mac 系统上设置全局应用菜单，确保快捷键在所有窗口都能正常工作
 if (process.platform === 'darwin') {
-  Menu.setApplicationMenu(null);
+  const template = [
+    {
+      label: app.name,
+      submenu: [
+        {
+          label: '关于 SDUT OJ 竞赛客户端',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (win) {
+              const { showInfoDialog } = require('./utils/dialogHelper');
+              showInfoDialog(win);
+            }
+          }
+        },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideothers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
+    },
+    {
+      label: '编辑',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' }
+      ]
+    },
+    {
+      label: '视图',
+      submenu: [
+        {
+          label: '后退',
+          accelerator: 'Cmd+Left',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (win && win._contentViewManager) {
+              const wc = win._contentViewManager.getWebContents();
+              if (wc && wc.canGoBack()) wc.goBack();
+            }
+          }
+        },
+        {
+          label: '前进',
+          accelerator: 'Cmd+Right',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (win && win._contentViewManager) {
+              const wc = win._contentViewManager.getWebContents();
+              if (wc && wc.canGoForward()) wc.goForward();
+            }
+          }
+        },
+        {
+          label: '刷新',
+          accelerator: 'Cmd+R',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (win && win._contentViewManager) {
+              const wc = win._contentViewManager.getWebContents();
+              if (wc) wc.reload();
+            }
+          }
+        },
+        {
+          label: '主页',
+          accelerator: 'Cmd+Shift+H',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (win && win._shortcutManager) {
+              const wc = win._contentViewManager?.getWebContents();
+              const initialUrl = win._shortcutManager.initialUrl;
+              if (wc && initialUrl) {
+                wc.loadURL(initialUrl);
+              }
+            }
+          }
+        },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    },
+    {
+      label: '窗口',
+      role: 'window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        { role: 'front' }
+      ]
+    },
+    {
+      label: '帮助',
+      role: 'help',
+      submenu: [
+        {
+          label: '系统信息',
+          accelerator: 'Cmd+I',
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (win) {
+              const { showInfoDialog } = require('./utils/dialogHelper');
+              showInfoDialog(win);
+            }
+          }
+        }
+      ]
+    }
+  ];
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }
 
 app.on('will-quit', () => {
