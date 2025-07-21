@@ -5,7 +5,7 @@ class ShortcutManager {
   constructor(contentViewManager, homeUrl, mainWindow = null) {
     this.contentViewManager = contentViewManager;
     this.homeUrl = homeUrl;
-    this.initialUrl = homeUrl; // 新增：记录窗口初始 url
+    this.initialUrl = homeUrl; // 保证为完整初始 url
     this.mainWindow = mainWindow;
     // 统一使用 PlatformHelper 默认快捷键
     this.shortcuts = PlatformHelper.getNavigationShortcuts();
