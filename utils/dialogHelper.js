@@ -345,7 +345,7 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
           <div class="dialog-detail">${detail}</div>
         </div>
         <div class="dialog-footer">
-          <button class="dialog-button" onclick="closeDialog()">${buttonText}</button>
+          <button class="dialog-button">${buttonText}</button>
         </div>
       </div>
       
@@ -361,9 +361,23 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
           }
         });
         
-        // 自动聚焦按钮
+        // 自动聚焦按钮并绑定点击事件
         window.addEventListener('load', function() {
-          document.querySelector('.dialog-button').focus();
+          const button = document.querySelector('.dialog-button');
+          if (button) {
+            button.focus();
+            // 确保点击事件正确绑定
+            button.onclick = function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              closeDialog();
+            };
+            button.addEventListener('click', function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              closeDialog();
+            });
+          }
         });
       </script>
     </body>
@@ -378,14 +392,60 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
 
     // 监听控制台消息
     dialogWindow.webContents.on('console-message', (event, level, message) => {
+      console.log('Dialog console message:', message); // 调试日志
       if (message === 'CLOSE_DIALOG') {
+        console.log('Closing dialog window'); // 调试日志
         dialogWindow.close();
       }
     });
 
     // 窗口关闭时的回调
     dialogWindow.on('closed', () => {
+      console.log('Dialog window closed'); // 调试日志
       if (typeof callback === 'function') callback();
+    });
+
+    // 添加 IPC 通信作为备选方案
+    dialogWindow.webContents.on('did-finish-load', () => {
+      // 注入 IPC 通信代码
+      dialogWindow.webContents.executeJavaScript(`
+        // 重新定义 closeDialog 函数使用多种方式关闭
+        function closeDialog() {
+          console.log('CLOSE_DIALOG');
+          // 尝试使用 window.close() 作为备选
+          try {
+            window.close();
+          } catch(e) {
+            console.log('window.close() failed:', e);
+          }
+        }
+        
+        // 确保按钮事件正确绑定
+        document.addEventListener('DOMContentLoaded', function() {
+          const button = document.querySelector('.dialog-button');
+          if (button) {
+            button.onclick = closeDialog;
+            button.addEventListener('click', closeDialog);
+          }
+        });
+        
+        // 如果 DOM 已经加载完成，立即执行
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', function() {
+            const button = document.querySelector('.dialog-button');
+            if (button) {
+              button.onclick = closeDialog;
+              button.addEventListener('click', closeDialog);
+            }
+          });
+        } else {
+          const button = document.querySelector('.dialog-button');
+          if (button) {
+            button.onclick = closeDialog;
+            button.addEventListener('click', closeDialog);
+          }
+        }
+      `);
     });
 
     dialogWindow.once('ready-to-show', () => {
@@ -400,14 +460,60 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
 
     // 监听控制台消息
     dialogWindow.webContents.on('console-message', (event, level, message) => {
+      console.log('Dialog console message (fallback):', message); // 调试日志
       if (message === 'CLOSE_DIALOG') {
+        console.log('Closing dialog window (fallback)'); // 调试日志
         dialogWindow.close();
       }
     });
 
     // 窗口关闭时的回调
     dialogWindow.on('closed', () => {
+      console.log('Dialog window closed (fallback)'); // 调试日志
       if (typeof callback === 'function') callback();
+    });
+
+    // 添加 IPC 通信作为备选方案
+    dialogWindow.webContents.on('did-finish-load', () => {
+      // 注入 IPC 通信代码
+      dialogWindow.webContents.executeJavaScript(`
+        // 重新定义 closeDialog 函数使用多种方式关闭
+        function closeDialog() {
+          console.log('CLOSE_DIALOG');
+          // 尝试使用 window.close() 作为备选
+          try {
+            window.close();
+          } catch(e) {
+            console.log('window.close() failed:', e);
+          }
+        }
+        
+        // 确保按钮事件正确绑定
+        document.addEventListener('DOMContentLoaded', function() {
+          const button = document.querySelector('.dialog-button');
+          if (button) {
+            button.onclick = closeDialog;
+            button.addEventListener('click', closeDialog);
+          }
+        });
+        
+        // 如果 DOM 已经加载完成，立即执行
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', function() {
+            const button = document.querySelector('.dialog-button');
+            if (button) {
+              button.onclick = closeDialog;
+              button.addEventListener('click', closeDialog);
+            }
+          });
+        } else {
+          const button = document.querySelector('.dialog-button');
+          if (button) {
+            button.onclick = closeDialog;
+            button.addEventListener('click', closeDialog);
+          }
+        }
+      `);
     });
 
     dialogWindow.once('ready-to-show', () => {

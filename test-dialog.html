@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试弹窗</title>
+</head>
+<body>
+    <h1>测试弹窗功能</h1>
+    <p>点击下面的链接测试弹窗拦截：</p>
+    <ul>
+        <li><a href="https://www.google.com" target="_blank">外部链接 - Google (应该被拦截)</a></li>
+        <li><a href="https://www.baidu.com" target="_blank">外部链接 - 百度 (应该被拦截)</a></li>
+        <li><a href="https://acm.sdut.edu.cn/onlinejudge3/contests" target="_blank">白名单链接 - SDUT OJ (应该允许)</a></li>
+    </ul>
+    
+    <script>
+        // 测试窗口跳转
+        function testNavigation() {
+            window.location.href = 'https://www.google.com';
+        }
+        
+        // 测试新窗口打开
+        function testPopup() {
+            window.open('https://www.google.com', '_blank');
+        }
+    </script>
+    
+    <p>
+        <button onclick="testNavigation()">测试页面跳转拦截</button>
+        <button onclick="testPopup()">测试新窗口拦截</button>
+    </p>
+</body>
+</html>
