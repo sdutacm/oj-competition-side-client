@@ -97,8 +97,8 @@ function showBlockedDialog(parentWindow, hostname, reason, type = 'default', cal
 function showCustomBlockedDialog(parentWindow, title, message, detail, buttonText, callback) {
   // 创建自定义弹窗窗口
   const dialogWindow = new BrowserWindow({
-    width: 450,
-    height: 280,
+    width: 480,
+    height: 340,
     parent: parentWindow,
     modal: true,
     resizable: false,
@@ -108,6 +108,7 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
     closable: true,
     minimizable: false,
     maximizable: false,
+    icon: path.join(__dirname, '../public/favicon.ico'), // 设置窗口图标
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -118,170 +119,293 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
   // 隐藏菜单栏
   dialogWindow.setMenuBarVisibility(false);
 
-  // 创建 HTML 内容
-  const htmlContent = `<!DOCTYPE html>
-  <html>
-  <head>
-    <meta charset="UTF-8">
-    <title>${title}</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      
-      body {
-        font-family: "Segoe UI", "Segoe UI Emoji", "Microsoft YaHei", "Noto Color Emoji", "Apple Color Emoji", sans-serif;
-        background: #f5f5f5;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        overflow: hidden;
-        /* 强制彩色 emoji */
-        font-variant-emoji: emoji;
-      }
-      
-      .dialog-container {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-      
-      .dialog-header {
-        padding: 20px 20px 10px;
-        border-bottom: 1px solid #e0e0e0;
-      }
-      
-      .dialog-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #333;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      
-      .dialog-body {
-        padding: 20px;
-        flex: 1;
-        overflow-y: auto;
-      }
-      
-      .dialog-message {
-        font-size: 14px;
-        color: #444;
-        margin-bottom: 15px;
-        line-height: 1.5;
-      }
-      
-      .dialog-detail {
-        font-size: 13px;
-        color: #666;
-        line-height: 1.6;
-        background: #f8f9fa;
-        padding: 12px;
-        border-radius: 6px;
-        white-space: pre-line;
-      }
-      
-      .dialog-footer {
-        padding: 15px 20px;
-        border-top: 1px solid #e0e0e0;
-        display: flex;
-        justify-content: flex-end;
-      }
-      
-      .dialog-button {
-        background: #007acc;
-        color: white;
-        border: none;
-        padding: 8px 20px;
-        border-radius: 4px;
-        font-size: 13px;
-        cursor: pointer;
-        font-family: inherit;
-        transition: background-color 0.2s;
-      }
-      
-      .dialog-button:hover {
-        background: #005a9e;
-      }
-      
-      .dialog-button:active {
-        transform: translateY(1px);
-      }
-      
-      /* 确保 emoji 显示为彩色 */
-      .emoji {
-        font-family: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif;
-        font-variant-emoji: emoji;
-      }
-      
-      /* Windows 10/11 emoji 优化 */
-      @media screen and (-ms-high-contrast: none) {
-        body, .dialog-title, .dialog-message, .dialog-detail {
-          font-family: "Segoe UI", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="dialog-container">
-      <div class="dialog-header">
-        <div class="dialog-title">${title}</div>
-      </div>
-      <div class="dialog-body">
-        <div class="dialog-message">${message}</div>
-        <div class="dialog-detail">${detail}</div>
-      </div>
-      <div class="dialog-footer">
-        <button class="dialog-button" onclick="closeDialog()">${buttonText}</button>
-      </div>
-    </div>
-    
-    <script>
-      function closeDialog() {
-        console.log('CLOSE_DIALOG');
-      }
-      
-      // ESC 键关闭
-      document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-          closeDialog();
-        }
-      });
-      
-      // 自动聚焦按钮
-      window.addEventListener('load', function() {
-        document.querySelector('.dialog-button').focus();
-      });
-    </script>
-  </body>
-  </html>`;
-
-  const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
-  dialogWindow.loadURL(dataURL);
-
-  // 监听控制台消息
-  dialogWindow.webContents.on('console-message', (event, level, message) => {
-    if (message === 'CLOSE_DIALOG') {
-      dialogWindow.close();
+  // 异步获取 favicon 的 base64 编码
+  async function getFaviconBase64() {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const imagePath = path.join(__dirname, '../public/favicon.ico');
+      const imageBuffer = fs.readFileSync(imagePath);
+      return imageBuffer.toString('base64');
+    } catch (error) {
+      console.error('Error loading favicon:', error);
+      return '';
     }
-  });
+  }
 
-  // 窗口关闭时的回调
-  dialogWindow.on('closed', () => {
-    if (typeof callback === 'function') callback();
-  });
+  // 创建 HTML 内容
+  function createDialogHTML(faviconBase64 = '') {
+    const logoImg = faviconBase64 ? 
+      `<img src="data:image/x-icon;base64,${faviconBase64}" alt="Logo" class="dialog-icon">` :
+      '<div class="dialog-icon-fallback">⚠️</div>';
 
-  dialogWindow.once('ready-to-show', () => {
-    dialogWindow.show();
+    return `<!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${title}</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        
+        body {
+          font-family: "Segoe UI", "Segoe UI Emoji", "Microsoft YaHei", "Noto Color Emoji", "Apple Color Emoji", sans-serif;
+          background: var(--bg-color);
+          color: var(--text-color);
+          padding: 0;
+          height: 100vh;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          /* 强制彩色 emoji */
+          font-variant-emoji: emoji;
+        }
+        
+        /* 系统主题适配 */
+        :root {
+          --bg-color: #ffffff;
+          --container-bg: #ffffff;
+          --text-color: #000000;
+          --text-secondary: #666666;
+          --border-color: #e0e0e0;
+          --button-bg: #0078d4;
+          --button-hover-bg: #106ebe;
+          --detail-bg: #f8f9fa;
+          --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Windows 暗色主题 */
+        @media (prefers-color-scheme: dark) {
+          :root {
+            --bg-color: #202020;
+            --container-bg: #2d2d2d;
+            --text-color: #ffffff;
+            --text-secondary: #cccccc;
+            --border-color: #404040;
+            --button-bg: #0078d4;
+            --button-hover-bg: #106ebe;
+            --detail-bg: #353535;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+          }
+        }
+        
+        .dialog-container {
+          background: var(--container-bg);
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        
+        .dialog-header {
+          padding: 20px 20px 15px;
+          border-bottom: 1px solid var(--border-color);
+          flex-shrink: 0;
+        }
+        
+        .dialog-title-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        
+        .dialog-icon {
+          width: 24px;
+          height: 24px;
+          flex-shrink: 0;
+        }
+        
+        .dialog-icon-fallback {
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          flex-shrink: 0;
+        }
+        
+        .dialog-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--text-color);
+          flex: 1;
+        }
+        
+        .dialog-body {
+          padding: 20px;
+          flex: 1;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+        }
+        
+        .dialog-message {
+          font-size: 14px;
+          color: var(--text-color);
+          line-height: 1.5;
+          flex-shrink: 0;
+        }
+        
+        .dialog-detail {
+          font-size: 13px;
+          color: var(--text-secondary);
+          line-height: 1.6;
+          background: var(--detail-bg);
+          padding: 12px;
+          border-radius: 6px;
+          white-space: pre-line;
+          flex: 1;
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 6;
+          -webkit-box-orient: vertical;
+          text-overflow: ellipsis;
+        }
+        
+        .dialog-footer {
+          padding: 15px 20px;
+          border-top: 1px solid var(--border-color);
+          display: flex;
+          justify-content: flex-end;
+          flex-shrink: 0;
+        }
+        
+        .dialog-button {
+          background: var(--button-bg);
+          color: white;
+          border: none;
+          padding: 10px 24px;
+          border-radius: 4px;
+          font-size: 14px;
+          cursor: pointer;
+          font-family: inherit;
+          transition: background-color 0.2s;
+          min-width: 100px;
+        }
+        
+        .dialog-button:hover {
+          background: var(--button-hover-bg);
+        }
+        
+        .dialog-button:active {
+          transform: translateY(1px);
+        }
+        
+        .dialog-button:focus {
+          outline: 2px solid #0078d4;
+          outline-offset: 2px;
+        }
+        
+        /* 确保 emoji 显示为彩色 */
+        .emoji {
+          font-family: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", sans-serif;
+          font-variant-emoji: emoji;
+        }
+        
+        /* Windows 10/11 emoji 优化 */
+        @media screen and (-ms-high-contrast: none) {
+          body, .dialog-title, .dialog-message, .dialog-detail {
+            font-family: "Segoe UI", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+          }
+        }
+        
+        /* 禁用所有滚动条 */
+        ::-webkit-scrollbar {
+          display: none;
+        }
+        
+        * {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="dialog-container">
+        <div class="dialog-header">
+          <div class="dialog-title-row">
+            ${logoImg}
+            <div class="dialog-title">${title}</div>
+          </div>
+        </div>
+        <div class="dialog-body">
+          <div class="dialog-message">${message}</div>
+          <div class="dialog-detail">${detail}</div>
+        </div>
+        <div class="dialog-footer">
+          <button class="dialog-button" onclick="closeDialog()">${buttonText}</button>
+        </div>
+      </div>
+      
+      <script>
+        function closeDialog() {
+          console.log('CLOSE_DIALOG');
+        }
+        
+        // ESC 键关闭
+        document.addEventListener('keydown', function(event) {
+          if (event.key === 'Escape') {
+            closeDialog();
+          }
+        });
+        
+        // 自动聚焦按钮
+        window.addEventListener('load', function() {
+          document.querySelector('.dialog-button').focus();
+        });
+      </script>
+    </body>
+    </html>`;
+  }
+
+  // 加载 favicon 并创建窗口
+  getFaviconBase64().then(faviconBase64 => {
+    const htmlContent = createDialogHTML(faviconBase64);
+    const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+    dialogWindow.loadURL(dataURL);
+
+    // 监听控制台消息
+    dialogWindow.webContents.on('console-message', (event, level, message) => {
+      if (message === 'CLOSE_DIALOG') {
+        dialogWindow.close();
+      }
+    });
+
+    // 窗口关闭时的回调
+    dialogWindow.on('closed', () => {
+      if (typeof callback === 'function') callback();
+    });
+
+    dialogWindow.once('ready-to-show', () => {
+      dialogWindow.show();
+    });
+  }).catch(error => {
+    console.error('Error creating custom dialog:', error);
+    // 无图标版本
+    const htmlContent = createDialogHTML();
+    const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+    dialogWindow.loadURL(dataURL);
+
+    // 监听控制台消息
+    dialogWindow.webContents.on('console-message', (event, level, message) => {
+      if (message === 'CLOSE_DIALOG') {
+        dialogWindow.close();
+      }
+    });
+
+    // 窗口关闭时的回调
+    dialogWindow.on('closed', () => {
+      if (typeof callback === 'function') callback();
+    });
+
+    dialogWindow.once('ready-to-show', () => {
+      dialogWindow.show();
+    });
   });
 
   return dialogWindow;
