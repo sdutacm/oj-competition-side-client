@@ -57,11 +57,6 @@ class MacMenuManager {
           },
           { type: 'separator' },
           {
-            label: i18n.t('menu.language'),
-            submenu: this.createLanguageSubmenu()
-          },
-          { type: 'separator' },
-          {
             label: i18n.t('menu.hide', { appName: appName }),
             accelerator: 'Cmd+H',
             click: () => {
@@ -212,22 +207,6 @@ class MacMenuManager {
                 click: () => this.forceReload()
               }
             ]
-          },
-          { type: 'separator' },
-          {
-            label: i18n.t('menu.resetZoom'),
-            accelerator: 'Cmd+0',
-            click: () => this.resetZoom()
-          },
-          {
-            label: i18n.t('menu.zoomIn'),
-            accelerator: 'Cmd+=',
-            click: () => this.zoomIn()
-          },
-          {
-            label: i18n.t('menu.zoomOut'),
-            accelerator: 'Cmd+-',
-            click: () => this.zoomOut()
           },
           { type: 'separator' },
           {
