@@ -52,14 +52,8 @@ class MacMenuManager {
         label: appName,
         submenu: [
           {
-            label: i18n.t('menu.about'),
+            label: i18n.t('app.about'),
             click: () => this.showAboutDialog()
-          },
-          { type: 'separator' },
-          {
-            label: i18n.t('menu.preferences'),
-            accelerator: 'Cmd+,',
-            click: () => this.showPreferences()
           },
           { type: 'separator' },
           {
@@ -299,18 +293,9 @@ class MacMenuManager {
             label: i18n.t('menu.systemInfo'),
             click: () => this.showSystemInfo()
           },
-          { type: 'separator' },
-          {
-            label: i18n.t('menu.checkForUpdates'),
-            click: () => this.checkForUpdates()
-          },
           {
             label: i18n.t('menu.reportIssue'),
             click: () => this.reportIssue()
-          },
-          {
-            label: i18n.t('menu.learnMore'),
-            click: () => this.learnMore()
           }
         ]
       }
@@ -363,7 +348,7 @@ class MacMenuManager {
     
     dialog.showMessageBox(this.mainWindow, {
       type: 'info',
-      title: i18n.t('menu.about'),
+      title: i18n.t('app.about'),
       message: appName,
       detail: i18n.t('app.description') + '\\n\\n' + i18n.t('app.version', { version }),
       buttons: [i18n.t('dialog.ok')]

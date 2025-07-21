@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "SDUT OJ 竞赛客户端",
-    "about": "关于 %{appName}",
+    "about": "关于 SDUT OJ 竞赛客户端",
     "version": "版本 %{version}",
     "description": "专业的在线评测系统客户端"
   },
