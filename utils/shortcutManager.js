@@ -115,7 +115,7 @@ class ShortcutManager {
           }
         ];
         const menu = Menu.buildFromTemplate(template);
-        this.mainWindow.setMenu(menu);
+        require('electron').Menu.setApplicationMenu(menu);
         // 不隐藏菜单栏，保留原生体验
         // 主动聚焦内容区，确保快捷键可用
         try {
