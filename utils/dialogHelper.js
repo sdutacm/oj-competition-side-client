@@ -103,11 +103,11 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
     modal: true,
     resizable: false,
     show: false,
-    frame: true,
-    titleBarStyle: 'default',
-    closable: true,
-    minimizable: false,
-    maximizable: false,
+    frame: false, // 移除标题栏和边框
+    titleBarStyle: 'hidden', // 隐藏标题栏
+    closable: false, // 禁用关闭按钮
+    minimizable: false, // 禁用最小化按钮
+    maximizable: false, // 禁用最大化按钮
     icon: path.join(__dirname, '../public/favicon.ico'), // 设置窗口图标
     webPreferences: {
       nodeIntegration: false,
@@ -198,12 +198,17 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
           display: flex;
           flex-direction: column;
           overflow: hidden;
+          border-radius: 8px; /* 添加圆角 */
+          box-shadow: 0 10px 30px var(--shadow-color); /* 添加阴影 */
+          border: 1px solid var(--border-color); /* 添加边框 */
         }
         
         .dialog-header {
           padding: 20px 20px 15px;
           border-bottom: 1px solid var(--border-color);
           flex-shrink: 0;
+          border-radius: 8px 8px 0 0; /* 顶部圆角 */
+          background: var(--container-bg); /* 确保背景一致 */
         }
         
         .dialog-title-row {
@@ -273,6 +278,8 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
           display: flex;
           justify-content: flex-end;
           flex-shrink: 0;
+          border-radius: 0 0 8px 8px; /* 底部圆角 */
+          background: var(--container-bg); /* 确保背景一致 */
         }
         
         .dialog-button {
