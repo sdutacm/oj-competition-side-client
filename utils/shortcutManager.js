@@ -68,8 +68,56 @@ class ShortcutManager {
         if (this.mainWindow.setMenuBarVisibility) {
           this.mainWindow.setMenuBarVisibility(false);
         }
+      } else {
+        // macOS: 设置原生菜单，确保系统快捷键可用
+        const template = [
+          {
+            label: 'SDUT OJ',
+            submenu: [
+              { role: 'about' },
+              { type: 'separator' },
+              { role: 'quit' }
+            ]
+          },
+          {
+            label: '编辑',
+            submenu: [
+              { role: 'undo' },
+              { role: 'redo' },
+              { type: 'separator' },
+              { role: 'cut' },
+              { role: 'copy' },
+              { role: 'paste' },
+              { role: 'pasteAndMatchStyle' },
+              { role: 'delete' },
+              { role: 'selectAll' }
+            ]
+          },
+          {
+            label: '视图',
+            submenu: [
+              { role: 'reload' },
+              { role: 'togglefullscreen' }
+            ]
+          },
+          {
+            label: '窗口',
+            submenu: [
+              { role: 'minimize' },
+              { role: 'close' }
+            ]
+          },
+          {
+            label: '帮助',
+            submenu: [
+              { role: 'help' }
+            ]
+          }
+        ];
+        const menu = Menu.buildFromTemplate(template);
+        this.mainWindow.setMenu(menu);
+        // 不隐藏菜单栏，保留原生体验
       }
-      // Mac 下不做任何菜单和快捷键处理，保留原生
     } catch (error) {
       console.log('注册快捷键失败（已忽略）:', error.message);
     }
