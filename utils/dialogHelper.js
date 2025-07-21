@@ -201,6 +201,7 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
           border-radius: 8px; /* 添加圆角 */
           box-shadow: 0 10px 30px var(--shadow-color); /* 添加阴影 */
           border: 1px solid var(--border-color); /* 添加边框 */
+          user-select: none; /* 禁止选中 */
         }
         
         .dialog-header {
@@ -648,7 +649,7 @@ function showInfoDialog(parentWindow) {
         }
         
         body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Segoe UI Emoji', Roboto, 'Microsoft YaHei', 'Noto Color Emoji', 'Apple Color Emoji', sans-serif;
+          font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI Emoji', Roboto, 'Microsoft YaHei', 'Noto Color Emoji', 'Apple Color Emoji', system-ui, sans-serif;
           background: var(--bg-color);
           color: var(--text-color);
           line-height: 1.6;
@@ -660,6 +661,9 @@ function showInfoDialog(parentWindow) {
           overflow: hidden; /* 隐藏滚动条 */
           /* 强制使用彩色 emoji */
           font-variant-emoji: emoji;
+          /* 优化数字显示 */
+          font-variant-numeric: normal;
+          font-feature-settings: normal;
         }
 
         /* Windows 系统 emoji 字体优化 */
@@ -675,8 +679,12 @@ function showInfoDialog(parentWindow) {
         
         /* Windows 特定的 emoji 优化 */
         @media (min-width: 0) {
-          .app-name, .app-version, .app-description, .links-title, .copyright {
-            font-family: "Segoe UI", "Segoe UI Emoji", "Microsoft YaHei", "Apple Color Emoji", sans-serif;
+          .app-name, .app-version, .app-description, .links-title, .copyright, .feature-text {
+            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Microsoft YaHei", "Segoe UI Emoji", "Apple Color Emoji", system-ui, sans-serif;
+          }
+          .link-item {
+            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Microsoft YaHei", system-ui, sans-serif !important;
+            font-variant-emoji: none !important;
           }
         }
         
@@ -689,8 +697,12 @@ function showInfoDialog(parentWindow) {
         
         /* 为旧版 Windows 提供备用方案 */
         @media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
-          * {
-            font-family: "Segoe UI", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+          body, .app-name, .app-version, .app-description, .feature-text, .links-title, .copyright {
+            font-family: "Segoe UI", "Segoe UI Emoji", "Segoe UI Symbol", "Microsoft YaHei", system-ui, sans-serif;
+          }
+          .link-item {
+            font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif !important;
+            font-variant-emoji: none !important;
           }
         }
 
@@ -764,17 +776,22 @@ function showInfoDialog(parentWindow) {
           font-weight: 700;
           margin-bottom: 6px;
           color: var(--text-color);
+          font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
         }
         
         .app-version {
           font-size: 16px;
           color: var(--text-secondary);
           margin-bottom: 4px;
+          font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+          font-variant-numeric: tabular-nums; /* 使用等宽数字 */
+          font-feature-settings: "tnum"; /* 表格数字 */
         }
         
         .app-description {
           font-size: 14px;
           color: var(--text-tertiary);
+          font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
         }
         
         .content {
@@ -817,6 +834,9 @@ function showInfoDialog(parentWindow) {
         .feature-text {
           color: var(--text-secondary);
           font-size: 14px;
+          font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+          font-variant-numeric: tabular-nums; /* 使用等宽数字 */
+          font-feature-settings: "tnum"; /* 表格数字 */
         }
         
         .footer {
@@ -847,8 +867,9 @@ function showInfoDialog(parentWindow) {
         .links-container {
           display: flex;
           justify-content: center;
-          gap: 20px;
+          gap: 15px; /* 减少按钮间距 */
           flex-wrap: wrap;
+          align-items: center;
         }
         
         .link-item {
@@ -866,12 +887,14 @@ function showInfoDialog(parentWindow) {
           font-weight: 500;
           transition: all 0.2s ease;
           cursor: pointer;
-          width: 130px;
-          min-width: 130px;
-          max-width: 130px;
+          width: 130px; /* 固定宽度确保一致 */
           box-sizing: border-box;
           white-space: nowrap;
           text-align: center;
+          letter-spacing: normal; /* 正常字符间距 */
+          word-spacing: normal; /* 正常单词间距 */
+          font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important; /* 强制使用系统字体，不使用 emoji 字体 */
+          font-variant-emoji: none; /* 禁用 emoji 字体 */
         }
         
         .link-item:hover {
