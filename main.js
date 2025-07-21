@@ -41,6 +41,24 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
   if (view && view.webContents) {
     let lastRedirectBlockedUrl = '';
     let lastRedirectBlockedTime = 0;
+    let currentPageUrl = ''; // 记录当前页面URL
+    
+    // 监听页面导航开始，记录URL
+    view.webContents.on('did-start-navigation', (event, url) => {
+      if (!url.startsWith('data:') && url !== 'about:blank') {
+        currentPageUrl = url;
+        console.log('页面导航开始，记录URL:', currentPageUrl);
+      }
+    });
+    
+    // 监听页面导航完成，更新URL记录
+    view.webContents.on('did-navigate', (event, url) => {
+      if (!url.startsWith('data:') && url !== 'about:blank') {
+        currentPageUrl = url;
+        console.log('页面导航完成，更新URL:', currentPageUrl);
+      }
+    });
+    
     view.webContents.on('will-navigate', (event, url) => {
       const domain = require('./utils/urlHelper').getHostname(url);
       if (isMainWindow && isWhiteDomain(url, APP_CONFIG)) {
@@ -58,21 +76,74 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
       }
       event.preventDefault();
     });
+    
     view.webContents.on('will-redirect', (event, url) => {
-      const domain = require('./utils/urlHelper').getHostname(url);
-      if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+      console.log('检测到重定向，从', currentPageUrl, '到', url);
+      
+      const redirectDomain = require('./utils/urlHelper').getHostname(url);
+      if (redirectDomain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
         event.preventDefault();
-        showBlockedDialogWithDebounce(win, domain, '非法重定向拦截，已自动回退主页', 'redirect');
+        showBlockedDialogWithDebounce(win, redirectDomain, '非法重定向拦截，已自动回退主页', 'redirect');
+        
         // 自动回退主页（仅新窗口需要，主窗口不回退）
         if (!isMainWindow) {
-          try {
-            // 禁止覆盖 ShortcutManager 的 homeUrl/initialUrl
-            // 只回退页面，不修改主页记录
-            const shortcutManager = win._shortcutManager;
-            if (shortcutManager && shortcutManager.initialUrl) {
-              view.webContents.loadURL(shortcutManager.initialUrl);
+          // 使用 setTimeout 异步执行，避免在事件处理期间同步加载URL
+          setTimeout(() => {
+            try {
+              let targetUrl;
+              if (currentPageUrl && currentPageUrl !== 'about:blank' && !currentPageUrl.startsWith('data:')) {
+                const beforeRedirectDomain = require('./utils/urlHelper').getHostname(currentPageUrl);
+                if (beforeRedirectDomain) {
+                  // 直接回退到重定向前URL的顶级域名
+                  targetUrl = `https://${beforeRedirectDomain}/`;
+                  console.log('重定向拦截，回退到重定向前URL的顶级域名:', targetUrl, '(重定向前URL:', currentPageUrl, ')');
+                } else {
+                  // 域名提取失败，使用新窗口的初始URL
+                  if (win._shortcutManager && win._shortcutManager.initialUrl) {
+                    targetUrl = win._shortcutManager.initialUrl;
+                    console.log('重定向拦截，域名提取失败，回退到窗口初始URL:', targetUrl);
+                  } else {
+                    targetUrl = `https://${APP_CONFIG.MAIN_DOMAIN}/`;
+                    console.log('重定向拦截，域名提取失败，使用系统主域名:', targetUrl);
+                  }
+                }
+              } else {
+                // 当前URL无效，使用新窗口的初始URL
+                if (win._shortcutManager && win._shortcutManager.initialUrl) {
+                  targetUrl = win._shortcutManager.initialUrl;
+                  console.log('重定向拦截，当前URL无效，回退到窗口初始URL:', targetUrl);
+                } else {
+                  targetUrl = `https://${APP_CONFIG.MAIN_DOMAIN}/`;
+                  console.log('重定向拦截，当前URL无效，使用系统主域名:', targetUrl);
+                }
+              }
+              view.webContents.loadURL(targetUrl);
+              
+              // 重要：更新窗口的初始URL为新的安全顶级域名，避免"返回主页"时再次触发重定向
+              if (win._shortcutManager && targetUrl && targetUrl.startsWith('https://')) {
+                win._shortcutManager.initialUrl = targetUrl;
+                win._shortcutManager.homeUrl = targetUrl;
+                console.log('已更新窗口初始URL为新的安全域名:', targetUrl);
+              }
+            } catch (error) {
+              console.log('重定向拦截处理失败:', error);
+              // 最终备用方案：使用新窗口的初始URL或系统主域名
+              let fallbackUrl;
+              if (win._shortcutManager && win._shortcutManager.initialUrl) {
+                fallbackUrl = win._shortcutManager.initialUrl;
+              } else {
+                fallbackUrl = `https://${APP_CONFIG.MAIN_DOMAIN}/`;
+              }
+              view.webContents.loadURL(fallbackUrl);
+              
+              // 重要：更新窗口的初始URL为新的安全域名
+              if (win._shortcutManager && fallbackUrl && fallbackUrl.startsWith('https://')) {
+                win._shortcutManager.initialUrl = fallbackUrl;
+                win._shortcutManager.homeUrl = fallbackUrl;
+                console.log('已更新窗口初始URL为备用安全域名:', fallbackUrl);
+              }
             }
-          } catch {}
+          }, 50);
         }
       }
     });
