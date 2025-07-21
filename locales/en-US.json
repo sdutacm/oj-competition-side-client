@@ -1,0 +1,103 @@
+{
+  "app": {
+    "name": "SDUT OJ Competition Client",
+    "about": "About %{appName}",
+    "version": "Version %{version}",
+    "description": "Professional Online Judge Client"
+  },
+  "menu": {
+    "file": "File",
+    "edit": "Edit",
+    "view": "View",
+    "window": "Window",
+    "help": "Help",
+    "about": "About",
+    "preferences": "Preferences",
+    "services": "Services",
+    "hide": "Hide %{appName}",
+    "hideOthers": "Hide Others",
+    "showAll": "Show All",
+    "quit": "Quit %{appName}",
+    "undo": "Undo",
+    "redo": "Redo",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "pasteAndMatchStyle": "Paste and Match Style",
+    "delete": "Delete",
+    "selectAll": "Select All",
+    "speech": "Speech",
+    "startSpeaking": "Start Speaking",
+    "stopSpeaking": "Stop Speaking",
+    "close": "Close",
+    "minimize": "Minimize",
+    "zoom": "Zoom",
+    "reload": "Reload",
+    "forceReload": "Force Reload",
+    "toggleDevTools": "Toggle Developer Tools",
+    "resetZoom": "Actual Size",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "toggleFullscreen": "Toggle Fullscreen",
+    "front": "Bring All to Front",
+    "language": "Language",
+    "systemInfo": "System Information",
+    "checkForUpdates": "Check for Updates",
+    "reportIssue": "Report Issue",
+    "learnMore": "Learn More",
+    "navigation": "Navigation",
+    "goBack": "Go Back",
+    "goForward": "Go Forward",
+    "goHome": "Go Home",
+    "refresh": "Refresh",
+    "security": "Security",
+    "blockList": "Block List",
+    "allowList": "Allow List",
+    "redirectProtection": "Redirect Protection",
+    "chinese": "中文",
+    "english": "English"
+  },
+  "toolbar": {
+    "back": "Back",
+    "forward": "Forward",
+    "refresh": "Refresh",
+    "home": "Home"
+  },
+  "dialog": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "yes": "Yes",
+    "no": "No",
+    "save": "Save",
+    "dontSave": "Don't Save",
+    "close": "Close",
+    "retry": "Retry",
+    "ignore": "Ignore",
+    "abort": "Abort",
+    "blocked": {
+      "title": "Access Restricted",
+      "message": "Cannot access this website during competition",
+      "button": "Got it"
+    },
+    "info": {
+      "title": "About",
+      "version": "Version",
+      "description": "Professional Online Judge Client",
+      "links": "Related Links",
+      "officialSite": "SDUT OJ Official",
+      "github": "GitHub",
+      "copyright": "© 2008-2025 SDUTACM. All Rights Reserved."
+    }
+  },
+  "shortcuts": {
+    "cmdOrCtrl": "Cmd",
+    "alt": "Option",
+    "shift": "Shift"
+  },
+  "system": {
+    "electron": "Electron %{version}",
+    "node": "Node.js %{version}",
+    "chromium": "Chromium %{version}",
+    "v8": "V8 %{version}"
+  }
+}

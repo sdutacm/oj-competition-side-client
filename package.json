@@ -108,5 +108,8 @@
       "createStartMenuShortcut": true,
       "license": null
     }
+  },
+  "dependencies": {
+    "i18n-js": "^4.5.1"
   }
 }

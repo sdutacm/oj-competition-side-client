@@ -1,0 +1,103 @@
+{
+  "app": {
+    "name": "SDUT OJ 竞赛客户端",
+    "about": "关于 %{appName}",
+    "version": "版本 %{version}",
+    "description": "专业的在线评测系统客户端"
+  },
+  "menu": {
+    "file": "文件",
+    "edit": "编辑",
+    "view": "视图",
+    "window": "窗口",
+    "help": "帮助",
+    "about": "关于",
+    "preferences": "偏好设置",
+    "services": "服务",
+    "hide": "隐藏 %{appName}",
+    "hideOthers": "隐藏其他",
+    "showAll": "显示全部",
+    "quit": "退出 %{appName}",
+    "undo": "撤销",
+    "redo": "重做",
+    "cut": "剪切",
+    "copy": "复制",
+    "paste": "粘贴",
+    "pasteAndMatchStyle": "粘贴并匹配样式",
+    "delete": "删除",
+    "selectAll": "全选",
+    "speech": "朗读",
+    "startSpeaking": "开始朗读",
+    "stopSpeaking": "停止朗读",
+    "close": "关闭",
+    "minimize": "最小化",
+    "zoom": "缩放",
+    "reload": "重新加载",
+    "forceReload": "强制重新加载",
+    "toggleDevTools": "切换开发者工具",
+    "resetZoom": "实际大小",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "toggleFullscreen": "切换全屏",
+    "front": "前置全部窗口",
+    "language": "语言",
+    "systemInfo": "系统信息",
+    "checkForUpdates": "检查更新",
+    "reportIssue": "报告问题",
+    "learnMore": "了解更多",
+    "navigation": "导航",
+    "goBack": "后退",
+    "goForward": "前进",
+    "goHome": "首页",
+    "refresh": "刷新",
+    "security": "安全",
+    "blockList": "黑名单设置",
+    "allowList": "白名单设置",
+    "redirectProtection": "重定向保护",
+    "chinese": "中文",
+    "english": "English"
+  },
+  "toolbar": {
+    "back": "后退",
+    "forward": "前进",
+    "refresh": "刷新",
+    "home": "主页"
+  },
+  "dialog": {
+    "ok": "确定",
+    "cancel": "取消",
+    "yes": "是",
+    "no": "否",
+    "save": "保存",
+    "dontSave": "不保存",
+    "close": "关闭",
+    "retry": "重试",
+    "ignore": "忽略",
+    "abort": "中止",
+    "blocked": {
+      "title": "访问受限",
+      "message": "比赛期间不能访问这个网站",
+      "button": "知道了"
+    },
+    "info": {
+      "title": "关于",
+      "version": "版本",
+      "description": "专业的在线评测系统客户端",
+      "links": "相关链接",
+      "officialSite": "SDUT OJ 官网",
+      "github": "GitHub",
+      "copyright": "© 2008-2025 SDUTACM. All Rights Reserved."
+    }
+  },
+  "shortcuts": {
+    "cmdOrCtrl": "Cmd",
+    "alt": "Option",
+    "shift": "Shift"
+  },
+  "system": {
+    "electron": "Electron %{version}",
+    "node": "Node.js %{version}",
+    "chromium": "Chromium %{version}",
+    "v8": "V8 %{version}"
+  }
+}

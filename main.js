@@ -7,12 +7,15 @@ const { LayoutManager } = require('./utils/windowHelper');
 const PlatformHelper = require('./utils/platformHelper');
 const { isWhiteDomain } = require('./utils/domainHelper');
 const { showBlockedDialog } = require('./utils/dialogHelper');
+const i18n = require('./utils/i18nManager');
+const MacMenuManager = require('./utils/macMenuManager');
 
 let mainWindow = null;
 let toolbarManager = null;
 let contentViewManager = null;
 let shortcutManager = null;
 let layoutManager = null;
+let macMenuManager = null;
 
 // 应用配置
 const APP_CONFIG = {
@@ -250,113 +253,8 @@ function openNewWindow(url) {
 
   // 新增：为每个新弹窗设置独立菜单栏和快捷键
   if (process.platform === 'darwin') {
-    const { showInfoDialog } = require('./utils/dialogHelper');
-    const template = [
-      {
-        label: app.name,
-        submenu: [
-          {
-            label: '关于 SDUT OJ 竞赛客户端',
-            click: () => showInfoDialog(win)
-          },
-          { type: 'separator' },
-          { role: 'services' },
-          { type: 'separator' },
-          { role: 'hide' },
-          { role: 'hideothers' },
-          { role: 'unhide' },
-          { type: 'separator' },
-          { role: 'quit' }
-        ]
-      },
-      {
-        label: '文件',
-        submenu: [
-          { role: 'close' }
-        ]
-      },
-      {
-        label: '编辑',
-        submenu: [
-          { role: 'undo' },
-          { role: 'redo' },
-          { type: 'separator' },
-          { role: 'cut' },
-          { role: 'copy' },
-          { role: 'paste' },
-          { role: 'selectAll' }
-        ]
-      },
-      {
-        label: '视图',
-        submenu: [
-          {
-            label: '后退',
-            accelerator: 'Cmd+Left',
-            click: () => {
-              const wc = contentViewManager?.getWebContents();
-              if (wc && wc.canGoBack()) wc.goBack();
-            }
-          },
-          {
-            label: '前进',
-            accelerator: 'Cmd+Right',
-            click: () => {
-              const wc = contentViewManager?.getWebContents();
-              if (wc && wc.canGoForward()) wc.goForward();
-            }
-          },
-          {
-            label: '刷新',
-            accelerator: 'Cmd+R',
-            click: () => {
-              const wc = contentViewManager?.getWebContents();
-              if (wc) wc.reload();
-            }
-          },
-          {
-            label: '主页',
-            accelerator: 'Cmd+Shift+H',
-            click: () => {
-              const win = BrowserWindow.getFocusedWindow();
-              if (win && win._shortcutManager) {
-                const wc = win._contentViewManager?.getWebContents();
-                // 直接使用 shortcutManager 的 initialUrl
-                const initialUrl = win._shortcutManager.initialUrl;
-                console.log('主页跳转使用URL:', initialUrl);
-                if (wc && initialUrl) {
-                  wc.loadURL(initialUrl);
-                }
-              }
-            }
-          },
-          { type: 'separator' },
-          { role: 'togglefullscreen' }
-        ]
-      },
-      {
-        label: '窗口',
-        role: 'window',
-        submenu: [
-          { role: 'minimize' },
-          { role: 'zoom' },
-          { role: 'front' }
-        ]
-      },
-      {
-        label: '帮助',
-        role: 'help',
-        submenu: [
-          {
-            label: '系统信息',
-            accelerator: 'Cmd+I',
-            click: () => showInfoDialog(win)
-          }
-        ]
-      }
-    ];
-    const menu = Menu.buildFromTemplate(template);
-    win.setMenu(menu);
+    // 使用国际化菜单管理器为新窗口创建菜单
+    const newWindowMenuManager = new MacMenuManager(win);
   }
   // 新增：所有新弹窗/子窗口隐藏菜单栏，但保留菜单以支持快捷键
   win.setMenuBarVisibility(false);
@@ -387,7 +285,8 @@ app.whenReady().then(() => {
     }
 
     // 设置应用程序名称
-    app.setName('SDUT OJ 竞赛客户端');
+    const appName = i18n.t('app.name');
+    app.setName(appName);
   }
 
   try {
@@ -432,7 +331,8 @@ app.whenReady().then(() => {
     mainWindow.webContents.setUserAgent(customUserAgent);
 
     // 设置窗口标题
-    mainWindow.setTitle('SDUT OJ 竞赛客户端');
+    const windowTitle = i18n.t('app.name');
+    mainWindow.setTitle(windowTitle);
     // 隐藏菜单栏，但保留菜单以支持快捷键
     try {
       mainWindow.setMenuBarVisibility(false);
@@ -440,6 +340,11 @@ app.whenReady().then(() => {
 
     // 禁用开发者工具相关功能
     disableDevTools();
+
+    // 初始化国际化菜单管理器（macOS）
+    if (process.platform === 'darwin') {
+      macMenuManager = new MacMenuManager(mainWindow);
+    }
 
     // 初始化管理器
     initializeManagers();
@@ -513,6 +418,7 @@ app.whenReady().then(() => {
     // 监听窗口关闭，清理资源
     mainWindow.on('closed', () => {
       if (shortcutManager) shortcutManager.unregisterAll();
+      if (macMenuManager) macMenuManager.destroy();
       mainWindow = null;
     });
 
@@ -609,130 +515,6 @@ app.on('browser-window-created', (event, win) => {
     }
   } catch {}
 });
-// 在 Mac 系统上设置全局应用菜单，确保快捷键在所有窗口都能正常工作
-if (process.platform === 'darwin') {
-  const template = [
-    {
-      label: app.name,
-      submenu: [
-        {
-          label: '关于 SDUT OJ 竞赛客户端',
-          click: () => {
-            const win = BrowserWindow.getFocusedWindow();
-            if (win) {
-              const { showInfoDialog } = require('./utils/dialogHelper');
-              showInfoDialog(win);
-            }
-          }
-        },
-        { type: 'separator' },
-        { role: 'services' },
-        { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideothers' },
-        { role: 'unhide' },
-        { type: 'separator' },
-        { role: 'quit' }
-      ]
-    },
-    {
-      label: '编辑',
-      submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' }
-      ]
-    },
-    {
-      label: '视图',
-      submenu: [
-        {
-          label: '后退',
-          accelerator: 'Cmd+Left',
-          click: () => {
-            const win = BrowserWindow.getFocusedWindow();
-            if (win && win._contentViewManager) {
-              const wc = win._contentViewManager.getWebContents();
-              if (wc && wc.canGoBack()) wc.goBack();
-            }
-          }
-        },
-        {
-          label: '前进',
-          accelerator: 'Cmd+Right',
-          click: () => {
-            const win = BrowserWindow.getFocusedWindow();
-            if (win && win._contentViewManager) {
-              const wc = win._contentViewManager.getWebContents();
-              if (wc && wc.canGoForward()) wc.goForward();
-            }
-          }
-        },
-        {
-          label: '刷新',
-          accelerator: 'Cmd+R',
-          click: () => {
-            const win = BrowserWindow.getFocusedWindow();
-            if (win && win._contentViewManager) {
-              const wc = win._contentViewManager.getWebContents();
-              if (wc) wc.reload();
-            }
-          }
-        },
-        {
-          label: '主页',
-          accelerator: 'Cmd+Shift+H',
-          click: () => {
-            const win = BrowserWindow.getFocusedWindow();
-            if (win && win._shortcutManager) {
-              const wc = win._contentViewManager?.getWebContents();
-              // 直接使用 shortcutManager 的 initialUrl
-              const initialUrl = win._shortcutManager.initialUrl;
-              console.log('全局菜单主页跳转使用URL:', initialUrl);
-              if (wc && initialUrl) {
-                wc.loadURL(initialUrl);
-              }
-            }
-          }
-        },
-        { type: 'separator' },
-        { role: 'togglefullscreen' }
-      ]
-    },
-    {
-      label: '窗口',
-      role: 'window',
-      submenu: [
-        { role: 'minimize' },
-        { role: 'zoom' },
-        { role: 'front' }
-      ]
-    },
-    {
-      label: '帮助',
-      role: 'help',
-      submenu: [
-        {
-          label: '系统信息',
-          accelerator: 'Cmd+I',
-          click: () => {
-            const win = BrowserWindow.getFocusedWindow();
-            if (win) {
-              const { showInfoDialog } = require('./utils/dialogHelper');
-              showInfoDialog(win);
-            }
-          }
-        }
-      ]
-    }
-  ];
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
-}
 
 app.on('will-quit', () => {
   // 取消注册所有快捷键
