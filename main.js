@@ -77,13 +77,7 @@ function openNewWindow(url) {
   // 先声明 contentViewManager，便于 action handler 使用
   const contentViewManager = new ContentViewManager(win, APP_CONFIG, openNewWindow);
   // 计算初始 url 的顶级域名主页
-  let homeUrl = url;
-  try {
-    const u = new URL(url);
-    homeUrl = u.origin + '/';
-  } catch (e) {
-    // fallback: 不是合法 url 就用原始 url
-  }
+  let homeUrl = url; // 直接使用窗口创建时的原始 url 作为主页
   // 新窗口快捷键管理器需提前声明，便于 action handler 使用
   let shortcutManager;
   // 传递 action handler，所有按钮和快捷键统一处理
