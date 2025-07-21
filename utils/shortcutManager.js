@@ -168,7 +168,6 @@ class ShortcutManager {
       const webContents = this.contentViewManager.getWebContents();
       if (webContents) {
         try {
-          // 跳转到窗口创建时的初始 url（即 homeUrl）
           webContents.loadURL(this.homeUrl);
         } catch (error) {
           console.log('主页跳转失败（已忽略）:', error.message);
@@ -275,7 +274,6 @@ class ShortcutManager {
           break;
         case 'home':
           try {
-            // 跳转到窗口创建时的初始 url（即 homeUrl）
             webContents.loadURL(this.homeUrl);
           } catch (error) {
             console.log('主页跳转失败（已忽略）:', error.message);
