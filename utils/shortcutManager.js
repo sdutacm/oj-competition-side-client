@@ -85,60 +85,8 @@ class ShortcutManager {
           this.mainWindow.setMenuBarVisibility(false);
         }
       } else {
-        // macOS: 设置原生菜单，确保系统快捷键可用
-        const template = [
-          {
-            label: 'SDUT OJ 竞赛客户端',
-            submenu: [
-              {
-                label: '关于 SDUT OJ 竞赛客户端',
-                click: () => {
-                  if (this.mainWindow) {
-                    showInfoDialog(this.mainWindow);
-                  }
-                }
-              },
-              { type: 'separator' },
-              { role: 'quit' }
-            ]
-          },
-          {
-            label: '编辑',
-            submenu: [
-              { role: 'undo' },
-              { role: 'redo' },
-              { type: 'separator' },
-              { role: 'cut' },
-              { role: 'copy' },
-              { role: 'paste' },
-              { role: 'pasteAndMatchStyle' },
-              { role: 'delete' },
-              { role: 'selectAll' }
-            ]
-          },
-          {
-            label: '视图',
-            submenu: [
-              { role: 'reload' },
-              { role: 'togglefullscreen' }
-            ]
-          },
-          {
-            label: '窗口',
-            submenu: [
-              { role: 'minimize' },
-              { role: 'close' }
-            ]
-          },
-          {
-            label: '帮助',
-            submenu: [
-              { role: 'help' }
-            ]
-          }
-        ];
-        const menu = require('electron').Menu.buildFromTemplate(template);
-        require('electron').Menu.setApplicationMenu(menu);
+        // macOS: 不在这里设置菜单，让 MacMenuManager 负责菜单管理
+        console.log('macOS 系统，跳过在 ShortcutManager 中设置菜单，使用 MacMenuManager');
         // 不隐藏菜单栏，保留原生体验
         // 主动聚焦内容区，确保快捷键可用
         try {

@@ -341,8 +341,8 @@ app.whenReady().then(() => {
     // 禁用开发者工具相关功能
     disableDevTools();
 
-    // 初始化国际化菜单管理器（macOS）
-    if (process.platform === 'darwin') {
+    // 初始化国际化菜单管理器（macOS 和 Linux）
+    if (process.platform === 'darwin' || process.platform === 'linux') {
       macMenuManager = new MacMenuManager(mainWindow);
     }
 
