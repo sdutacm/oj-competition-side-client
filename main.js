@@ -427,8 +427,13 @@ app.whenReady().then(() => {
             openNewWindow(url);
             return { action: 'deny' };
           }
-          // 非白名单只 deny，不弹窗
-          return { action: 'deny' };
+          // 非白名单/主域名弹窗拦截
+          if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+            showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+            return { action: 'deny' };
+          }
+          // 主域名允许跳转
+          return { action: 'allow' };
         });
       }
     }
