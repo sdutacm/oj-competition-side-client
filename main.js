@@ -1,12 +1,12 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
 const ToolbarManager = require('./utils/toolbarManager');
 const ContentViewManager = require('./utils/contentViewManager');
 const ShortcutManager = require('./utils/shortcutManager');
 const { LayoutManager } = require('./utils/windowHelper');
 const PlatformHelper = require('./utils/platformHelper');
-const { interceptDomain } = require('./utils/domainHelper');
-const { getCustomUserAgent } = require('./utils/uaHelper');
+const { isWhiteDomain } = require('./utils/domainHelper');
+const { showBlockedDialog } = require('./utils/dialogHelper');
 
 let mainWindow = null;
 let toolbarManager = null;
@@ -39,18 +39,67 @@ const APP_CONFIG = {
 // 重定向拦截器，应用于任意 BrowserView
 function applyRedirectInterceptor(view, win, isMainWindow = false) {
   if (view && view.webContents) {
-    view.webContents.on('did-navigate', (event, url) => {
-      if (!interceptDomain(win, url, APP_CONFIG, isMainWindow)) {
-        // 已拦截并提示，弹窗已自动关闭
+    let lastRedirectBlockedUrl = '';
+    let lastRedirectBlockedTime = 0;
+    // 所有窗口都做 will-navigate 拦截，用户点击跳转到非法域名弹窗
+    view.webContents.on('will-navigate', (event, url) => {
+      const domain = require('./utils/urlHelper').getHostname(url);
+      // 白名单直接弹新窗口（仅主窗口需要，子窗口不弹新窗口）
+      if (isMainWindow && isWhiteDomain(url, APP_CONFIG)) {
+        event.preventDefault();
+        openNewWindow(url);
         return;
       }
-      // 允许访问，无需额外处理
+      // 非主域名/白名单，全部弹窗拦截
+      if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+        event.preventDefault();
+        showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
+        return;
+      }
+      // 主域名页面允许跳转
+      if (domain === APP_CONFIG.MAIN_DOMAIN || domain.endsWith('.' + APP_CONFIG.MAIN_DOMAIN)) {
+        return;
+      }
+      // 其它场景一律拦截但不弹窗（如 SPA 跳转等）
+      event.preventDefault();
+    });
+    // 所有窗口都做 will-redirect 拦截，非法重定向弹窗
+    view.webContents.on('will-redirect', (event, url) => {
+      const domain = require('./utils/urlHelper').getHostname(url);
+      if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+        const now = Date.now();
+        if (url === lastRedirectBlockedUrl && now - lastRedirectBlockedTime < 1000) {
+          event.preventDefault();
+          return;
+        }
+        lastRedirectBlockedUrl = url;
+        lastRedirectBlockedTime = now;
+        event.preventDefault();
+        showBlockedDialogWithDebounce(win, domain, '非法重定向拦截，已自动回退主页', 'redirect');
+        // 自动回退主页（仅新窗口需要，主窗口不回退）
+        if (!isMainWindow) {
+          try {
+            const u = new URL(win._shortcutManager?.homeUrl || win._contentViewManager?.homeUrl || '');
+            view.webContents.loadURL(u.origin + '/');
+          } catch {}
+        }
+      }
     });
   }
 }
 
 // 独立的新窗口创建函数，不放在 APP_CONFIG 内，避免 require 副作用
+let lastOpenedUrl = '';
+let lastOpenedTime = 0;
+// openNewWindow 只负责弹新窗口，不再做白名单判断和拦截
 function openNewWindow(url) {
+  // 防止同一 url 在极短时间内弹两次窗口
+  const now = Date.now();
+  if (url === lastOpenedUrl && now - lastOpenedTime < 1000) {
+    return;
+  }
+  lastOpenedUrl = url;
+  lastOpenedTime = now;
   const width = 1400, height = 900;
   let iconPath = undefined;
   if (process.platform === 'win32') {
@@ -74,13 +123,15 @@ function openNewWindow(url) {
   win.on('ready-to-show', () => {
     win.setMenuBarVisibility(false);
   });
+  // 记录初始 url 的顶级域名主页
+  let homeUrl = url;
+  try {
+    const u = new URL(url);
+    homeUrl = u.origin + '/';
+  } catch (e) {}
   // 先声明 contentViewManager，便于 action handler 使用
   const contentViewManager = new ContentViewManager(win, APP_CONFIG, openNewWindow);
-  // 计算初始 url 的顶级域名主页
-  let homeUrl = url; // 直接使用窗口创建时的原始 url 作为主页
-  // 新窗口快捷键管理器需提前声明，便于 action handler 使用
   let shortcutManager;
-  // 传递 action handler，所有按钮和快捷键统一处理
   const toolbarManager = new ToolbarManager(win, (action) => {
     if (shortcutManager) {
       shortcutManager.handleToolbarAction(action);
@@ -100,16 +151,29 @@ function openNewWindow(url) {
   // 关键：将 homeUrl 作为 home 页面传递给 ShortcutManager
   shortcutManager = new ShortcutManager(contentViewManager, homeUrl, win, false);
   shortcutManager.registerShortcuts();
-  // 新增：内容区页面标题变化时，同步窗口标题、重定向拦截
+  // 新增：重定向拦截，非白名单自动回退到 homeUrl
   if (contentViewManager.getView && typeof contentViewManager.getView === 'function') {
     const contentView = contentViewManager.getView();
     if (contentView && contentView.webContents) {
-      // 标题同步
+      applyRedirectInterceptor(contentView, win, false); // 新窗口
       contentView.webContents.on('page-title-updated', (event, title) => {
         win.setTitle(title);
       });
-      // 应用重定向拦截（弹窗 isMainWindow 传 false）
-      applyRedirectInterceptor(contentView, win, false);
+      // 新窗口 setWindowOpenHandler 拦截非法域名并弹窗
+      contentView.webContents.setWindowOpenHandler(({ url }) => {
+        const domain = require('./utils/urlHelper').getHostname(url);
+        if (isWhiteDomain(url, APP_CONFIG)) {
+          openNewWindow(url);
+          return { action: 'deny' };
+        }
+        // 非白名单/主域名弹窗拦截
+        if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+          showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
+          return { action: 'deny' };
+        }
+        // 主域名允许跳转
+        return { action: 'allow' };
+      });
     }
   }
   win.on('closed', () => {
@@ -288,13 +352,14 @@ app.whenReady().then(() => {
         sandbox: platformConfig.sandbox,
         experimentalFeatures: platformConfig.experimentalFeatures,
         devTools: false, // 禁用开发者工具
+        preload: path.join(__dirname, 'preload.js') // 注入 preload 脚本
       },
       show: false, // 初始不显示，等待准备完成
     });
 
     // 设置自定义 User-Agent
     const defaultUserAgent = mainWindow.webContents.getUserAgent();
-    const customUserAgent = getCustomUserAgent(defaultUserAgent);
+    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
     mainWindow.webContents.setUserAgent(customUserAgent);
 
     // 设置窗口标题
@@ -314,15 +379,55 @@ app.whenReady().then(() => {
     // 创建视图
     createViews();
 
-    // 新增：主窗口内容区页面标题变化时，同步主窗口标题、重定向拦截
+    // 新增：主窗口内容区页面标题变化时，同步主窗口标题
     if (contentViewManager && contentViewManager.getView && typeof contentViewManager.getView === 'function') {
       const contentView = contentViewManager.getView();
       if (contentView && contentView.webContents) {
+        // 标题同步
         contentView.webContents.on('page-title-updated', (event, title) => {
           mainWindow.setTitle(title);
         });
-        // 应用重定向拦截（主窗口只拦截黑名单）
-        applyRedirectInterceptor(contentView, mainWindow, true);
+        // 主窗口只做 will-navigate 和 will-redirect 拦截，不做 did-navigate 拦截，不绑定 applyRedirectInterceptor
+        contentView.webContents.on('will-navigate', (event, url) => {
+          const domain = require('./utils/urlHelper').getHostname(url);
+          // 白名单：页面内点击立即弹新窗口
+          if (isWhiteDomain(url, APP_CONFIG)) {
+            event.preventDefault();
+            openNewWindow(url);
+            return;
+          }
+          // 非主域名/白名单，全部弹窗拦截
+          if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+            event.preventDefault();
+            showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+            return;
+          }
+          // 主域名页面允许跳转
+          if (domain === APP_CONFIG.MAIN_DOMAIN || domain.endsWith('.' + APP_CONFIG.MAIN_DOMAIN)) {
+            return;
+          }
+          // 其它场景一律拦截但不弹窗（如 SPA 跳转等）
+          event.preventDefault();
+        });
+        // 主窗口 will-redirect 拦截，非法重定向弹窗
+        contentView.webContents.on('will-redirect', (event, url) => {
+          const domain = require('./utils/urlHelper').getHostname(url);
+          if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+            event.preventDefault();
+            showBlockedDialogWithDebounce(mainWindow, domain, '非法重定向拦截，已阻止跳转', 'redirect');
+            return;
+          }
+          // 主域名和白名单允许跳转
+        });
+        contentView.webContents.setWindowOpenHandler(({ url }) => {
+          const domain = require('./utils/urlHelper').getHostname(url);
+          if (isWhiteDomain(url, APP_CONFIG)) {
+            openNewWindow(url);
+            return { action: 'deny' };
+          }
+          // 非白名单只 deny，不弹窗
+          return { action: 'deny' };
+        });
       }
     }
 
@@ -433,3 +538,19 @@ app.on('will-quit', () => {
     shortcutManager.unregisterAll();
   }
 });
+
+// 防抖弹窗相关
+let lastBlockedUrl = '';
+let lastBlockedType = '';
+let lastBlockedTime = 0;
+function showBlockedDialogWithDebounce(win, url, message, type = 'default') {
+  const now = Date.now();
+  // type: 'default' 主窗口拦截，'redirect' 新窗口重定向拦截
+  if (url === lastBlockedUrl && type === lastBlockedType && now - lastBlockedTime < 1000) {
+    return;
+  }
+  lastBlockedUrl = url;
+  lastBlockedType = type;
+  lastBlockedTime = now;
+  showBlockedDialog(win, url, message, type);
+}

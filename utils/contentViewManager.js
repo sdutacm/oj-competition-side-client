@@ -57,8 +57,12 @@ class ContentViewManager {
     // 禁用内容视图的开发者工具相关功能和快捷键，仅拦截开发者工具快捷键
     this.disableDevToolsForContentView(contentView);
 
-    // 设置内容视图的导航监听
-    this.setupNavigation(contentView, targetWindow);
+    // 仅新窗口绑定跳转拦截，主窗口只绑定导航状态
+    if (targetWindow !== this.mainWindow) {
+      this.setupNavigation(contentView, targetWindow);
+    } else {
+      this.setupNavigation(contentView, targetWindow, true); // 主窗口只绑定导航状态
+    }
     // 记录子窗口视图
     if (targetWindow !== this.mainWindow) {
       this.childViews.push(contentView);
@@ -205,8 +209,11 @@ class ContentViewManager {
 
   /**
    * 设置导航监听（支持主窗口和新窗口）
+   * @param {BrowserView} contentView
+   * @param {BrowserWindow} targetWindow
+   * @param {boolean} onlyNavState 仅绑定导航状态（主窗口用）
    */
-  setupNavigation(contentView, targetWindow) {
+  setupNavigation(contentView, targetWindow, onlyNavState = false) {
     const webContents = contentView?.webContents;
     if (!webContents) return;
 
@@ -214,33 +221,29 @@ class ContentViewManager {
     webContents.on('did-navigate', () => {
       this.updateNavigationState();
     });
-
     webContents.on('did-navigate-in-page', () => {
       this.updateNavigationState();
     });
-
     webContents.on('did-finish-load', () => {
       this.updateNavigationState();
     });
-
     webContents.on('did-start-loading', () => {
       this.updateNavigationState();
     });
-
     webContents.on('did-stop-loading', () => {
       this.updateNavigationState();
     });
 
     // 为 macOS 添加额外的导航状态检查
     if (process.platform === 'darwin') {
-      // 定期更新导航状态，确保在 macOS 上正确检测
       const navigationUpdateInterval = setInterval(() => {
         this.updateNavigationState();
       }, 1000);
-
-      // 保存定时器引用以便清理
       this.navigationUpdateInterval = navigationUpdateInterval;
     }
+
+    // 仅新窗口绑定 will-navigate/will-redirect/setWindowOpenHandler 拦截
+    if (onlyNavState) return;
 
     webContents.on('will-navigate', (event, targetUrl) => {
       const targetDomain = getHostname(targetUrl);

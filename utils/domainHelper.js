@@ -2,7 +2,7 @@ const { getHostname } = require('./urlHelper');
 const { showBlockedDialog } = require('./dialogHelper');
 
 /**
- * 统一判断域名是否允许访问
+ * 统一判断弹窗只允许白名单，主窗口允许主域名和白名单
  * @param {string} domain - 目标域名
  * @param {object} config - 配置对象，需包含 MAIN_DOMAIN/POPUP_WHITELIST/BLOCKED_DOMAINS
  * @param {boolean} isMainWindow - 是否主窗口
@@ -20,21 +20,36 @@ function checkDomainAllowed(domain, config, isMainWindow = false) {
       }
     }
   }
-  // 主域名及其子域名始终允许（无论主窗口还是弹窗）
-  const mainDomain = config.MAIN_DOMAIN;
-  if (domain === mainDomain || domain.endsWith('.' + mainDomain)) {
-    return { allowed: true, reason: null };
-  }
-  // 白名单域名及其子域名允许
-  if (config.POPUP_WHITELIST && config.POPUP_WHITELIST.size > 0) {
-    for (const allowedDomain of config.POPUP_WHITELIST) {
-      if (domain === allowedDomain || domain.endsWith('.' + allowedDomain)) {
-        return { allowed: true, reason: null };
+  if (isMainWindow) {
+    // 主窗口允许主域名和白名单
+    const mainDomain = config.MAIN_DOMAIN;
+    if (domain === mainDomain || domain.endsWith('.' + mainDomain)) {
+      return { allowed: true, reason: null };
+    }
+    if (config.POPUP_WHITELIST && config.POPUP_WHITELIST.size > 0) {
+      for (const allowedDomain of config.POPUP_WHITELIST) {
+        if (domain === allowedDomain || domain.endsWith('.' + allowedDomain)) {
+          return { allowed: true, reason: null };
+        }
       }
     }
+    // 其它域名不允许
+    return { allowed: false, reason: '该域名不在主窗口允许访问范围' };
   }
-  // 其它域名不允许
-  return { allowed: false, reason: '该域名不在允许访问范围' };
+  // 弹窗严格校验白名单
+  if (config.POPUP_WHITELIST && config.POPUP_WHITELIST.size > 0) {
+    let allowed = false;
+    for (const allowedDomain of config.POPUP_WHITELIST) {
+      if (domain === allowedDomain || domain.endsWith('.' + allowedDomain)) {
+        allowed = true;
+        break;
+      }
+    }
+    if (!allowed) {
+      return { allowed: false, reason: '该域名不在允许访问的白名单中' };
+    }
+  }
+  return { allowed: true, reason: null };
 }
 
 /**
@@ -60,7 +75,25 @@ function interceptDomain(win, url, config, isMainWindow = false, type = 'default
   return true;
 }
 
+/**
+ * 判断 url 是否属于白名单域名
+ * @param {string} url
+ * @param {object} config
+ * @returns {boolean}
+ */
+function isWhiteDomain(url, config) {
+  const domain = getHostname(url);
+  if (!domain || !config || !config.POPUP_WHITELIST) return false;
+  for (const allowedDomain of config.POPUP_WHITELIST) {
+    if (domain === allowedDomain || domain.endsWith('.' + allowedDomain)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 module.exports = {
   checkDomainAllowed,
-  interceptDomain
+  interceptDomain,
+  isWhiteDomain
 };
