@@ -5,6 +5,7 @@ class ShortcutManager {
   constructor(contentViewManager, homeUrl, mainWindow = null) {
     this.contentViewManager = contentViewManager;
     this.homeUrl = homeUrl;
+    this.initialUrl = homeUrl; // 新增：记录窗口初始 url
     this.mainWindow = mainWindow;
     // 统一使用 PlatformHelper 默认快捷键
     this.shortcuts = PlatformHelper.getNavigationShortcuts();
@@ -28,11 +29,18 @@ class ShortcutManager {
       this.setupKeyHandlers();
       const { Menu } = require('electron');
       const isMac = process.platform === 'darwin';
-      // 新增：监听 will-redirect，自动更新 homeUrl 为当前页面顶级域名
+      // 新增：监听 will-redirect，智能更新 initialUrl
       const webContents = this.contentViewManager.getWebContents();
       if (webContents) {
         webContents.on('will-redirect', (event, url) => {
-          this.homeUrl = url;
+          try {
+            const oldUrl = new URL(this.initialUrl);
+            const newUrl = new URL(url);
+            // 只有同站点且路径不同才更新
+            if (oldUrl.origin === newUrl.origin && oldUrl.pathname !== newUrl.pathname) {
+              this.initialUrl = url;
+            }
+          } catch {}
         });
       }
       if (!isMac) {
@@ -239,7 +247,7 @@ class ShortcutManager {
       const webContents = this.contentViewManager.getWebContents();
       if (webContents) {
         try {
-          webContents.loadURL(this.homeUrl);
+          webContents.loadURL(this.initialUrl);
         } catch (error) {
           console.log('主页跳转失败（已忽略）:', error.message);
         }
