@@ -41,52 +41,37 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
   if (view && view.webContents) {
     let lastRedirectBlockedUrl = '';
     let lastRedirectBlockedTime = 0;
-    // 所有窗口都做 will-navigate 拦截，用户点击跳转到非法域名弹窗
     view.webContents.on('will-navigate', (event, url) => {
       const domain = require('./utils/urlHelper').getHostname(url);
-      // 白名单直接弹新窗口（仅主窗口需要，子窗口不弹新窗口）
       if (isMainWindow && isWhiteDomain(url, APP_CONFIG)) {
         event.preventDefault();
         openNewWindow(url);
         return;
       }
-      // 非主域名/白名单，全部弹窗拦截
       if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
         event.preventDefault();
         showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
         return;
       }
-      // 主域名页面允许跳转
       if (domain === APP_CONFIG.MAIN_DOMAIN || domain.endsWith('.' + APP_CONFIG.MAIN_DOMAIN)) {
         return;
       }
-      // 其它场景一律拦截但不弹窗（如 SPA 跳转等）
       event.preventDefault();
     });
-    // 所有窗口都做 will-redirect 拦截，非法重定向弹窗
     view.webContents.on('will-redirect', (event, url) => {
       const domain = require('./utils/urlHelper').getHostname(url);
       if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
-        const now = Date.now();
-        if (url === lastRedirectBlockedUrl && now - lastRedirectBlockedTime < 1000) {
-          event.preventDefault();
-          return;
-        }
-        lastRedirectBlockedUrl = url;
-        lastRedirectBlockedTime = now;
         event.preventDefault();
         showBlockedDialogWithDebounce(win, domain, '非法重定向拦截，已自动回退主页', 'redirect');
         // 自动回退主页（仅新窗口需要，主窗口不回退）
         if (!isMainWindow) {
           try {
-            const homeUrl = win._shortcutManager?.homeUrl || win._contentViewManager?.homeUrl || '';
-            const u = new URL(homeUrl);
-            const topLevelUrl = u.origin + '/';
-            // 更新窗口的初始 URL 为顶级域名
-            if (win._shortcutManager) {
-              win._shortcutManager.homeUrl = topLevelUrl;
+            // 禁止覆盖 ShortcutManager 的 homeUrl/initialUrl
+            // 只回退页面，不修改主页记录
+            const shortcutManager = win._shortcutManager;
+            if (shortcutManager && shortcutManager.initialUrl) {
+              view.webContents.loadURL(shortcutManager.initialUrl);
             }
-            view.webContents.loadURL(topLevelUrl); // 重定向拦截返回顶级域名
           } catch {}
         }
       }
