@@ -47,6 +47,13 @@
             "x64",
             "arm64"
           ]
+        },
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "artifactName": "SDUTOJCompetitionSideClient_mac_${arch}_${version}.${ext}"
