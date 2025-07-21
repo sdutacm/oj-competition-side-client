@@ -37,12 +37,11 @@ function createNewWindow(url, options = {}, useSimpleMode = false) {
   // 禁用新窗口的开发者工具相关功能
   disableDevToolsForWindow(newWin);
 
-  // 为新窗口添加导航栏
+  // 为新窗口添加导航栏，传递初始 url 作为 homeUrl
   try {
-    setupNavigationForNewWindow(newWin, url);
+    setupNavigationForNewWindow(newWin, url, url); // 新增第三个参数 homeUrl
   } catch (error) {
     console.error('设置新窗口导航栏失败:', error);
-    // 如果导航栏设置失败，至少让窗口显示内容
     newWin.loadURL(url);
   }
 
@@ -53,8 +52,9 @@ function createNewWindow(url, options = {}, useSimpleMode = false) {
  * 为新窗口设置导航栏
  * @param {BrowserWindow} window - 新窗口
  * @param {string} url - 要加载的URL
+ * @param {string} homeUrl - 主页URL（实际初始 url）
  */
-function setupNavigationForNewWindow(window, url) {
+function setupNavigationForNewWindow(window, url, homeUrl) {
   const toolbarHeight = 48;
 
   try {
@@ -126,8 +126,7 @@ function setupNavigationForNewWindow(window, url) {
       toolbarView.webContents.on('console-message', (event, level, message) => {
         if (message.startsWith('TOOLBAR_ACTION:')) {
           const action = message.replace('TOOLBAR_ACTION:', '');
-          // 传入主页URL而不是当前页面URL
-          const homeUrl = 'https://op.sdutacm.cn/';
+          // 使用传入的 homeUrl 而不是硬编码
           handleNewWindowToolbarAction(action, contentView, homeUrl);
         }
       });
