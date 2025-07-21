@@ -72,7 +72,7 @@ class ShortcutManager {
         // macOS: 设置原生菜单，确保系统快捷键可用
         const template = [
           {
-            label: 'SDUT OJ',
+            label: 'SDUT OJ 竞赛客户端',
             submenu: [
               {
                 label: '关于 SDUT OJ 竞赛客户端',
