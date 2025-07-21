@@ -79,8 +79,14 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
         // 自动回退主页（仅新窗口需要，主窗口不回退）
         if (!isMainWindow) {
           try {
-            const u = new URL(win._shortcutManager?.homeUrl || win._contentViewManager?.homeUrl || '');
-            view.webContents.loadURL(u.origin + '/');
+            const homeUrl = win._shortcutManager?.homeUrl || win._contentViewManager?.homeUrl || '';
+            const u = new URL(homeUrl);
+            const topLevelUrl = u.origin + '/';
+            // 更新窗口的初始 URL 为顶级域名
+            if (win._shortcutManager) {
+              win._shortcutManager.homeUrl = topLevelUrl;
+            }
+            view.webContents.loadURL(topLevelUrl); // 重定向拦截返回顶级域名
           } catch {}
         }
       }
@@ -123,12 +129,8 @@ function openNewWindow(url) {
   win.on('ready-to-show', () => {
     win.setMenuBarVisibility(false);
   });
-  // 记录初始 url 的顶级域名主页
+  // 记录初始 url 作为主页
   let homeUrl = url;
-  try {
-    const u = new URL(url);
-    homeUrl = u.origin + '/';
-  } catch (e) {}
   // 先声明 contentViewManager，便于 action handler 使用
   const contentViewManager = new ContentViewManager(win, APP_CONFIG, openNewWindow);
   let shortcutManager;
