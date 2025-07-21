@@ -74,7 +74,14 @@ class ShortcutManager {
           {
             label: 'SDUT OJ',
             submenu: [
-              { role: 'about' },
+              {
+                label: '关于 SDUT OJ 竞赛客户端',
+                click: () => {
+                  if (this.mainWindow) {
+                    showInfoDialog(this.mainWindow);
+                  }
+                }
+              },
               { type: 'separator' },
               { role: 'quit' }
             ]
@@ -114,7 +121,7 @@ class ShortcutManager {
             ]
           }
         ];
-        const menu = Menu.buildFromTemplate(template);
+        const menu = require('electron').Menu.buildFromTemplate(template);
         require('electron').Menu.setApplicationMenu(menu);
         // 不隐藏菜单栏，保留原生体验
         // 主动聚焦内容区，确保快捷键可用
