@@ -69,23 +69,35 @@ class MacMenuManager {
           { type: 'separator' },
           {
             label: i18n.t('menu.services'),
-            role: 'services',
             submenu: []
           },
           { type: 'separator' },
           {
             label: i18n.t('menu.hide', { appName: appName }),
             accelerator: 'Cmd+H',
-            role: 'hide'
+            click: () => {
+              if (this.mainWindow) {
+                this.mainWindow.hide();
+              }
+            }
           },
           {
             label: i18n.t('menu.hideOthers'),
             accelerator: 'Cmd+Shift+H',
-            role: 'hideothers'
+            click: () => {
+              if (this.mainWindow && this.mainWindow.setVisibleOnAllWorkspaces) {
+                // 在macOS上隐藏其他应用程序
+                const { app } = require('electron');
+                app.hide();
+              }
+            }
           },
           {
             label: i18n.t('menu.showAll'),
-            role: 'unhide'
+            click: () => {
+              const { app } = require('electron');
+              app.show();
+            }
           },
           { type: 'separator' },
           {
@@ -166,11 +178,11 @@ class MacMenuManager {
             submenu: [
               {
                 label: i18n.t('menu.startSpeaking'),
-                role: 'startspeaking'
+                click: () => this.startSpeaking()
               },
               {
                 label: i18n.t('menu.stopSpeaking'),
-                role: 'stopspeaking'
+                click: () => this.stopSpeaking()
               }
             ]
           }
@@ -271,7 +283,10 @@ class MacMenuManager {
           { type: 'separator' },
           {
             label: i18n.t('menu.front'),
-            role: 'front'
+            click: () => {
+              const { app } = require('electron');
+              app.focus();
+            }
           }
         ]
       },
@@ -516,6 +531,47 @@ class MacMenuManager {
       }
     } catch (error) {
       console.error('显示系统信息失败:', error);
+    }
+  }
+
+  /**
+   * 朗读功能
+   */
+  startSpeaking() {
+    if (this.mainWindow && this.mainWindow._contentViewManager) {
+      const wc = this.mainWindow._contentViewManager.getWebContents();
+      if (wc) {
+        // 获取选中的文本
+        wc.executeJavaScript(`
+          const selection = window.getSelection();
+          selection.toString();
+        `).then(selectedText => {
+          if (selectedText) {
+            // 使用系统语音合成
+            wc.executeJavaScript(`
+              if (window.speechSynthesis) {
+                const utterance = new SpeechSynthesisUtterance('${selectedText.replace(/'/g, "\\'")}');
+                window.speechSynthesis.speak(utterance);
+              }
+            `);
+          }
+        }).catch(err => {
+          console.error('朗读失败:', err);
+        });
+      }
+    }
+  }
+
+  stopSpeaking() {
+    if (this.mainWindow && this.mainWindow._contentViewManager) {
+      const wc = this.mainWindow._contentViewManager.getWebContents();
+      if (wc) {
+        wc.executeJavaScript(`
+          if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+          }
+        `);
+      }
     }
   }
 
