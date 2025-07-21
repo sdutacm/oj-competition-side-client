@@ -28,6 +28,16 @@ class ShortcutManager {
       this.setupKeyHandlers();
       const { Menu } = require('electron');
       const isMac = process.platform === 'darwin';
+      // 新增：监听 will-redirect，自动更新 homeUrl 为当前页面顶级域名
+      const webContents = this.contentViewManager.getWebContents();
+      if (webContents) {
+        webContents.on('will-redirect', (event, url) => {
+          try {
+            const u = new URL(url);
+            this.homeUrl = u.origin + '/';
+          } catch {}
+        });
+      }
       if (!isMac) {
         // 仅非 Mac 下自定义菜单和快捷键
         const shortcuts = this.shortcuts;
