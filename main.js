@@ -114,8 +114,9 @@ function openNewWindow(url) {
   win.on('ready-to-show', () => {
     win.setMenuBarVisibility(false);
   });
-  // 记录初始 url 作为主页
-  let homeUrl = url; // 记录完整初始 url
+  // 记录初始 url 作为主页（确保是完整 url）
+  const initialUrl = url;  // 使用 const 确保不被修改
+  
   // 先声明 contentViewManager，便于 action handler 使用
   const contentViewManager = new ContentViewManager(win, APP_CONFIG, openNewWindow);
   let shortcutManager;
@@ -129,16 +130,27 @@ function openNewWindow(url) {
   const layoutManager = new LayoutManager(win, toolbarManager, contentViewManager);
   layoutManager.layoutViews();
   layoutManager.setupResizeListener();
-  contentViewManager.createContentView(win, url);
+  contentViewManager.createContentView(win, initialUrl);  // 使用 initialUrl
+  
   // 新增：确保新窗口内容区获得焦点，快捷键才生效
   const view = contentViewManager.getView && contentViewManager.getView();
   if (view && view.webContents && view.webContents.focus) {
     view.webContents.focus();
   }
-  // 关键：将 homeUrl 作为 home 页面传递给 ShortcutManager，并确保 initialUrl 只赋值一次且为完整 url
-  shortcutManager = new ShortcutManager(contentViewManager, homeUrl, win, false);
-  shortcutManager.initialUrl = homeUrl; // 强制确保 initialUrl 为完整初始 url
-  shortcutManager.homeUrl = homeUrl;    // 强制确保 homeUrl 为完整初始 url
+  
+  // 使用完整的 initialUrl 初始化 ShortcutManager
+  shortcutManager = new ShortcutManager(contentViewManager, initialUrl, win, false);
+  // 强制确保两个 url 都设置为完整初始 url
+  Object.defineProperties(shortcutManager, {
+    initialUrl: {
+      value: initialUrl,
+      writable: false  // 设为只读，防止被修改
+    },
+    homeUrl: {
+      value: initialUrl,
+      writable: false  // 设为只读，防止被修改
+    }
+  });
   shortcutManager.registerShortcuts();
   // 新增：重定向拦截，非白名单自动回退到 homeUrl
   if (contentViewManager.getView && typeof contentViewManager.getView === 'function') {
@@ -489,6 +501,17 @@ function initializeManagers() {
 
     // 创建快捷键管理器（在内容视图管理器创建后）
     shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, mainWindow, true);
+    // 主窗口也设置只读的 initialUrl 和 homeUrl
+    Object.defineProperties(shortcutManager, {
+      initialUrl: {
+        value: APP_CONFIG.HOME_URL,
+        writable: false
+      },
+      homeUrl: {
+        value: APP_CONFIG.HOME_URL,
+        writable: false
+      }
+    });
 
     // 创建布局管理器
     layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
