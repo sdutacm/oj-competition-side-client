@@ -32,10 +32,7 @@ class ShortcutManager {
       const webContents = this.contentViewManager.getWebContents();
       if (webContents) {
         webContents.on('will-redirect', (event, url) => {
-          try {
-            const u = new URL(url);
-            this.homeUrl = u.origin + '/';
-          } catch {}
+          this.homeUrl = url;
         });
       }
       if (!isMac) {
