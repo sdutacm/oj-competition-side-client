@@ -33,7 +33,8 @@ class ContentViewManager {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        devTools: false,
+        nativeWindowOpen: true,
+        // devTools: false, // 不禁用开发者工具，确保系统命令可用
       }
     });
     targetWindow.addBrowserView(contentView);
