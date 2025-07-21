@@ -47,9 +47,21 @@
             "x64",
             "arm64"
           ]
+        },
+        {
+          "target": "dmg",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
         }
       ],
-      "artifactName": "${productName}_${version}_mac_${arch}.${ext}"
+      "artifactName": "SDUTOJCompetitionSideClient_mac_${arch}_${version}.${ext}"
     },
     "win": {
       "icon": "public/favicon.ico",
@@ -57,7 +69,9 @@
         {
           "target": "nsis",
           "arch": [
-            "x64"
+            "x64",
+            "arm64",
+            "ia32"
           ]
         },
         {
@@ -69,7 +83,7 @@
       ],
       "forceCodeSigning": false,
       "signAndEditExecutable": false,
-      "artifactName": "${productName}_${version}_win_${arch}.${ext}"
+      "artifactName": "SDUTOJCompetitionSideClient_windows_${target}_${arch}_${version}.${ext}"
     },
     "linux": {
       "icon": "public/icon.png",
@@ -84,11 +98,12 @@
         {
           "target": "deb",
           "arch": [
-            "x64"
+            "x64",
+            "arm64"
           ]
         }
       ],
-      "artifactName": "${productName}_${version}_linux_${arch}.${ext}"
+      "artifactName": "SDUTOJCompetitionSideClient_linux_${arch}_${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
