@@ -115,7 +115,7 @@ function openNewWindow(url) {
     win.setMenuBarVisibility(false);
   });
   // 记录初始 url 作为主页
-  let homeUrl = url;
+  let homeUrl = url; // 记录完整初始 url
   // 先声明 contentViewManager，便于 action handler 使用
   const contentViewManager = new ContentViewManager(win, APP_CONFIG, openNewWindow);
   let shortcutManager;
@@ -135,8 +135,10 @@ function openNewWindow(url) {
   if (view && view.webContents && view.webContents.focus) {
     view.webContents.focus();
   }
-  // 关键：将 homeUrl 作为 home 页面传递给 ShortcutManager
+  // 关键：将 homeUrl 作为 home 页面传递给 ShortcutManager，并确保 initialUrl 只赋值一次且为完整 url
   shortcutManager = new ShortcutManager(contentViewManager, homeUrl, win, false);
+  shortcutManager.initialUrl = homeUrl; // 强制确保 initialUrl 为完整初始 url
+  shortcutManager.homeUrl = homeUrl;    // 强制确保 homeUrl 为完整初始 url
   shortcutManager.registerShortcuts();
   // 新增：重定向拦截，非白名单自动回退到 homeUrl
   if (contentViewManager.getView && typeof contentViewManager.getView === 'function') {
@@ -242,7 +244,11 @@ function openNewWindow(url) {
             accelerator: 'Cmd+Shift+H',
             click: () => {
               const wc = contentViewManager?.getWebContents();
-              if (wc) wc.loadURL(homeUrl);
+              // 统一跳转到窗口创建时的完整初始 url
+              const initialUrl = win._shortcutManager?.initialUrl;
+              if (wc && initialUrl) {
+                wc.loadURL(initialUrl);
+              }
             }
           },
           { type: 'separator' },
