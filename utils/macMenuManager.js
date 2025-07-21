@@ -173,50 +173,6 @@ class MacMenuManager {
         ]
       },
       
-      // 视图菜单
-      {
-        label: i18n.t('menu.view'),
-        submenu: [
-          {
-            label: i18n.t('menu.navigation'),
-            submenu: [
-              {
-                label: i18n.t('menu.goBack'),
-                accelerator: 'Cmd+Left',
-                click: () => this.navigateBack()
-              },
-              {
-                label: i18n.t('menu.goForward'),
-                accelerator: 'Cmd+Right',
-                click: () => this.navigateForward()
-              },
-              {
-                label: i18n.t('menu.goHome'),
-                accelerator: 'Cmd+Shift+H',
-                click: () => this.navigateHome()
-              },
-              { type: 'separator' },
-              {
-                label: i18n.t('menu.refresh'),
-                accelerator: 'Cmd+R',
-                click: () => this.refresh()
-              },
-              {
-                label: i18n.t('menu.forceReload'),
-                accelerator: 'Cmd+Shift+R',
-                click: () => this.forceReload()
-              }
-            ]
-          },
-          { type: 'separator' },
-          {
-            label: i18n.t('menu.toggleFullscreen'),
-            accelerator: 'Ctrl+Cmd+F',
-            click: () => this.toggleFullscreen()
-          }
-        ]
-      },
-      
       // 窗口菜单
       {
         label: i18n.t('menu.window'),
