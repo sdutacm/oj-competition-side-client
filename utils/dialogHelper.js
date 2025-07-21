@@ -646,6 +646,11 @@ function showInfoDialog(parentWindow) {
           margin: 0;
           padding: 0;
           box-sizing: border-box;
+          /* 禁止用户选中文本 */
+          user-select: none;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
         }
         
         body {
@@ -664,6 +669,11 @@ function showInfoDialog(parentWindow) {
           /* 优化数字显示 */
           font-variant-numeric: normal;
           font-feature-settings: normal;
+          /* 禁止用户选中文本 */
+          user-select: none;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
         }
 
         /* Windows 系统 emoji 字体优化 */
