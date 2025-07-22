@@ -615,20 +615,19 @@ global.setRestartingState = (state) => {
 
 app.on('reopen-main-window', () => {
   isRestarting = true; // 设置重启标记
-  setTimeout(() => {
-    if (!mainWindow) {
-      try {
-        // 重新创建主窗口
-        createMainWindow();
-        isRestarting = false; // 重启完成，清除标记
-      } catch (error) {
-        console.error('重置后主窗口创建失败:', error);
-        isRestarting = false; // 发生错误也要清除标记
-      }
-    } else {
-      isRestarting = false; // 主窗口已存在，清除标记
+  // 立即重新创建主窗口，无需延迟
+  if (!mainWindow) {
+    try {
+      // 重新创建主窗口
+      createMainWindow();
+      isRestarting = false; // 重启完成，清除标记
+    } catch (error) {
+      console.error('重置后主窗口创建失败:', error);
+      isRestarting = false; // 发生错误也要清除标记
     }
-  }, 3000);
+  } else {
+    isRestarting = false; // 主窗口已存在，清除标记
+  }
 });
 
 app.on('will-quit', () => {
