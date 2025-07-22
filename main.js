@@ -186,7 +186,8 @@ function openNewWindow(url) {
     },
     show: false, // 初始不显示，等待内容加载完成
     autoHideMenuBar: true,
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default', // Mac 优化
+    titleBarStyle: 'default', // 使用默认标题栏
+    frame: true, // 保留窗口边框
   });
   if (process.platform !== 'darwin') {
     win.setMenuBarVisibility(false);
@@ -336,7 +337,8 @@ app.whenReady().then(() => {
         preload: path.join(__dirname, 'preload.js') // 注入 preload 脚本
       },
       show: false, // 初始不显示，等待准备完成
-      titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default', // Mac 优化
+      titleBarStyle: process.platform === 'darwin' ? 'default' : 'default', // 使用默认标题栏
+      frame: true, // 保留窗口边框
     });
 
     // 设置自定义 User-Agent

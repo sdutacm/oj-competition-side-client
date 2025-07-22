@@ -455,13 +455,13 @@ class LayoutManager {
    * 布局所有视图
    */
   layoutViews() {
-    const bounds = this.mainWindow.getBounds();
+    const contentBounds = this.mainWindow.getContentBounds();
 
-    // 设置工具栏位置（顶部）
+    // 设置工具栏位置（内容区域顶部）
     this.toolbarManager.setBounds({
       x: 0,
       y: 0,
-      width: bounds.width,
+      width: contentBounds.width,
       height: this.toolbarHeight
     });
 
@@ -469,8 +469,8 @@ class LayoutManager {
     this.contentViewManager.setBounds({
       x: 0,
       y: this.toolbarHeight,
-      width: bounds.width,
-      height: bounds.height - this.toolbarHeight
+      width: contentBounds.width,
+      height: contentBounds.height - this.toolbarHeight
     });
   }
 

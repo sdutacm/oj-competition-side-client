@@ -163,18 +163,21 @@ class ToolbarManager {
             padding: 0 12px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-app-region: drag; /* 允许拖动窗口 */
           }
 
           .toolbar-left {
             display: flex;
             align-items: center;
             gap: 8px;
+            -webkit-app-region: no-drag; /* 按钮区域不允许拖动 */
           }
 
           .toolbar-right {
             display: flex;
             align-items: center;
             gap: 8px;
+            -webkit-app-region: no-drag; /* 按钮区域不允许拖动 */
           }
 
           .toolbar-btn {
@@ -190,6 +193,7 @@ class ToolbarManager {
             transition: all 0.15s ease;
             position: relative;
             transition: background 0.3s ease;
+            -webkit-app-region: no-drag; /* 确保按钮不会拖动窗口 */
           }
 
           .toolbar-btn:hover {
