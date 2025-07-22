@@ -48,15 +48,15 @@ class ToolbarManager {
             // 如果是 clean，则主窗口也清理 localStorage 和 cookie
             if (action === 'clean') {
               const { BrowserWindow, app, dialog } = require('electron');
-              
+
               // 显示同步确认对话框
               const currentWindow = BrowserWindow.getFocusedWindow() || this.mainWindow;
-              
+
               // 创建带倒计时的自定义对话框
               const isMac = process.platform === 'darwin';
               const confirmWindow = new BrowserWindow({
                 width: 460,
-                height: 350,
+                height: 400,
                 frame: false, // 完全无框
                 resizable: false,
                 alwaysOnTop: true, // 设为置顶，确保在所有窗口之上
@@ -79,15 +79,31 @@ class ToolbarManager {
                 }
               });
 
+              let dialogResult = false;
+
+              // 先设置console-message监听器，确保在对话框加载前就准备好
+              confirmWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+                console.log('[Dialog Console]', message);
+                if (message.startsWith('DIALOG_RESULT:')) {
+                  const result = message.replace('DIALOG_RESULT:', '');
+                  dialogResult = (result === 'confirm');
+                  confirmWindow.close();
+                } else if (message.startsWith('REQUEST_LOGOUT:')) {
+                  // 处理登出请求 - 创建隐藏窗口发送请求
+                  const requestId = message.replace('REQUEST_LOGOUT:', '');
+                  console.log(`Received logout request: ${requestId}`);
+
+                  this.performLogoutInHiddenWindow(requestId, confirmWindow);
+                }
+              });
+
               // 创建确认对话框HTML
               const confirmHTML = this.getConfirmDialogHTML();
               const confirmDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(confirmHTML)}`;
-              
+
               confirmWindow.loadURL(confirmDataURL);
-              
-              let dialogResult = false;
-              
-              // 监听对话框结果
+
+              // 监听对话框DOM准备就绪
               confirmWindow.webContents.once('dom-ready', () => {
                 // 确保CSS完全加载后再显示窗口，避免闪烁
                 setTimeout(() => {
@@ -104,18 +120,10 @@ class ToolbarManager {
                       // 静默处理可能的API错误
                     }
                   }
-                  
+
                   confirmWindow.show();
                   confirmWindow.focus();
                 }, 100); // 延迟100ms确保CSS完全应用
-                
-                confirmWindow.webContents.on('console-message', (event, level, message) => {
-                  if (message.startsWith('DIALOG_RESULT:')) {
-                    const result = message.replace('DIALOG_RESULT:', '');
-                    dialogResult = (result === 'confirm');
-                    confirmWindow.close();
-                  }
-                });
               });
 
               // 等待对话框关闭
@@ -123,12 +131,12 @@ class ToolbarManager {
                 if (!dialogResult) {
                   return;
                 }
-                
+
                 // 用户确认后，设置重启状态，防止应用退出
                 if (global.setRestartingState) {
                   global.setRestartingState(true);
                 }
-                
+
                 const allWindows = BrowserWindow.getAllWindows();
                 // 清理所有窗口存储和 cookie
                 allWindows.forEach(win => {
@@ -149,18 +157,18 @@ class ToolbarManager {
                         }
                         if (window._resetAppState) window._resetAppState();
                       } catch (e) {}
-                    `).catch(() => {});
+                    `).catch(() => { });
                     // 清理 session cookies
                     try {
                       win.webContents.session.clearStorageData({ storages: ['cookies'] });
-                    } catch (e) {}
+                    } catch (e) { }
                   }
                 });
                 // 关闭所有窗口
                 allWindows.forEach(win => {
-                  try { win.close(); } catch (e) {}
+                  try { win.close(); } catch (e) { }
                 });
-                
+
                 // 立即显示启动页窗口
                 this.showStartupWindow(() => {
                   // 启动页关闭后重启主窗口
@@ -176,6 +184,212 @@ class ToolbarManager {
     });
 
     return this.toolbarView;
+  }
+
+  /**
+   * 在隐藏窗口中执行登出请求
+   */
+  performLogoutInHiddenWindow(requestId, dialogWindow) {
+    const { BrowserWindow } = require('electron');
+
+    // 创建隐藏的登出窗口
+    const logoutWindow = new BrowserWindow({
+      width: 1,
+      height: 1,
+      show: false, // 隐藏窗口
+      webSecurity: true,
+      nodeIntegration: false,
+      contextIsolation: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        webSecurity: true
+      }
+    });
+
+    console.log('Creating hidden logout window...');
+
+    // 加载登录页面以获取 cookies 和 CSRF token
+    logoutWindow.loadURL('https://op.sdutacm.cn/onlinejudge3/').then(() => {
+      console.log('Hidden window loaded, attempting logout...');
+
+      // 等待页面完全加载后执行登出
+      setTimeout(() => {
+        logoutWindow.webContents.executeJavaScript(`
+          (async function() {
+            console.log('Starting logout process in hidden window...');
+            
+            try {
+              // 获取 CSRF token
+              let csrfToken = null;
+              
+              // 1. 从cookie获取 csrfToken
+              const allCookies = document.cookie;
+              console.log('Hidden window cookies:', allCookies);
+              
+              if (allCookies) {
+                const cookies = allCookies.split(';');
+                for (let cookie of cookies) {
+                  const trimmedCookie = cookie.trim();
+                  const equalIndex = trimmedCookie.indexOf('=');
+                  if (equalIndex === -1) continue;
+                  
+                  const name = trimmedCookie.substring(0, equalIndex).trim();
+                  const value = trimmedCookie.substring(equalIndex + 1).trim();
+                  
+                  if (name === 'csrfToken') {
+                    csrfToken = decodeURIComponent(value);
+                    console.log('Found csrfToken in hidden window:', csrfToken);
+                    break;
+                  }
+                }
+              }
+              
+              if (!csrfToken) {
+                // 2. 从meta标签获取
+                const metaToken = document.querySelector('meta[name="csrf-token"]') || 
+                                 document.querySelector('meta[name="csrf_token"]') ||
+                                 document.querySelector('meta[name="_token"]');
+                if (metaToken) {
+                  csrfToken = metaToken.getAttribute('content');
+                  console.log('Found CSRF token in hidden window meta tag:', csrfToken);
+                }
+              }
+              
+              if (!csrfToken) {
+                console.warn('No CSRF token found in hidden window');
+                return { success: false, error: 'NO_TOKEN', message: '未找到CSRF令牌，可能未登录' };
+              }
+              
+              // 发送登出请求
+              console.log('Sending logout request with token:', csrfToken);
+              const response = await fetch('https://op.sdutacm.cn/onlinejudge3/api/logout', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRF-Token': csrfToken
+                },
+                credentials: 'include'
+              });
+              
+              console.log('Logout response status:', response.status);
+              
+              if (!response.ok) {
+                return { 
+                  success: false, 
+                  error: 'HTTP_ERROR', 
+                  status: response.status,
+                  message: \`登出请求失败，HTTP状态: \${response.status}\`
+                };
+              }
+              
+              const data = await response.json();
+              console.log('Logout response data:', data);
+              
+              if (data && data.success === true) {
+                return { success: true, message: '登出成功' };
+              } else {
+                return { 
+                  success: false, 
+                  error: 'API_ERROR', 
+                  data: data,
+                  message: '登出API返回失败状态'
+                };
+              }
+              
+            } catch (error) {
+              console.error('Logout error in hidden window:', error);
+              
+              if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                return { 
+                  success: false, 
+                  error: 'NETWORK_ERROR', 
+                  message: '网络连接失败'
+                };
+              } else {
+                return { 
+                  success: false, 
+                  error: 'UNKNOWN_ERROR', 
+                  message: error.message || '未知错误'
+                };
+              }
+            }
+          })()
+        `).then(result => {
+          console.log('Logout result from hidden window:', result);
+
+          // 关闭隐藏窗口
+          logoutWindow.close();
+
+          // 将结果发送回对话框
+          dialogWindow.webContents.executeJavaScript(`
+            if (window.handleLogoutResponse) {
+              window.handleLogoutResponse('${requestId}', ${JSON.stringify(result)});
+            }
+          `).catch(err => {
+            console.error('Error sending logout response to dialog:', err);
+          });
+
+        }).catch(err => {
+          console.error('Error executing logout script in hidden window:', err);
+
+          // 关闭隐藏窗口
+          logoutWindow.close();
+
+          // 发送错误结果
+          const errorResult = {
+            success: false,
+            error: 'SCRIPT_ERROR',
+            message: '执行登出脚本时出错'
+          };
+
+          dialogWindow.webContents.executeJavaScript(`
+            if (window.handleLogoutResponse) {
+              window.handleLogoutResponse('${requestId}', ${JSON.stringify(errorResult)});
+            }
+          `).catch(() => { });
+        });
+      }, 2000); // 等待2秒确保页面完全加载
+
+    }).catch(err => {
+      console.error('Error loading hidden logout window:', err);
+
+      // 关闭隐藏窗口
+      logoutWindow.close();
+
+      // 发送错误结果
+      const errorResult = {
+        success: false,
+        error: 'LOAD_ERROR',
+        message: '无法加载登出页面'
+      };
+
+      dialogWindow.webContents.executeJavaScript(`
+        if (window.handleLogoutResponse) {
+          window.handleLogoutResponse('${requestId}', ${JSON.stringify(errorResult)});
+        }
+      `).catch(() => { });
+    });
+
+    // 设置超时，防止窗口长时间未响应
+    setTimeout(() => {
+      if (!logoutWindow.isDestroyed()) {
+        console.warn('Logout window timeout, closing...');
+        logoutWindow.close();
+
+        const timeoutResult = {
+          success: false,
+          error: 'TIMEOUT',
+          message: '登出请求超时'
+        };
+
+        dialogWindow.webContents.executeJavaScript(`
+          if (window.handleLogoutResponse) {
+            window.handleLogoutResponse('${requestId}', ${JSON.stringify(timeoutResult)});
+          }
+        `).catch(() => { });
+      }
+    }, 15000); // 15秒超时
   }
 
   /**
@@ -406,7 +620,7 @@ class ToolbarManager {
       font-size: 12px;
       line-height: 1.4;
       color: var(--text-primary);
-      max-height: 160px;
+      max-height: 190px;
       overflow: hidden;
       flex: 1;
       min-height: 0;
@@ -521,6 +735,92 @@ class ToolbarManager {
       opacity: 0;
       pointer-events: none;
     }
+
+    /* Loading 动画样式 */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      border-radius: 16px;
+    }
+
+    .loading-overlay.show {
+      display: flex;
+    }
+
+    .loading-content {
+      background: var(--bg-primary);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      min-width: 200px;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-color);
+      border-top: 3px solid var(--confirm-bg);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* 错误提示样式 */
+    .error-message {
+      color: var(--text-danger);
+      font-size: 12px;
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .loading-logout-icon {
+      width: 32px;
+      height: 32px;
+      stroke: var(--text-primary);
+      margin: 12px auto 0 auto;
+      display: block;
+    }
+    .loading-logout-icon path {
+      stroke-dasharray: 60;
+      stroke-dashoffset: 60;
+      animation: logout-stroke 1.2s cubic-bezier(0.4,0,0.2,1) infinite;
+    }
+    @keyframes logout-stroke {
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
   </style>
 </head>
 <body>
@@ -553,7 +853,20 @@ class ToolbarManager {
           <span class="countdown" id="countdown">确认重置 (5)</span>
           <span>确认重置</span>
         </button>
+        <div class="error-message" id="errorMessage"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Loading 遮罩层 -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+      <svg class="loading-logout-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 12px auto; display: block; color: #dc2626;">
+        <path d="m16 17 5-5-5-5"/>
+        <path d="M21 12H9"/>
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      </svg>
+      <div class="loading-text" id="loadingText">正在退出登录...</div>
     </div>
   </div>
 
@@ -582,7 +895,41 @@ class ToolbarManager {
       if (countdownInterval) {
         clearInterval(countdownInterval);
       }
-      console.log('DIALOG_RESULT:confirm');
+      
+      // 显示loading动画
+      showLoading('正在退出登录...');
+      
+      // 先尝试登出用户
+      logoutUser()
+        .then(success => {
+          console.log('Logout completed, success:', success);
+          if (success) {
+            // 登出成功，继续重置操作
+            hideLoading();
+            console.log('Logout successful, proceeding with reset');
+            console.log('DIALOG_RESULT:confirm');
+          } else {
+            // 登出失败，显示错误信息但仍然允许重置
+            hideLoading();
+            console.log('Logout failed, but proceeding with reset anyway');
+            showError('登出失败，但将继续重置本地数据');
+            // 给用户2秒时间看到错误信息，然后继续重置
+            setTimeout(() => {
+              console.log('DIALOG_RESULT:confirm');
+            }, 2000);
+          }
+        })
+        .catch(error => {
+          // 网络错误或其他异常
+          hideLoading();
+          console.error('Logout error:', error);
+          console.log('Logout error occurred, but proceeding with reset anyway');
+          showError('网络错误，但将继续重置本地数据');
+          // 给用户2秒时间看到错误信息，然后继续重置
+          setTimeout(() => {
+            console.log('DIALOG_RESULT:confirm');
+          }, 2000);
+        });
     }
 
     function cancel() {
@@ -591,6 +938,99 @@ class ToolbarManager {
         clearInterval(countdownInterval);
       }
       console.log('DIALOG_RESULT:cancel');
+    }
+
+    function showLoading(text) {
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      const loadingText = document.getElementById('loadingText');
+      if (loadingText) {
+        loadingText.textContent = text;
+      }
+      if (loadingOverlay) {
+        loadingOverlay.classList.add('show');
+      }
+    }
+
+    function hideLoading() {
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      if (loadingOverlay) {
+        loadingOverlay.classList.remove('show');
+      }
+    }
+
+    function showError(message) {
+      const errorElement = document.getElementById('errorMessage');
+      if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.classList.add('show');
+        
+        // 3秒后自动隐藏错误信息
+        setTimeout(() => {
+          errorElement.classList.remove('show');
+        }, 3000);
+      }
+    }
+
+    async function logoutUser() {
+      try {
+        console.log('Starting logout process using hidden window...');
+        
+        // 使用隐藏窗口发送登出请求
+        const result = await performLogoutRequest();
+        
+        if (result.success) {
+          console.log('Logout successful:', result.message);
+          return true;
+        } else {
+          console.warn('Logout failed:', result.error, result.message);
+          
+          // 根据错误类型决定是否继续重置
+          if (result.error === 'NO_TOKEN') {
+            console.log('No token found, user might not be logged in, proceeding with reset');
+            return true; // 没有token说明可能未登录，继续重置
+          } else if (result.error === 'NETWORK_ERROR') {
+            console.log('Network error, proceeding with local reset anyway');
+            return true; // 网络错误时仍然允许重置
+          } else {
+            console.log('Other logout error, but proceeding with reset anyway');
+            return false; // 其他错误，显示错误信息但允许重置
+          }
+        }
+      } catch (error) {
+        console.error('Unexpected error during logout process:', error);
+        return true; // 意外错误时仍然允许重置
+      }
+    }
+
+    function performLogoutRequest() {
+      return new Promise((resolve) => {
+        const requestId = 'logout-request-' + Date.now();
+        
+        // 设置全局响应处理器
+        window.handleLogoutResponse = (id, result) => {
+          if (id === requestId) {
+            delete window.handleLogoutResponse;
+            resolve(result);
+          }
+        };
+        
+        // 发送登出请求（添加延迟确保监听器设置完成）
+        setTimeout(() => {
+          console.log('REQUEST_LOGOUT:' + requestId);
+        }, 500);
+
+        // 设置超时
+        setTimeout(() => {
+          if (window.handleLogoutResponse) {
+            delete window.handleLogoutResponse;
+            resolve({
+              success: false,
+              error: 'TIMEOUT',
+              message: '登出请求超时'
+            });
+          }
+        }, 20000); // 20秒超时
+      });
     }
 
     // 页面加载完成后开始倒计时
@@ -709,10 +1149,10 @@ class ToolbarManager {
    */
   showStartupWindow(callback) {
     const { BrowserWindow } = require('electron');
-    
+
     // 获取完整的 index.html 内容
     const startupHTML = this.getStartupHTML();
-    
+
     // 防止回调函数被多次调用
     let callbackCalled = false;
     const safeCallback = () => {
@@ -721,7 +1161,7 @@ class ToolbarManager {
         callback();
       }
     };
-    
+
     // 创建无框启动页窗口
     const startupWindow = new BrowserWindow({
       width: 1000,
@@ -745,9 +1185,9 @@ class ToolbarManager {
 
     // 加载启动页内容
     const startupDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(startupHTML)}`;
-    
+
     startupWindow.loadURL(startupDataURL);
-    
+
     // 内容加载完成后显示窗口
     startupWindow.webContents.once('dom-ready', () => {
       // 确保窗口完全透明
@@ -755,7 +1195,7 @@ class ToolbarManager {
         // Windows平台的额外透明设置
         startupWindow.setBackgroundColor('rgba(0,0,0,0)');
       }
-      
+
       // 设置窗口圆角形状 - 通过CSS clip-path实现
       startupWindow.webContents.executeJavaScript(`
         // 创建一个遮罩层来隐藏直角边缘
@@ -792,10 +1232,10 @@ class ToolbarManager {
         \`;
         
         document.documentElement.appendChild(mask);
-      `).catch(() => {});
-      
+      `).catch(() => { });
+
       startupWindow.show();
-      
+
       // 3秒后关闭启动页窗口并立即开启主窗口
       setTimeout(() => {
         try {
@@ -1264,7 +1704,9 @@ class ToolbarManager {
         <div class="toolbar-right">
           ${(!isAboutDialog && !isMainWindow) ? `<button class="toolbar-btn" data-action="info" title="系统信息 (Alt+I)">${infoSVG}</button>` : ''}
           <button class="toolbar-btn" data-action="clean" title="系统重置">
-            ${cleanSVG}
+            <svg class="icon" viewBox="0 0 1024 1024" width="32" height="32" stroke="none" stroke-width="0" fill="var(--toolbar-icon-color)">
+              <path d="M502.714987 58.258904l-126.531056-54.617723a52.797131 52.797131 0 0 0-41.873587 96.855428A447.865322 447.865322 0 0 0 392.02307 946.707184a61.535967 61.535967 0 0 0 13.83649 1.820591 52.797131 52.797131 0 0 0 13.65443-103.773672 342.453118 342.453118 0 0 1-31.678278-651.771485l-8.374718 19.480321a52.615072 52.615072 0 0 0 27.855039 69.182448 51.522718 51.522718 0 0 0 20.572675 4.369418A52.797131 52.797131 0 0 0 476.498481 254.882703L530.205907 127.441352a52.979191 52.979191 0 0 0-27.49092-69.182448zM962.960326 509.765407A448.775617 448.775617 0 0 0 643.992829 68.090094a52.797131 52.797131 0 1 0-30.403866 101.042786A342.635177 342.635177 0 0 1 674.578753 801.059925a52.615072 52.615072 0 0 0-92.30395-50.612422l-71.913335 117.246043a52.433013 52.433013 0 0 0 17.295612 72.82363l117.063985 72.823629a52.797131 52.797131 0 1 0 54.617722-89.755123l-16.021198-10.013249A448.593558 448.593558 0 0 0 962.960326 509.765407z"></path>
+            </svg>
           </button>
         </div>
         <script>
