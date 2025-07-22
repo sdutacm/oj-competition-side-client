@@ -361,8 +361,8 @@ app.whenReady().then(() => {
     // 禁用开发者工具相关功能
     disableDevTools();
 
-    // 初始化国际化菜单管理器（macOS 和 Linux）
-    if (process.platform === 'darwin' || process.platform === 'linux') {
+    // 初始化国际化菜单管理器（仅 macOS）
+    if (process.platform === 'darwin') {
       console.log('准备初始化 MacMenuManager...');
       console.log('当前语言:', i18n.getCurrentLanguage());
       console.log('测试菜单翻译:', i18n.t('menu.file'));

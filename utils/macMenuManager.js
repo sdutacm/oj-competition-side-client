@@ -23,7 +23,7 @@ class MacMenuManager {
    */
   createMenu() {
     if (process.platform !== 'darwin') {
-      console.log('当前不是 macOS 系统，跳过创建 Mac 菜单');
+      console.log('当前系统不是 macOS，跳过创建国际化菜单');
       return;
     }
 
@@ -34,6 +34,11 @@ class MacMenuManager {
    * 更新菜单
    */
   updateMenu() {
+    console.log('更新菜单开始 - 当前语言:', i18n.getCurrentLanguage());
+    console.log('测试翻译 - 视图:', i18n.t('menu.view'));
+    console.log('测试翻译 - 刷新:', i18n.t('menu.refresh'));
+    console.log('测试翻译 - 切换全屏:', i18n.t('menu.toggleFullscreen'));
+    
     const template = this.createMenuTemplate();
     const menu = Menu.buildFromTemplate(template);
     Menu.setApplicationMenu(menu);
