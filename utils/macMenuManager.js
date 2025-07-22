@@ -292,7 +292,7 @@ class MacMenuManager {
    * 获取关于菜单标签
    */
   getAboutMenuLabel() {
-    const currentLanguage = i18n.getLocale() || 'zh-CN';
+    const currentLanguage = i18n.getCurrentLanguage() || 'zh-CN';
     if (currentLanguage === 'en-US') {
       return 'About SDUT OJ Competition Side Client';
     } else {
@@ -308,7 +308,7 @@ class MacMenuManager {
     const version = require('../package.json').version || '1.0.0';
     
     // 根据语言设置对话框标题
-    const currentLanguage = i18n.getLocale() || 'zh-CN';
+    const currentLanguage = i18n.getCurrentLanguage() || 'zh-CN';
     let title;
     if (currentLanguage === 'en-US') {
       title = 'About SDUT OJ Competition Side Client';
