@@ -57,19 +57,21 @@ class ToolbarManager {
               const confirmWindow = new BrowserWindow({
                 width: 520,
                 height: 420,
-                frame: false,
+                frame: false, // 完全无框
                 resizable: false,
                 alwaysOnTop: false, // 不置顶，允许其他窗口覆盖
                 center: true,
                 modal: false, // 不设为模态，允许其他窗口正常交互
                 parent: currentWindow,
                 show: false,
-                transparent: !isMac, // Mac上禁用透明以确保窗口可见
-                backgroundColor: isMac ? '#ffffff' : 'rgba(0,0,0,0)', // Mac使用白色背景
+                transparent: true, // Mac也启用透明，解决边框问题
+                backgroundColor: 'rgba(0,0,0,0)', // 完全透明背景
                 skipTaskbar: false, // 允许在任务栏显示
                 focusable: true,
-                titleBarStyle: isMac ? 'hidden' : undefined, // Mac专用设置
-                vibrancy: isMac ? 'sidebar' : undefined, // Mac专用毛玻璃效果
+                titleBarStyle: isMac ? 'customButtonsOnHover' : undefined, // Mac隐藏原生按钮
+                trafficLightPosition: isMac ? { x: -100, y: -100 } : undefined, // Mac隐藏交通灯按钮
+                hasShadow: false, // 禁用窗口阴影
+                thickFrame: false, // 禁用厚边框
                 webPreferences: {
                   nodeIntegration: false,
                   contextIsolation: true,
@@ -87,9 +89,17 @@ class ToolbarManager {
               
               // 监听对话框结果
               confirmWindow.webContents.once('dom-ready', () => {
-                // Mac系统特殊处理：确保窗口可见但不置顶
+                // Mac系统特殊处理：确保窗口可见但不置顶，隐藏原生控件
                 if (isMac) {
                   confirmWindow.setVisibleOnAllWorkspaces(false); // 不在所有工作区显示
+                  // 确保窗口完全透明且无边框
+                  confirmWindow.setBackgroundColor('rgba(0,0,0,0)');
+                  // 移除窗口阴影和边框
+                  try {
+                    confirmWindow.setHasShadow(false);
+                  } catch (e) {
+                    // 静默处理可能的API错误
+                  }
                 }
                 
                 confirmWindow.show();
@@ -227,14 +237,16 @@ class ToolbarManager {
       border-radius: 16px;
       scrollbar-width: none;
       -ms-overflow-style: none;
+      border: none; /* 移除任何边框 */
+      outline: none; /* 移除轮廓 */
     }
 
     /* Mac系统特殊处理 */
     @supports (-webkit-backdrop-filter: blur(10px)) {
       html, body {
-        background: rgba(255, 255, 255, 0.95);
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
+        background: transparent; /* 保持透明，让dialog-content处理背景 */
+        -webkit-backdrop-filter: none; /* 移除背景滤镜避免边框 */
+        backdrop-filter: none;
       }
     }
 
@@ -274,6 +286,27 @@ class ToolbarManager {
       overflow: hidden;
       scrollbar-width: none;
       -ms-overflow-style: none;
+    }
+
+    /* Mac系统特殊处理 - 使用毛玻璃效果 */
+    @supports (-webkit-backdrop-filter: blur(10px)) {
+      .dialog-content {
+        background: rgba(255, 255, 255, 0.95);
+        -webkit-backdrop-filter: blur(20px);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 
+                    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        .dialog-content {
+          background: rgba(30, 41, 59, 0.95);
+          border: 1px solid rgba(148, 163, 184, 0.3);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 
+                      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+      }
     }
 
     .dialog-content::-webkit-scrollbar {
@@ -539,11 +572,38 @@ class ToolbarManager {
       
       startCountdown();
       
-      // Mac系统特殊处理：确保窗口可见
+      // Mac系统特殊处理：移除可能的边框和确保样式正确
       if (navigator.platform.includes('Mac')) {
-        document.body.style.background = 'rgba(255, 255, 255, 0.98)';
-        document.body.style.backdropFilter = 'blur(10px)';
-        console.log('Applied Mac-specific styling');
+        // 确保整个文档没有边框
+        document.documentElement.style.cssText += \`
+          border: none !important;
+          outline: none !important;
+          background: transparent !important;
+          -webkit-appearance: none !important;
+        \`;
+        
+        document.body.style.cssText += \`
+          border: none !important;
+          outline: none !important;
+          background: transparent !important;
+          -webkit-appearance: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        \`;
+        
+        // 应用毛玻璃背景到dialog-content
+        const dialogContent = document.querySelector('.dialog-content');
+        if (dialogContent) {
+          dialogContent.style.cssText += \`
+            background: rgba(255, 255, 255, 0.95) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+          \`;
+        }
+        
+        console.log('Applied Mac-specific styling without borders');
       }
       
       // 拦截所有可能的快捷键
