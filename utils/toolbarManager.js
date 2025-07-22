@@ -63,14 +63,14 @@ class ToolbarManager {
                 center: true,
                 modal: true, // 设为模态，阻止父窗口交互
                 parent: currentWindow,
-                show: false,
-                transparent: true, // Mac也启用透明，解决边框问题
-                backgroundColor: 'rgba(0,0,0,0)', // 完全透明背景
+                show: false, // 重要：先不显示，等内容完全加载后再显示
+                transparent: true, // 所有平台都启用透明
+                backgroundColor: 'rgba(0,0,0,0)', // 所有平台都使用完全透明背景
                 skipTaskbar: false, // 允许在任务栏显示
                 focusable: true,
-                titleBarStyle: isMac ? 'customButtonsOnHover' : undefined, // Mac隐藏原生按钮
-                trafficLightPosition: isMac ? { x: -100, y: -100 } : undefined, // Mac隐藏交通灯按钮
-                hasShadow: false, // 禁用窗口阴影
+                titleBarStyle: isMac ? 'hidden' : undefined, // Mac使用hidden而不是customButtonsOnHover
+                trafficLightPosition: undefined, // 移除交通灯位置设置，避免闪烁
+                hasShadow: !isMac, // Mac上禁用阴影，其他系统启用
                 thickFrame: false, // 禁用厚边框
                 webPreferences: {
                   nodeIntegration: false,
@@ -89,21 +89,25 @@ class ToolbarManager {
               
               // 监听对话框结果
               confirmWindow.webContents.once('dom-ready', () => {
-                // Mac系统特殊处理：确保窗口可见但不置顶，隐藏原生控件
-                if (isMac) {
+                // 确保CSS完全加载后再显示窗口，避免闪烁
+                setTimeout(() => {
+                  // 确保所有平台窗口完全透明且无边框
                   confirmWindow.setVisibleOnAllWorkspaces(false); // 不在所有工作区显示
-                  // 确保窗口完全透明且无边框
+                  // 强制设置窗口完全透明背景
                   confirmWindow.setBackgroundColor('rgba(0,0,0,0)');
-                  // 移除窗口阴影和边框
-                  try {
-                    confirmWindow.setHasShadow(false);
-                  } catch (e) {
-                    // 静默处理可能的API错误
+                  // Mac系统额外处理
+                  if (isMac) {
+                    // 移除窗口阴影和边框
+                    try {
+                      confirmWindow.setHasShadow(false);
+                    } catch (e) {
+                      // 静默处理可能的API错误
+                    }
                   }
-                }
-                
-                confirmWindow.show();
-                confirmWindow.focus();
+                  
+                  confirmWindow.show();
+                  confirmWindow.focus();
+                }, 100); // 延迟100ms确保CSS完全应用
                 
                 confirmWindow.webContents.on('console-message', (event, level, message) => {
                   if (message.startsWith('DIALOG_RESULT:')) {
@@ -185,6 +189,23 @@ class ToolbarManager {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>确认系统重置</title>
   <style>
+    /* 预加载样式，确保窗口显示前就有正确的透明背景 */
+    html, body {
+      background: transparent !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+    
+    /* 防止任何元素出现白色边框 */
+    *, *::before, *::after {
+      border-color: transparent !important;
+      outline-color: transparent !important;
+    }
+  </style>
+  <style>
     * {
       margin: 0;
       padding: 0;
@@ -198,7 +219,7 @@ class ToolbarManager {
       --text-primary: #1e293b;
       --text-secondary: #64748b;
       --text-danger: #ff2e2ed0;
-      --border-color: #e2e8f0;
+      --border-color: transparent; /* 改为透明，避免白色边框 */
       --shadow-color: rgba(0, 0, 0, 0.1);
       --danger-bg: rgba(254, 242, 242, 0.8);
       --danger-border: rgba(239, 68, 68, 0.3);
@@ -216,7 +237,7 @@ class ToolbarManager {
         --text-primary: #f1f5f9;
         --text-secondary: #94a3b8;
         --text-danger: #ef4444;
-        --border-color: #334155;
+        --border-color: transparent; /* 改为透明，避免白色边框 */
         --shadow-color: rgba(0, 0, 0, 0.3);
         --danger-bg: rgba(127, 29, 29, 0.3);
         --danger-border: rgba(239, 68, 68, 0.3);
@@ -232,13 +253,16 @@ class ToolbarManager {
       height: 100%;
       width: 100%;
       font-family: "Segoe UI", "Helvetica Neue", sans-serif;
-      background: transparent;
+      background: transparent; /* 确保透明背景，避免闪烁 */
       overflow: hidden;
       border-radius: 16px;
       scrollbar-width: none;
       -ms-overflow-style: none;
       border: none; /* 移除任何边框 */
       outline: none; /* 移除轮廓 */
+      margin: 0;
+      padding: 0;
+      box-shadow: none; /* 移除任何阴影 */
     }
 
     /* Mac系统特殊处理 */
@@ -247,6 +271,9 @@ class ToolbarManager {
         background: transparent; /* 保持透明，让dialog-content处理背景 */
         -webkit-backdrop-filter: none; /* 移除背景滤镜避免边框 */
         backdrop-filter: none;
+        border: none !important; /* 强制移除边框 */
+        outline: none !important; /* 强制移除轮廓 */
+        box-shadow: none !important; /* 强制移除阴影 */
       }
     }
 
@@ -275,11 +302,12 @@ class ToolbarManager {
     .dialog-content {
       background: var(--bg-primary);
       border-radius: 16px;
-      border: 2px solid var(--border-color);
-      box-shadow: 0 25px 50px -12px var(--shadow-color), 0 0 0 1px rgba(255,255,255,0.05);
+      border: none; /* 移除边框，避免白色直角边 */
+      box-shadow: 0 25px 50px -12px var(--shadow-color);
       padding: 24px;
-      width: 100%;
-      height: 100%;
+      width: calc(100% - 2px); /* 稍微缩小，避免边缘问题 */
+      height: calc(100% - 2px); /* 稍微缩小，避免边缘问题 */
+      margin: 1px; /* 添加小边距，防止边缘切割 */
       display: flex;
       flex-direction: column;
       animation: dialogAppear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -291,12 +319,11 @@ class ToolbarManager {
     /* Mac系统特殊处理 - 使用毛玻璃效果 */
     @supports (-webkit-backdrop-filter: blur(10px)) {
       .dialog-content {
-        background: rgba(255, 255, 255, 0.95);
-        -webkit-backdrop-filter: blur(20px);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 
-                    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.95) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        backdrop-filter: blur(20px) !important;
+        border: none !important; /* 强制移除边框 */
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
       }
       
       @media (prefers-color-scheme: dark) {
@@ -304,9 +331,8 @@ class ToolbarManager {
           background: rgba(30, 41, 59, 0.95) !important;
           -webkit-backdrop-filter: blur(20px) !important;
           backdrop-filter: blur(20px) !important;
-          border: 1px solid rgba(148, 163, 184, 0.3) !important;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 
-                      inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+          border: none !important; /* 强制移除边框 */
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
         }
       }
     }
@@ -331,7 +357,7 @@ class ToolbarManager {
       align-items: center;
       margin-bottom: 14px;
       padding-bottom: 10px;
-      border-bottom: 1px solid var(--border-color);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1); /* 使用半透明边框 */
       flex-shrink: 0;
     }
 
@@ -416,7 +442,7 @@ class ToolbarManager {
       gap: 16px;
       justify-content: flex-end;
       padding-top: 12px;
-      border-top: 1px solid var(--border-color);
+      border-top: 1px solid rgba(0, 0, 0, 0.1); /* 使用半透明边框 */
       margin-top: auto;
       flex-shrink: 0;
     }
@@ -604,8 +630,8 @@ class ToolbarManager {
               background: rgba(30, 41, 59, 0.95) !important;
               -webkit-backdrop-filter: blur(20px) !important;
               backdrop-filter: blur(20px) !important;
-              border: 1px solid rgba(148, 163, 184, 0.3) !important;
-              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+              border: none !important;
+              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
             \`;
           } else {
             // 浅色主题毛玻璃效果
@@ -613,8 +639,8 @@ class ToolbarManager {
               background: rgba(255, 255, 255, 0.95) !important;
               -webkit-backdrop-filter: blur(20px) !important;
               backdrop-filter: blur(20px) !important;
-              border: 1px solid rgba(255, 255, 255, 0.3) !important;
-              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+              border: none !important;
+              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
             \`;
           }
           
@@ -626,15 +652,15 @@ class ToolbarManager {
                 // 切换到暗色主题
                 dialogContent.style.cssText += \`
                   background: rgba(30, 41, 59, 0.95) !important;
-                  border: 1px solid rgba(148, 163, 184, 0.3) !important;
-                  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+                  border: none !important;
+                  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
                 \`;
               } else {
                 // 切换到浅色主题
                 dialogContent.style.cssText += \`
                   background: rgba(255, 255, 255, 0.95) !important;
-                  border: 1px solid rgba(255, 255, 255, 0.3) !important;
-                  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+                  border: none !important;
+                  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
                 \`;
               }
             });
