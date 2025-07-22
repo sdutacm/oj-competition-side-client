@@ -59,9 +59,9 @@ class ToolbarManager {
                 height: 420,
                 frame: false, // 完全无框
                 resizable: false,
-                alwaysOnTop: false, // 不置顶，允许其他窗口覆盖
+                alwaysOnTop: true, // 设为置顶，确保在所有窗口之上
                 center: true,
-                modal: false, // 不设为模态，允许其他窗口正常交互
+                modal: true, // 设为模态，阻止父窗口交互
                 parent: currentWindow,
                 show: false,
                 transparent: true, // Mac也启用透明，解决边框问题
@@ -301,10 +301,12 @@ class ToolbarManager {
       
       @media (prefers-color-scheme: dark) {
         .dialog-content {
-          background: rgba(30, 41, 59, 0.95);
-          border: 1px solid rgba(148, 163, 184, 0.3);
+          background: rgba(30, 41, 59, 0.95) !important;
+          -webkit-backdrop-filter: blur(20px) !important;
+          backdrop-filter: blur(20px) !important;
+          border: 1px solid rgba(148, 163, 184, 0.3) !important;
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 
-                      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                      inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
         }
       }
     }
@@ -591,19 +593,55 @@ class ToolbarManager {
           padding: 0 !important;
         \`;
         
-        // 应用毛玻璃背景到dialog-content
+        // 动态检测系统主题并应用相应的毛玻璃背景
         const dialogContent = document.querySelector('.dialog-content');
         if (dialogContent) {
-          dialogContent.style.cssText += \`
-            background: rgba(255, 255, 255, 0.95) !important;
-            -webkit-backdrop-filter: blur(20px) !important;
-            backdrop-filter: blur(20px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.3) !important;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-          \`;
+          const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          
+          if (isDarkMode) {
+            // 暗色主题毛玻璃效果
+            dialogContent.style.cssText += \`
+              background: rgba(30, 41, 59, 0.95) !important;
+              -webkit-backdrop-filter: blur(20px) !important;
+              backdrop-filter: blur(20px) !important;
+              border: 1px solid rgba(148, 163, 184, 0.3) !important;
+              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+            \`;
+          } else {
+            // 浅色主题毛玻璃效果
+            dialogContent.style.cssText += \`
+              background: rgba(255, 255, 255, 0.95) !important;
+              -webkit-backdrop-filter: blur(20px) !important;
+              backdrop-filter: blur(20px) !important;
+              border: 1px solid rgba(255, 255, 255, 0.3) !important;
+              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+            \`;
+          }
+          
+          // 监听主题变化
+          if (window.matchMedia) {
+            const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            darkModeQuery.addListener((e) => {
+              if (e.matches) {
+                // 切换到暗色主题
+                dialogContent.style.cssText += \`
+                  background: rgba(30, 41, 59, 0.95) !important;
+                  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+                  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+                \`;
+              } else {
+                // 切换到浅色主题
+                dialogContent.style.cssText += \`
+                  background: rgba(255, 255, 255, 0.95) !important;
+                  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+                  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+                \`;
+              }
+            });
+          }
         }
         
-        console.log('Applied Mac-specific styling without borders');
+        console.log('Applied Mac-specific styling with dynamic theme support');
       }
       
       // 拦截所有可能的快捷键
@@ -1002,8 +1040,8 @@ class ToolbarManager {
         }
         // Mac 下处理导航/刷新/主页/info/clean快捷键，且只在 toolbarView 聚焦时生效
         if (process.platform === 'darwin' && webContents.isFocused && webContents.isFocused()) {
-          // 主页 Option+Cmd+H
-          if (input.meta && input.alt && !input.shift && !input.control && input.key.toUpperCase() === 'H') {
+          // 主页 Cmd+Shift+H
+          if (input.meta && input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'H') {
             if (this.onActionCallback) this.onActionCallback('home');
           }
           // 刷新 Cmd+R
