@@ -47,9 +47,27 @@ class ToolbarManager {
             this.onActionCallback(action);
             // 如果是 clean，则主窗口也清理 localStorage 和 cookie
             if (action === 'clean') {
-              const { BrowserWindow, app } = require('electron');
+              const { BrowserWindow, app, dialog } = require('electron');
               
-              // 设置重启状态，防止应用退出
+              // 显示确认对话框
+              const currentWindow = BrowserWindow.getFocusedWindow() || this.mainWindow;
+              const choice = dialog.showMessageBoxSync(currentWindow, {
+                type: 'warning',
+                buttons: ['🚀 确认清理并重启', '❌ 取消'],
+                defaultId: 1, // 默认选中"取消"
+                cancelId: 1, // ESC键对应"取消"
+                title: '🔄 确认系统重置',
+                message: '⚡ 清理本地存储并重启应用',
+                detail: '🧹 此操作将执行以下内容：\n\n📦 清空所有本地存储数据（localStorage）\n💾 清空所有会话存储数据（sessionStorage）\n🍪 清空所有 Cookie 数据\n🗃️ 清空 IndexedDB 数据库\n🔄 关闭所有窗口并重启应用\n\n🏠 重启后将返回到应用主页。确定要继续吗？',
+                noLink: true // 不显示链接样式
+              });
+              
+              // 如果用户选择取消（选项1），则不执行任何操作
+              if (choice !== 0) {
+                return;
+              }
+              
+              // 用户确认后，设置重启状态，防止应用退出
               if (global.setRestartingState) {
                 global.setRestartingState(true);
               }
@@ -85,12 +103,12 @@ class ToolbarManager {
               allWindows.forEach(win => {
                 try { win.close(); } catch (e) {}
               });
-              // 5秒后重启主窗口
+              // 3秒后重启主窗口
               setTimeout(() => {
                 if (app && app.emit) {
                   app.emit('reopen-main-window');
                 }
-              }, 5000);
+              }, 3000);
             }
           }
         }
@@ -318,7 +336,7 @@ class ToolbarManager {
         </div>
         <div class="toolbar-right">
           ${(!isAboutDialog && !isMainWindow) ? `<button class="toolbar-btn" data-action="info" title="系统信息 (Alt+I)">${infoSVG}</button>` : ''}
-          <button class="toolbar-btn" data-action="clean" title="清空本地存储">
+          <button class="toolbar-btn" data-action="clean" title="系统重置（清理存储并重启）">
             ${cleanSVG}
           </button>
         </div>
