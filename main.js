@@ -71,7 +71,9 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
       }
       if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
         event.preventDefault();
-        showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
+        if (win && !win.isDestroyed()) {
+          showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
+        }
         return;
       }
       if (domain === APP_CONFIG.MAIN_DOMAIN || domain.endsWith('.' + APP_CONFIG.MAIN_DOMAIN)) {
@@ -86,7 +88,9 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
       const redirectDomain = require('./utils/urlHelper').getHostname(url);
       if (redirectDomain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
         event.preventDefault();
-        showBlockedDialogWithDebounce(win, redirectDomain, '非法重定向拦截，已自动回退主页', 'redirect');
+        if (win && !win.isDestroyed()) {
+          showBlockedDialogWithDebounce(win, redirectDomain, '非法重定向拦截，已自动回退主页', 'redirect');
+        }
         
         // 自动回退主页（仅新窗口需要，主窗口不回退）
         if (!isMainWindow) {
@@ -120,7 +124,11 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
                   console.log('重定向拦截，当前URL无效，使用系统主域名:', targetUrl);
                 }
               }
-              view.webContents.loadURL(targetUrl);
+              
+              // 检查窗口是否仍然有效
+              if (view && view.webContents && !view.webContents.isDestroyed()) {
+                view.webContents.loadURL(targetUrl);
+              }
               
               // 重要：更新窗口的初始URL为新的安全顶级域名，避免"返回主页"时再次触发重定向
               if (win._shortcutManager && targetUrl && targetUrl.startsWith('https://')) {
@@ -137,7 +145,11 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
               } else {
                 fallbackUrl = `https://${APP_CONFIG.MAIN_DOMAIN}/`;
               }
-              view.webContents.loadURL(fallbackUrl);
+              
+              // 检查窗口是否仍然有效
+              if (view && view.webContents && !view.webContents.isDestroyed()) {
+                view.webContents.loadURL(fallbackUrl);
+              }
               
               // 重要：更新窗口的初始URL为新的安全域名
               if (win._shortcutManager && fallbackUrl && fallbackUrl.startsWith('https://')) {
@@ -234,7 +246,9 @@ function openNewWindow(url) {
     if (contentView && contentView.webContents) {
       applyRedirectInterceptor(contentView, win, false); // 新窗口
       contentView.webContents.on('page-title-updated', (event, title) => {
-        win.setTitle(title);
+        if (win && !win.isDestroyed()) {
+          win.setTitle(title);
+        }
       });
       // 新窗口 setWindowOpenHandler 拦截非法域名并弹窗
       contentView.webContents.setWindowOpenHandler(({ url }) => {
@@ -245,7 +259,9 @@ function openNewWindow(url) {
         }
         // 非白名单/主域名弹窗拦截
         if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
-          showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
+          if (win && !win.isDestroyed()) {
+            showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
+          }
           return { action: 'deny' };
         }
         // 主域名允许跳转
@@ -271,38 +287,10 @@ function openNewWindow(url) {
   return win;
 }
 
-app.whenReady().then(() => {
-  // 确保 i18n 完全初始化
-  console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
-  console.log('App ready - 测试翻译:', i18n.t('app.name'));
-  
-  // Windows 兼容性设置
-  if (PlatformHelper.isWindows()) {
-    // 添加 Windows 特定的命令行开关来解决 GPU 问题
-    app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor');
-    app.commandLine.appendSwitch('disable-gpu-sandbox');
-    app.commandLine.appendSwitch('disable-software-rasterizer');
-    app.commandLine.appendSwitch('disable-gpu');
-    app.commandLine.appendSwitch('no-sandbox');
-  }
-
-  // macOS 特定设置
-  if (PlatformHelper.isMacOS()) {
-    // 设置 Dock 图标
-    try {
-      const iconPath = path.join(__dirname, 'public/favicon.icns');
-      if (app.dock) {
-        app.dock.setIcon(iconPath);
-      }
-    } catch (error) {
-      console.error('设置 Dock 图标失败:', error);
-    }
-
-    // 设置应用程序名称
-    const appName = i18n.t('app.name');
-    app.setName(appName);
-  }
-
+/**
+ * 创建主窗口
+ */
+function createMainWindow() {
   try {
     // 获取平台特定配置
     const platformConfig = PlatformHelper.getPlatformConfig();
@@ -408,8 +396,45 @@ app.whenReady().then(() => {
       }
     }, 2000);
   } catch (error) {
-    console.error('应用初始化失败:', error);
+    console.error('主窗口创建失败:', error);
+    throw error;
   }
+}
+
+app.whenReady().then(() => {
+  // 确保 i18n 完全初始化
+  console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
+  console.log('App ready - 测试翻译:', i18n.t('app.name'));
+  
+  // Windows 兼容性设置
+  if (PlatformHelper.isWindows()) {
+    // 添加 Windows 特定的命令行开关来解决 GPU 问题
+    app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor');
+    app.commandLine.appendSwitch('disable-gpu-sandbox');
+    app.commandLine.appendSwitch('disable-software-rasterizer');
+    app.commandLine.appendSwitch('disable-gpu');
+    app.commandLine.appendSwitch('no-sandbox');
+  }
+
+  // macOS 特定设置
+  if (PlatformHelper.isMacOS()) {
+    // 设置 Dock 图标
+    try {
+      const iconPath = path.join(__dirname, 'public/favicon.icns');
+      if (app.dock) {
+        app.dock.setIcon(iconPath);
+      }
+    } catch (error) {
+      console.error('设置 Dock 图标失败:', error);
+    }
+
+    // 设置应用程序名称
+    const appName = i18n.t('app.name');
+    app.setName(appName);
+  }
+
+  // 创建主窗口
+  createMainWindow();
 }).catch(error => {
   console.error('应用启动失败:', error);
 });
@@ -491,9 +516,11 @@ function setupMainWindowInterceptors() {
   if (contentViewManager && contentViewManager.getView && typeof contentViewManager.getView === 'function') {
     const contentView = contentViewManager.getView();
     if (contentView && contentView.webContents) {
-      // 标题同步
+      // 标题同步 - 增加 mainWindow 存在性检查
       contentView.webContents.on('page-title-updated', (event, title) => {
-        mainWindow.setTitle(title);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setTitle(title);
+        }
       });
       
       // 主窗口 will-navigate 拦截
@@ -508,7 +535,9 @@ function setupMainWindowInterceptors() {
         // 非主域名/白名单，全部弹窗拦截
         if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
           event.preventDefault();
-          showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+          }
           return;
         }
         // 主域名页面允许跳转
@@ -524,7 +553,9 @@ function setupMainWindowInterceptors() {
         const domain = require('./utils/urlHelper').getHostname(url);
         if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
           event.preventDefault();
-          showBlockedDialogWithDebounce(mainWindow, domain, '非法重定向拦截，已阻止跳转', 'redirect');
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            showBlockedDialogWithDebounce(mainWindow, domain, '非法重定向拦截，已阻止跳转', 'redirect');
+          }
           return;
         }
         // 主域名和白名单允许跳转
@@ -539,7 +570,9 @@ function setupMainWindowInterceptors() {
         }
         // 非白名单/主域名弹窗拦截
         if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
-          showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+          }
           return { action: 'deny' };
         }
         // 主域名允许跳转
@@ -573,6 +606,31 @@ app.on('browser-window-created', (event, win) => {
   } catch {}
 });
 
+let isRestarting = false; // 标记是否正在重启
+
+// 导出重启状态设置函数
+global.setRestartingState = (state) => {
+  isRestarting = state;
+};
+
+app.on('reopen-main-window', () => {
+  isRestarting = true; // 设置重启标记
+  setTimeout(() => {
+    if (!mainWindow) {
+      try {
+        // 重新创建主窗口
+        createMainWindow();
+        isRestarting = false; // 重启完成，清除标记
+      } catch (error) {
+        console.error('重置后主窗口创建失败:', error);
+        isRestarting = false; // 发生错误也要清除标记
+      }
+    } else {
+      isRestarting = false; // 主窗口已存在，清除标记
+    }
+  }, 3000);
+});
+
 app.on('will-quit', () => {
   // 取消注册所有快捷键
   if (shortcutManager) {
@@ -595,3 +653,16 @@ function showBlockedDialogWithDebounce(win, url, message, type = 'default') {
   lastBlockedTime = now;
   showBlockedDialog(win, url, message, type);
 }
+
+// 只在重启时阻止自动退出，正常关闭时允许退出
+app.on('window-all-closed', (event) => {
+  if (isRestarting) {
+    // 正在重启时阻止退出
+    event.preventDefault && event.preventDefault();
+    console.log('正在重启，阻止应用退出');
+  } else {
+    // 正常关闭时主动退出应用
+    console.log('所有窗口已关闭，应用将退出');
+    app.quit();
+  }
+});

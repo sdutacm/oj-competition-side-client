@@ -45,6 +45,53 @@ class ToolbarManager {
           const action = message.replace('TOOLBAR_ACTION:', '');
           if (this.onActionCallback) {
             this.onActionCallback(action);
+            // 如果是 clean，则主窗口也清理 localStorage 和 cookie
+            if (action === 'clean') {
+              const { BrowserWindow, app } = require('electron');
+              
+              // 设置重启状态，防止应用退出
+              if (global.setRestartingState) {
+                global.setRestartingState(true);
+              }
+              
+              const allWindows = BrowserWindow.getAllWindows();
+              // 清理所有窗口存储和 cookie
+              allWindows.forEach(win => {
+                if (win && win.webContents) {
+                  win.webContents.executeJavaScript(`
+                    try {
+                      localStorage.clear();
+                      sessionStorage.clear();
+                      document.cookie.split(';').forEach(function(c) {
+                        document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
+                      });
+                      if (window.indexedDB && indexedDB.databases) {
+                        indexedDB.databases().then(dbs => {
+                          dbs.forEach(db => {
+                            indexedDB.deleteDatabase(db.name);
+                          });
+                        });
+                      }
+                      if (window._resetAppState) window._resetAppState();
+                    } catch (e) {}
+                  `).catch(() => {});
+                  // 清理 session cookies
+                  try {
+                    win.webContents.session.clearStorageData({ storages: ['cookies'] });
+                  } catch (e) {}
+                }
+              });
+              // 关闭所有窗口
+              allWindows.forEach(win => {
+                try { win.close(); } catch (e) {}
+              });
+              // 5秒后重启主窗口
+              setTimeout(() => {
+                if (app && app.emit) {
+                  app.emit('reopen-main-window');
+                }
+              }, 5000);
+            }
           }
         }
       });
