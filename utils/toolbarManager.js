@@ -73,7 +73,7 @@ class ToolbarManager {
           event.preventDefault();
           return;
         }
-        // Mac 下处理导航/刷新/主页/info快捷键，且只在 toolbarView 聚焦时生效
+        // Mac 下处理导航/刷新/主页/info/clean快捷键，且只在 toolbarView 聚焦时生效
         if (process.platform === 'darwin' && webContents.isFocused && webContents.isFocused()) {
           // 主页 Cmd+Shift+H
           if (input.meta && input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'H') {
@@ -95,6 +95,10 @@ class ToolbarManager {
           else if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'I') {
             if (this.onActionCallback) this.onActionCallback('info');
           }
+          // 清空本地存储 Cmd+Shift+Delete
+          else if (input.meta && input.shift && !input.alt && !input.control && input.key === 'Delete') {
+            if (this.onActionCallback) this.onActionCallback('clean');
+          }
         }
       });
     }
@@ -105,7 +109,7 @@ class ToolbarManager {
    */
   createToolbarHTML() {
     // 读取本地 SVG 文件内容，增加错误处理
-    let backSVG, forwardSVG, refreshSVG, homeSVG, infoSVG;
+    let backSVG, forwardSVG, refreshSVG, homeSVG, infoSVG, cleanSVG;
 
     try {
       const svgPath = PlatformHelper.joinPath(__dirname, '..', 'public', 'svg');
@@ -115,6 +119,7 @@ class ToolbarManager {
       refreshSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'refresh.svg'), 'utf8');
       homeSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'home.svg'), 'utf8');
       infoSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'info.svg'), 'utf8');
+      cleanSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'clean.svg'), 'utf8');
     } catch (error) {
       console.error('Error loading SVG files:', error);
 
@@ -125,6 +130,7 @@ class ToolbarManager {
       refreshSVG = defaultSVG;
       homeSVG = defaultSVG;
       infoSVG = defaultSVG;
+      cleanSVG = defaultSVG;
     }
 
     // 获取平台快捷键信息
@@ -261,6 +267,9 @@ class ToolbarManager {
         </div>
         <div class="toolbar-right">
           ${(!isAboutDialog && !isMainWindow) ? `<button class="toolbar-btn" data-action="info" title="系统信息 (Alt+I)">${infoSVG}</button>` : ''}
+          <button class="toolbar-btn" data-action="clean" title="清空本地存储">
+            ${cleanSVG}
+          </button>
         </div>
         <script>
           // 工具栏按钮点击处理
@@ -268,6 +277,30 @@ class ToolbarManager {
             const btn = e.target.closest('.toolbar-btn');
             if (!btn || btn.disabled) return;
             const action = btn.getAttribute('data-action');
+            
+            // 处理清空本地存储
+            if (action === 'clean') {
+              try {
+                // 清空 localStorage
+                localStorage.clear();
+                
+                // 清空 cookies
+                document.cookie.split(";").forEach(function(c) { 
+                  document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+                
+                // 添加动画效果
+                btn.classList.add('animate');
+                setTimeout(() => {
+                  btn.classList.remove('animate');
+                }, 600);
+                
+                console.log('Local storage and cookies cleared');
+              } catch (error) {
+                console.error('Error clearing local storage:', error);
+              }
+            }
+            
             if (action === 'refresh' || action === 'home') {
               btn.classList.add('animate');
               setTimeout(() => {
