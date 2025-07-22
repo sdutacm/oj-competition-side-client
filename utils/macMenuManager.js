@@ -82,8 +82,8 @@ class MacMenuManager {
         label: appName,
         submenu: [
           {
-            label: i18n.t('menu.about'),
-            click: () => this.showAboutDialog()
+            label: this.getAboutMenuLabel(),
+            click: () => this.showSystemAboutDialog()
           },
           { type: 'separator' },
           {
@@ -285,6 +285,18 @@ class MacMenuManager {
     } catch (error) {
       console.error('显示关于对话框失败:', error);
       this.showSystemAboutDialog();
+    }
+  }
+
+  /**
+   * 获取关于菜单标签
+   */
+  getAboutMenuLabel() {
+    const currentLanguage = i18n.getLocale() || 'zh-CN';
+    if (currentLanguage === 'en-US') {
+      return 'About SDUT OJ Competition Side Client';
+    } else {
+      return '关于 SDUT OJ 竞赛客户端';
     }
   }
 
