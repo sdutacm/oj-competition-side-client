@@ -45,6 +45,9 @@ class MacMenuManager {
    */
   createMenuTemplate() {
     const appName = i18n.t('app.name');
+    console.log('创建菜单模板 - 应用名称:', appName);
+    console.log('创建菜单模板 - 文件菜单:', i18n.t('menu.file'));
+    console.log('创建菜单模板 - 当前语言:', i18n.getCurrentLanguage());
     
     return [
       // 应用菜单

@@ -272,6 +272,10 @@ function openNewWindow(url) {
 }
 
 app.whenReady().then(() => {
+  // 确保 i18n 完全初始化
+  console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
+  console.log('App ready - 测试翻译:', i18n.t('app.name'));
+  
   // Windows 兼容性设置
   if (PlatformHelper.isWindows()) {
     // 添加 Windows 特定的命令行开关来解决 GPU 问题
@@ -359,6 +363,9 @@ app.whenReady().then(() => {
 
     // 初始化国际化菜单管理器（macOS 和 Linux）
     if (process.platform === 'darwin' || process.platform === 'linux') {
+      console.log('准备初始化 MacMenuManager...');
+      console.log('当前语言:', i18n.getCurrentLanguage());
+      console.log('测试菜单翻译:', i18n.t('menu.file'));
       macMenuManager = new MacMenuManager(mainWindow);
     }
 
@@ -368,67 +375,10 @@ app.whenReady().then(() => {
     // 创建视图
     createViews();
 
-    // 新增：主窗口内容区页面标题变化时，同步主窗口标题
-    if (contentViewManager && contentViewManager.getView && typeof contentViewManager.getView === 'function') {
-      const contentView = contentViewManager.getView();
-      if (contentView && contentView.webContents) {
-        // 标题同步
-        contentView.webContents.on('page-title-updated', (event, title) => {
-          mainWindow.setTitle(title);
-        });
-        // 主窗口只做 will-navigate 和 will-redirect 拦截，不做 did-navigate 拦截，不绑定 applyRedirectInterceptor
-        contentView.webContents.on('will-navigate', (event, url) => {
-          const domain = require('./utils/urlHelper').getHostname(url);
-          // 白名单：页面内点击立即弹新窗口
-          if (isWhiteDomain(url, APP_CONFIG)) {
-            event.preventDefault();
-            openNewWindow(url);
-            return;
-          }
-          // 非主域名/白名单，全部弹窗拦截
-          if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
-            event.preventDefault();
-            showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
-            return;
-          }
-          // 主域名页面允许跳转
-          if (domain === APP_CONFIG.MAIN_DOMAIN || domain.endsWith('.' + APP_CONFIG.MAIN_DOMAIN)) {
-            return;
-          }
-          // 其它场景一律拦截但不弹窗（如 SPA 跳转等）
-          event.preventDefault();
-        });
-        // 主窗口 will-redirect 拦截，非法重定向弹窗
-        contentView.webContents.on('will-redirect', (event, url) => {
-          const domain = require('./utils/urlHelper').getHostname(url);
-          if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
-            event.preventDefault();
-            showBlockedDialogWithDebounce(mainWindow, domain, '非法重定向拦截，已阻止跳转', 'redirect');
-            return;
-          }
-          // 主域名和白名单允许跳转
-        });
-        contentView.webContents.setWindowOpenHandler(({ url }) => {
-          const domain = require('./utils/urlHelper').getHostname(url);
-          if (isWhiteDomain(url, APP_CONFIG)) {
-            openNewWindow(url);
-            return { action: 'deny' };
-          }
-          // 非白名单/主域名弹窗拦截
-          if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
-            showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
-            return { action: 'deny' };
-          }
-          // 主域名允许跳转
-          return { action: 'allow' };
-        });
-      }
-    }
-
     // 设置布局（所有平台都调用，确保 toolbar 正常显示）
     setupLayout();
 
-    // 注册快捷键（在所有初始化完成后注册）
+    // 最后注册快捷键（确保在所有菜单管理器初始化完成后）
     shortcutManager.registerShortcuts();
 
     // 监听窗口关闭，清理资源
