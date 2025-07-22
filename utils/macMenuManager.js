@@ -52,8 +52,24 @@ class MacMenuManager {
         label: appName,
         submenu: [
           {
-            label: i18n.t('app.about'),
+            label: i18n.t('menu.about'),
             click: () => this.showAboutDialog()
+          },
+          { type: 'separator' },
+          {
+            label: i18n.t('menu.preferences'),
+            accelerator: 'Cmd+,',
+            click: () => this.showPreferences()
+          },
+          { type: 'separator' },
+          {
+            label: i18n.t('menu.language'),
+            submenu: this.createLanguageSubmenu()
+          },
+          { type: 'separator' },
+          {
+            label: i18n.t('menu.services'),
+            submenu: []
           },
           { type: 'separator' },
           {
@@ -173,6 +189,72 @@ class MacMenuManager {
         ]
       },
       
+      // 视图菜单
+      {
+        label: i18n.t('menu.view'),
+        submenu: [
+          {
+            label: i18n.t('menu.navigation'),
+            submenu: [
+              {
+                label: i18n.t('menu.goBack'),
+                accelerator: 'Cmd+Left',
+                click: () => this.navigateBack()
+              },
+              {
+                label: i18n.t('menu.goForward'),
+                accelerator: 'Cmd+Right',
+                click: () => this.navigateForward()
+              },
+              {
+                label: i18n.t('menu.goHome'),
+                accelerator: 'Cmd+Shift+H',
+                click: () => this.navigateHome()
+              },
+              { type: 'separator' },
+              {
+                label: i18n.t('menu.refresh'),
+                accelerator: 'Cmd+R',
+                click: () => this.refresh()
+              },
+              {
+                label: i18n.t('menu.forceReload'),
+                accelerator: 'Cmd+Shift+R',
+                click: () => this.forceReload()
+              }
+            ]
+          },
+          { type: 'separator' },
+          {
+            label: i18n.t('menu.resetZoom'),
+            accelerator: 'Cmd+0',
+            click: () => this.resetZoom()
+          },
+          {
+            label: i18n.t('menu.zoomIn'),
+            accelerator: 'Cmd+Plus',
+            click: () => this.zoomIn()
+          },
+          {
+            label: i18n.t('menu.zoomOut'),
+            accelerator: 'Cmd+-',
+            click: () => this.zoomOut()
+          },
+          { type: 'separator' },
+          {
+            label: i18n.t('menu.toggleFullscreen'),
+            accelerator: 'Ctrl+Cmd+F',
+            click: () => this.toggleFullscreen()
+          },
+          { type: 'separator' },
+          {
+            label: i18n.t('menu.toggleDevTools'),
+            accelerator: 'Alt+Cmd+I',
+            click: () => this.toggleDevTools()
+          }
+        ]
+      },
+      
       // 窗口菜单
       {
         label: i18n.t('menu.window'),
@@ -217,9 +299,18 @@ class MacMenuManager {
             label: i18n.t('menu.systemInfo'),
             click: () => this.showSystemInfo()
           },
+          { type: 'separator' },
+          {
+            label: i18n.t('menu.checkForUpdates'),
+            click: () => this.checkForUpdates()
+          },
           {
             label: i18n.t('menu.reportIssue'),
             click: () => this.reportIssue()
+          },
+          {
+            label: i18n.t('menu.learnMore'),
+            click: () => this.learnMore()
           }
         ]
       }
@@ -272,7 +363,7 @@ class MacMenuManager {
     
     dialog.showMessageBox(this.mainWindow, {
       type: 'info',
-      title: i18n.t('app.about'),
+      title: i18n.t('menu.about'),
       message: appName,
       detail: i18n.t('app.description') + '\\n\\n' + i18n.t('app.version', { version }),
       buttons: [i18n.t('dialog.ok')]
@@ -490,7 +581,7 @@ class MacMenuManager {
   }
 
   reportIssue() {
-    shell.openExternal('https://github.com/ATRIOR-LCL/oj-competition-side-client/issues');
+    shell.openExternal('https://github.com/ATRIOR-LCL/oj-client/issues');
   }
 
   learnMore() {

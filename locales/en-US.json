@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "SDUT OJ Competition Client",
-    "about": "About SDUT OJ Competition Side Client",
+    "about": "About %{appName}",
     "version": "Version %{version}",
     "description": "Professional Online Judge Client"
   },
