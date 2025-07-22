@@ -55,8 +55,8 @@ class ToolbarManager {
               // 创建带倒计时的自定义对话框
               const isMac = process.platform === 'darwin';
               const confirmWindow = new BrowserWindow({
-                width: 520,
-                height: 420,
+                width: 460,
+                height: 350,
                 frame: false, // 完全无框
                 resizable: false,
                 alwaysOnTop: true, // 设为置顶，确保在所有窗口之上
@@ -214,14 +214,14 @@ class ToolbarManager {
     }
 
     :root {
-      --bg-primary: #ffffff;
+      --bg-primary: #fcfcfc; /* 使用工具栏背景色 */
       --bg-secondary: #f8fafc;
       --text-primary: #1e293b;
       --text-secondary: #64748b;
       --text-danger: #ff2e2ed0;
       --border-color: transparent; /* 改为透明，避免白色边框 */
       --shadow-color: rgba(0, 0, 0, 0.1);
-      --danger-bg: rgba(254, 242, 242, 0.8);
+      --danger-bg: rgba(255, 213, 213, 0.8);
       --danger-border: rgba(239, 68, 68, 0.3);
       --confirm-bg: #dc2626;
       --confirm-hover: #b91c1c;
@@ -232,14 +232,14 @@ class ToolbarManager {
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg-primary: #1e293b;
+        --bg-primary: #1f1f1f; /* 使用工具栏暗色背景色 */
         --bg-secondary: #0f172a;
         --text-primary: #f1f5f9;
         --text-secondary: #94a3b8;
         --text-danger: #ef4444;
         --border-color: transparent; /* 改为透明，避免白色边框 */
         --shadow-color: rgba(0, 0, 0, 0.3);
-        --danger-bg: rgba(127, 29, 29, 0.3);
+        --danger-bg: rgba(158, 31, 31, 0.67);
         --danger-border: rgba(239, 68, 68, 0.3);
         --confirm-bg: #dc2626;
         --confirm-hover: #b91c1c;
@@ -319,7 +319,7 @@ class ToolbarManager {
     /* Mac系统特殊处理 - 使用毛玻璃效果 */
     @supports (-webkit-backdrop-filter: blur(10px)) {
       .dialog-content {
-        background: rgba(255, 255, 255, 0.95) !important;
+        background: rgba(252, 252, 252, 0.95) !important; /* 使用工具栏背景色的半透明版本 */
         -webkit-backdrop-filter: blur(20px) !important;
         backdrop-filter: blur(20px) !important;
         border: none !important; /* 强制移除边框 */
@@ -328,7 +328,7 @@ class ToolbarManager {
       
       @media (prefers-color-scheme: dark) {
         .dialog-content {
-          background: rgba(30, 41, 59, 0.95) !important;
+          background: rgba(31, 31, 31, 0.95) !important; /* 使用工具栏暗色背景色的半透明版本 */
           -webkit-backdrop-filter: blur(20px) !important;
           backdrop-filter: blur(20px) !important;
           border: none !important; /* 强制移除边框 */
@@ -392,17 +392,17 @@ class ToolbarManager {
       color: var(--text-primary);
       font-size: 15px;
       line-height: 1.3;
-      margin-bottom: 16px;
+      // margin-bottom: 16px;
       font-weight: 500;
       flex-shrink: 0;
     }
 
     .dialog-details {
-      background: var(--danger-bg);
+      background: transparent;
       border: 2px solid var(--danger-border);
       border-radius: 12px;
       padding: 14px;
-      margin-bottom: 18px;
+      // margin-bottom: 18px;
       font-size: 12px;
       line-height: 1.4;
       color: var(--text-primary);
@@ -443,7 +443,7 @@ class ToolbarManager {
       justify-content: flex-end;
       padding-top: 12px;
       border-top: 1px solid rgba(0, 0, 0, 0.1); /* 使用半透明边框 */
-      margin-top: auto;
+      // margin-top: auto;
       flex-shrink: 0;
     }
 
@@ -532,14 +532,15 @@ class ToolbarManager {
       </div>
       
       <div class="dialog-message">
-        此操作将清理所有本地数据并重启应用程序
+        此操作将清空所有本地数据并重启应用程序
       </div>
       
       <div class="dialog-details">
         <strong>警告：此操作无法撤销</strong>
         <ul>
-          <li>清空所有本地存储数据（localStorage）</li>
-          <li>清空所有会话存储数据（sessionStorage）</li>
+          <li>登出账号</li>
+          <li>清空所有本地存储数据</li>
+          <li>清空所有会话存储数据</li>
           <li>清空所有 Cookie 数据</li>
           <li>关闭所有窗口并重启应用</li>
         </ul>
@@ -625,18 +626,18 @@ class ToolbarManager {
           const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
           
           if (isDarkMode) {
-            // 暗色主题毛玻璃效果
+            // 暗色主题毛玻璃效果 - 使用工具栏暗色背景色
             dialogContent.style.cssText += \`
-              background: rgba(30, 41, 59, 0.95) !important;
+              background: rgba(31, 31, 31, 0.95) !important;
               -webkit-backdrop-filter: blur(20px) !important;
               backdrop-filter: blur(20px) !important;
               border: none !important;
               box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
             \`;
           } else {
-            // 浅色主题毛玻璃效果
+            // 浅色主题毛玻璃效果 - 使用工具栏浅色背景色
             dialogContent.style.cssText += \`
-              background: rgba(255, 255, 255, 0.95) !important;
+              background: rgba(252, 252, 252, 0.95) !important;
               -webkit-backdrop-filter: blur(20px) !important;
               backdrop-filter: blur(20px) !important;
               border: none !important;
@@ -649,16 +650,16 @@ class ToolbarManager {
             const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
             darkModeQuery.addListener((e) => {
               if (e.matches) {
-                // 切换到暗色主题
+                // 切换到暗色主题 - 使用工具栏暗色背景色
                 dialogContent.style.cssText += \`
-                  background: rgba(30, 41, 59, 0.95) !important;
+                  background: rgba(31, 31, 31, 0.95) !important;
                   border: none !important;
                   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
                 \`;
               } else {
-                // 切换到浅色主题
+                // 切换到浅色主题 - 使用工具栏浅色背景色
                 dialogContent.style.cssText += \`
-                  background: rgba(255, 255, 255, 0.95) !important;
+                  background: rgba(252, 252, 252, 0.95) !important;
                   border: none !important;
                   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
                 \`;
