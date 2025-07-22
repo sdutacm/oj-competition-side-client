@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, nativeTheme } = require('electron');
 const path = require('path');
 const ToolbarManager = require('./utils/toolbarManager');
 const ContentViewManager = require('./utils/contentViewManager');
@@ -170,23 +170,32 @@ function openNewWindow(url) {
   if (process.platform === 'win32') {
     iconPath = path.join(__dirname, 'public/favicon.ico');
   }
+  
+  // 根据系统主题设置背景色
+  const backgroundColor = nativeTheme.shouldUseDarkColors ? '#1f1f1f' : '#fcfcfc';
+  
   const win = new BrowserWindow({
     width,
     height,
     icon: iconPath,
+    backgroundColor: backgroundColor, // 设置背景色，避免白屏
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       devTools: false,
     },
-    show: true,
-    autoHideMenuBar: true
+    show: false, // 初始不显示，等待内容加载完成
+    autoHideMenuBar: true,
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default', // Mac 优化
   });
   if (process.platform !== 'darwin') {
     win.setMenuBarVisibility(false);
   }
-  win.on('ready-to-show', () => {
+  
+  // 等待窗口准备完成后再显示，避免白屏
+  win.once('ready-to-show', () => {
     win.setMenuBarVisibility(false);
+    win.show();
   });
   // 记录初始 url 作为主页（确保是完整 url）
   const initialUrl = url;  // 使用 const 确保不被修改
@@ -307,11 +316,15 @@ app.whenReady().then(() => {
       iconPath = path.join(__dirname, 'public/favicon.ico');
     }
 
+    // 根据系统主题设置背景色
+    const backgroundColor = nativeTheme.shouldUseDarkColors ? '#1f1f1f' : '#fcfcfc';
+
     // 创建主窗口
     mainWindow = new BrowserWindow({
       width: 1440,
       height: 900,
       icon: iconPath, // 设置应用图标
+      backgroundColor: backgroundColor, // 设置背景色，避免白屏
       webPreferences: {
         nodeIntegration: platformConfig.nodeIntegration,
         contextIsolation: platformConfig.contextIsolation,
@@ -323,6 +336,7 @@ app.whenReady().then(() => {
         preload: path.join(__dirname, 'preload.js') // 注入 preload 脚本
       },
       show: false, // 初始不显示，等待准备完成
+      titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default', // Mac 优化
     });
 
     // 设置自定义 User-Agent
@@ -422,8 +436,25 @@ app.whenReady().then(() => {
       mainWindow = null;
     });
 
-    // 显示窗口
-    mainWindow.show();
+    // 监听系统主题变化，动态更新背景色
+    nativeTheme.on('updated', () => {
+      const newBackgroundColor = nativeTheme.shouldUseDarkColors ? '#1f1f1f' : '#fcfcfc';
+      if (mainWindow) {
+        mainWindow.setBackgroundColor(newBackgroundColor);
+      }
+    });
+
+    // 等待所有内容准备完成后再显示窗口，避免白屏
+    mainWindow.once('ready-to-show', () => {
+      mainWindow.show();
+    });
+    
+    // 如果 ready-to-show 没有触发，设置一个备用显示机制
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isVisible()) {
+        mainWindow.show();
+      }
+    }, 2000);
   } catch (error) {
     console.error('应用初始化失败:', error);
   }
