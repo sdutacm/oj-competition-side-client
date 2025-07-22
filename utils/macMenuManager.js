@@ -83,7 +83,7 @@ class MacMenuManager {
         submenu: [
           {
             label: this.getAboutMenuLabel(),
-            click: () => this.showSystemAboutDialog()
+            click: () => this.showAboutDialog()
           },
           { type: 'separator' },
           {
@@ -274,17 +274,14 @@ class MacMenuManager {
    */
   showAboutDialog() {
     try {
-      // 尝试使用自定义的 dialogHelper
       const dialogHelper = require('./dialogHelper');
       if (dialogHelper && dialogHelper.showInfoDialog) {
         dialogHelper.showInfoDialog(this.mainWindow);
       } else {
-        // 使用系统默认对话框
-        this.showSystemAboutDialog();
+        console.error('未找到自定义 info 窗口方法 dialogHelper.showInfoDialog');
       }
     } catch (error) {
-      console.error('显示关于对话框失败:', error);
-      this.showSystemAboutDialog();
+      console.error('显示自定义 info 窗口失败:', error);
     }
   }
 
