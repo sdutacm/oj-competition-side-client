@@ -197,7 +197,7 @@ class ToolbarManager {
       --bg-secondary: #f8fafc;
       --text-primary: #1e293b;
       --text-secondary: #64748b;
-      --text-danger: #dc2626;
+      --text-danger: #ff2e2ed0;
       --border-color: #e2e8f0;
       --shadow-color: rgba(0, 0, 0, 0.1);
       --danger-bg: rgba(254, 242, 242, 0.8);
@@ -1002,8 +1002,8 @@ class ToolbarManager {
         }
         // Mac 下处理导航/刷新/主页/info/clean快捷键，且只在 toolbarView 聚焦时生效
         if (process.platform === 'darwin' && webContents.isFocused && webContents.isFocused()) {
-          // 主页 Cmd+Shift+H
-          if (input.meta && input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'H') {
+          // 主页 Option+Cmd+H
+          if (input.meta && input.alt && !input.shift && !input.control && input.key.toUpperCase() === 'H') {
             if (this.onActionCallback) this.onActionCallback('home');
           }
           // 刷新 Cmd+R
