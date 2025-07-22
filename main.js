@@ -469,9 +469,77 @@ function createViews() {
   try {
     toolbarManager.createToolbarView();
     contentViewManager.createContentView();
+    
+    // 设置主窗口的拦截逻辑
+    setupMainWindowInterceptors();
   } catch (error) {
     console.error('创建视图失败:', error);
     throw error;
+  }
+}
+
+/**
+ * 设置主窗口拦截器
+ */
+function setupMainWindowInterceptors() {
+  if (contentViewManager && contentViewManager.getView && typeof contentViewManager.getView === 'function') {
+    const contentView = contentViewManager.getView();
+    if (contentView && contentView.webContents) {
+      // 标题同步
+      contentView.webContents.on('page-title-updated', (event, title) => {
+        mainWindow.setTitle(title);
+      });
+      
+      // 主窗口 will-navigate 拦截
+      contentView.webContents.on('will-navigate', (event, url) => {
+        const domain = require('./utils/urlHelper').getHostname(url);
+        // 白名单：页面内点击立即弹新窗口
+        if (isWhiteDomain(url, APP_CONFIG)) {
+          event.preventDefault();
+          openNewWindow(url);
+          return;
+        }
+        // 非主域名/白名单，全部弹窗拦截
+        if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+          event.preventDefault();
+          showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+          return;
+        }
+        // 主域名页面允许跳转
+        if (domain === APP_CONFIG.MAIN_DOMAIN || domain.endsWith('.' + APP_CONFIG.MAIN_DOMAIN)) {
+          return;
+        }
+        // 其它场景一律拦截但不弹窗（如 SPA 跳转等）
+        event.preventDefault();
+      });
+      
+      // 主窗口 will-redirect 拦截，非法重定向弹窗
+      contentView.webContents.on('will-redirect', (event, url) => {
+        const domain = require('./utils/urlHelper').getHostname(url);
+        if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+          event.preventDefault();
+          showBlockedDialogWithDebounce(mainWindow, domain, '非法重定向拦截，已阻止跳转', 'redirect');
+          return;
+        }
+        // 主域名和白名单允许跳转
+      });
+      
+      // 主窗口 setWindowOpenHandler 拦截
+      contentView.webContents.setWindowOpenHandler(({ url }) => {
+        const domain = require('./utils/urlHelper').getHostname(url);
+        if (isWhiteDomain(url, APP_CONFIG)) {
+          openNewWindow(url);
+          return { action: 'deny' };
+        }
+        // 非白名单/主域名弹窗拦截
+        if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+          showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+          return { action: 'deny' };
+        }
+        // 主域名允许跳转
+        return { action: 'allow' };
+      });
+    }
   }
 }
 

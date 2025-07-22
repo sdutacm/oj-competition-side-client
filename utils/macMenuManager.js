@@ -43,12 +43,10 @@ class MacMenuManager {
     console.log('=== 菜单更新开始 ===');
     console.log('当前语言:', i18n.getCurrentLanguage());
     console.log('测试翻译:');
-    console.log('  视图:', i18n.t('menu.view'));
-    console.log('  刷新:', i18n.t('menu.refresh'));
-    console.log('  重新加载:', i18n.t('menu.reload'));
-    console.log('  强制重新加载:', i18n.t('menu.forceReload'));
-    console.log('  切换全屏:', i18n.t('menu.toggleFullscreen'));
-    console.log('  切换开发者工具:', i18n.t('menu.toggleDevTools'));
+    console.log('  应用名称:', i18n.t('app.name'));
+    console.log('  帮助:', i18n.t('menu.help'));
+    console.log('  系统信息:', i18n.t('menu.systemInfo'));
+    console.log('  报告问题:', i18n.t('menu.reportIssue'));
     
     // 清除之前的菜单
     Menu.setApplicationMenu(null);
@@ -71,17 +69,11 @@ class MacMenuManager {
    * 创建菜单模板
    */
   createMenuTemplate() {
-    // 强制重新获取翻译，避免缓存问题
+    // 获取应用名称
     const appName = i18n.t('app.name');
-    const viewLabel = i18n.t('menu.view');
-    const refreshLabel = i18n.t('menu.refresh');
-    const toggleFullscreenLabel = i18n.t('menu.toggleFullscreen');
     
     console.log('=== 创建菜单模板调试信息 ===');
     console.log('应用名称:', appName);
-    console.log('视图菜单:', viewLabel);
-    console.log('刷新标签:', refreshLabel);
-    console.log('切换全屏标签:', toggleFullscreenLabel);
     console.log('当前语言:', i18n.getCurrentLanguage());
     
     return [
@@ -92,22 +84,6 @@ class MacMenuManager {
           {
             label: i18n.t('menu.about'),
             click: () => this.showAboutDialog()
-          },
-          { type: 'separator' },
-          {
-            label: i18n.t('menu.preferences'),
-            accelerator: 'Cmd+,',
-            click: () => this.showPreferences()
-          },
-          { type: 'separator' },
-          {
-            label: i18n.t('menu.language'),
-            submenu: this.createLanguageSubmenu()
-          },
-          { type: 'separator' },
-          {
-            label: i18n.t('menu.services'),
-            submenu: []
           },
           { type: 'separator' },
           {
@@ -227,72 +203,6 @@ class MacMenuManager {
         ]
       },
       
-      // 视图菜单
-      {
-        label: viewLabel,
-        submenu: [
-          {
-            label: refreshLabel,
-            accelerator: 'Cmd+R',
-            click: () => this.refresh()
-          },
-          {
-            label: i18n.t('menu.forceReload'),
-            accelerator: 'Cmd+Shift+R',
-            click: () => this.forceReload()
-          },
-          { type: 'separator' },
-          {
-            label: i18n.t('menu.navigation'),
-            submenu: [
-              {
-                label: i18n.t('menu.goBack'),
-                accelerator: 'Cmd+Left',
-                click: () => this.navigateBack()
-              },
-              {
-                label: i18n.t('menu.goForward'),
-                accelerator: 'Cmd+Right',
-                click: () => this.navigateForward()
-              },
-              {
-                label: i18n.t('menu.goHome'),
-                accelerator: 'Cmd+Shift+H',
-                click: () => this.navigateHome()
-              }
-            ]
-          },
-          { type: 'separator' },
-          {
-            label: i18n.t('menu.resetZoom'),
-            accelerator: 'Cmd+0',
-            click: () => this.resetZoom()
-          },
-          {
-            label: i18n.t('menu.zoomIn'),
-            accelerator: 'Cmd+Plus',
-            click: () => this.zoomIn()
-          },
-          {
-            label: i18n.t('menu.zoomOut'),
-            accelerator: 'Cmd+-',
-            click: () => this.zoomOut()
-          },
-          { type: 'separator' },
-          {
-            label: toggleFullscreenLabel,
-            accelerator: 'Ctrl+Cmd+F',
-            click: () => this.toggleFullscreen()
-          },
-          { type: 'separator' },
-          {
-            label: i18n.t('menu.toggleDevTools'),
-            accelerator: 'Alt+Cmd+I',
-            click: () => this.toggleDevTools()
-          }
-        ]
-      },
-      
       // 窗口菜单
       {
         label: i18n.t('menu.window'),
@@ -339,55 +249,12 @@ class MacMenuManager {
           },
           { type: 'separator' },
           {
-            label: i18n.t('menu.checkForUpdates'),
-            click: () => this.checkForUpdates()
-          },
-          {
             label: i18n.t('menu.reportIssue'),
             click: () => this.reportIssue()
-          },
-          {
-            label: i18n.t('menu.learnMore'),
-            click: () => this.learnMore()
           }
         ]
       }
     ];
-  }
-
-  /**
-   * 创建语言子菜单
-   */
-  createLanguageSubmenu() {
-    const currentLang = i18n.getCurrentLanguage();
-    const availableLanguages = i18n.getAvailableLanguages();
-    
-    const languageItems = availableLanguages.map(lang => ({
-      label: i18n.getLanguageDisplayName(lang),
-      type: 'radio',
-      checked: lang === currentLang,
-      click: () => {
-        i18n.setLanguage(lang);
-        console.log(`菜单语言已切换到: ${lang}`);
-        // 语言切换后强制刷新菜单
-        setTimeout(() => {
-          this.forceRefreshMenu();
-        }, 300);
-      }
-    }));
-
-    // 添加分隔符和刷新选项
-    languageItems.push(
-      { type: 'separator' },
-      {
-        label: '刷新菜单',
-        click: () => {
-          this.forceRefreshMenu();
-        }
-      }
-    );
-
-    return languageItems;
   }
 
   /**
@@ -426,153 +293,6 @@ class MacMenuManager {
   }
 
   /**
-   * 显示偏好设置
-   */
-  showPreferences() {
-    console.log('显示偏好设置');
-    // TODO: 实现偏好设置界面
-  }
-
-  /**
-   * 导航操作
-   */
-  navigateBack() {
-    if (this.mainWindow && this.mainWindow._contentViewManager) {
-      const wc = this.mainWindow._contentViewManager.getWebContents();
-      if (wc && wc.canGoBack()) {
-        wc.goBack();
-      }
-    }
-  }
-
-  navigateForward() {
-    if (this.mainWindow && this.mainWindow._contentViewManager) {
-      const wc = this.mainWindow._contentViewManager.getWebContents();
-      if (wc && wc.canGoForward()) {
-        wc.goForward();
-      }
-    }
-  }
-
-  navigateHome() {
-    if (this.mainWindow && this.mainWindow._shortcutManager) {
-      const wc = this.mainWindow._contentViewManager?.getWebContents();
-      const initialUrl = this.mainWindow._shortcutManager.initialUrl;
-      console.log('菜单主页跳转使用URL:', initialUrl);
-      if (wc && initialUrl) {
-        wc.loadURL(initialUrl);
-      }
-    }
-  }
-
-  refresh() {
-    if (this.mainWindow && this.mainWindow._contentViewManager) {
-      const wc = this.mainWindow._contentViewManager.getWebContents();
-      if (wc) {
-        wc.reload();
-      }
-    }
-  }
-
-  forceReload() {
-    if (this.mainWindow && this.mainWindow._contentViewManager) {
-      const wc = this.mainWindow._contentViewManager.getWebContents();
-      if (wc) {
-        wc.reloadIgnoringCache();
-      }
-    }
-  }
-
-  /**
-   * 执行编辑操作
-   */
-  executeEditAction(action) {
-    if (this.mainWindow && this.mainWindow._contentViewManager) {
-      const wc = this.mainWindow._contentViewManager.getWebContents();
-      if (wc) {
-        switch (action) {
-          case 'undo':
-            wc.undo();
-            break;
-          case 'redo':
-            wc.redo();
-            break;
-          case 'cut':
-            wc.cut();
-            break;
-          case 'copy':
-            wc.copy();
-            break;
-          case 'paste':
-            wc.paste();
-            break;
-          case 'pasteAndMatchStyle':
-            wc.pasteAndMatchStyle();
-            break;
-          case 'delete':
-            wc.delete();
-            break;
-          case 'selectAll':
-            wc.selectAll();
-            break;
-          default:
-            console.warn('未知的编辑操作:', action);
-        }
-      }
-    }
-  }
-
-  /**
-   * 缩放操作
-   */
-  resetZoom() {
-    if (this.mainWindow && this.mainWindow._contentViewManager) {
-      const wc = this.mainWindow._contentViewManager.getWebContents();
-      if (wc) {
-        wc.setZoomLevel(0);
-      }
-    }
-  }
-
-  zoomIn() {
-    if (this.mainWindow && this.mainWindow._contentViewManager) {
-      const wc = this.mainWindow._contentViewManager.getWebContents();
-      if (wc) {
-        const currentZoom = wc.getZoomLevel();
-        wc.setZoomLevel(currentZoom + 0.5);
-      }
-    }
-  }
-
-  zoomOut() {
-    if (this.mainWindow && this.mainWindow._contentViewManager) {
-      const wc = this.mainWindow._contentViewManager.getWebContents();
-      if (wc) {
-        const currentZoom = wc.getZoomLevel();
-        wc.setZoomLevel(currentZoom - 0.5);
-      }
-    }
-  }
-
-  /**
-   * 窗口操作
-   */
-  toggleFullscreen() {
-    if (this.mainWindow) {
-      this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
-    }
-  }
-
-  toggleDevTools() {
-    if (this.mainWindow && this.mainWindow._contentViewManager) {
-      const wc = this.mainWindow._contentViewManager.getWebContents();
-      if (wc) {
-        wc.toggleDevTools();
-      }
-    }
-  }
-
-  /**
    * 帮助菜单操作
    */
   showSystemInfo() {
@@ -589,58 +309,8 @@ class MacMenuManager {
     }
   }
 
-  /**
-   * 朗读功能
-   */
-  startSpeaking() {
-    if (this.mainWindow && this.mainWindow._contentViewManager) {
-      const wc = this.mainWindow._contentViewManager.getWebContents();
-      if (wc) {
-        // 获取选中的文本
-        wc.executeJavaScript(`
-          const selection = window.getSelection();
-          selection.toString();
-        `).then(selectedText => {
-          if (selectedText) {
-            // 使用系统语音合成
-            wc.executeJavaScript(`
-              if (window.speechSynthesis) {
-                const utterance = new SpeechSynthesisUtterance('${selectedText.replace(/'/g, "\\'")}');
-                window.speechSynthesis.speak(utterance);
-              }
-            `);
-          }
-        }).catch(err => {
-          console.error('朗读失败:', err);
-        });
-      }
-    }
-  }
-
-  stopSpeaking() {
-    if (this.mainWindow && this.mainWindow._contentViewManager) {
-      const wc = this.mainWindow._contentViewManager.getWebContents();
-      if (wc) {
-        wc.executeJavaScript(`
-          if (window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-          }
-        `);
-      }
-    }
-  }
-
-  checkForUpdates() {
-    console.log('检查更新');
-    // TODO: 实现更新检查
-  }
-
   reportIssue() {
     shell.openExternal('https://github.com/ATRIOR-LCL/oj-client/issues');
-  }
-
-  learnMore() {
-    shell.openExternal('https://oj.sdutacm.cn/onlinejudge3/');
   }
 
   /**
