@@ -52,62 +52,24 @@ class ToolbarManager {
               // 显示同步确认对话框
               const currentWindow = BrowserWindow.getFocusedWindow() || this.mainWindow;
               
-              // 禁用父窗口的交互
-              if (currentWindow && currentWindow.setEnabled) {
-                currentWindow.setEnabled(false);
-              }
-              
-              // 禁用父窗口的移动
-              let originalMovable = false;
-              if (currentWindow && currentWindow.setMovable) {
-                originalMovable = currentWindow.isMovable();
-                currentWindow.setMovable(false);
-              }
-              
-              // 通过注入CSS禁用拖动区域
-              let dragDisableStyleSheet = null;
-              if (currentWindow && currentWindow.webContents) {
-                try {
-                  currentWindow.webContents.executeJavaScript(`
-                    // 创建禁用拖动的样式
-                    const dragDisableStyle = document.createElement('style');
-                    dragDisableStyle.id = 'dialog-drag-disable';
-                    dragDisableStyle.textContent = \`
-                      * {
-                        -webkit-app-region: no-drag !important;
-                      }
-                      body {
-                        -webkit-app-region: no-drag !important;
-                        pointer-events: none !important;
-                        user-select: none !important;
-                      }
-                    \`;
-                    document.head.appendChild(dragDisableStyle);
-                    
-                    // 禁用所有鼠标事件
-                    document.body.style.pointerEvents = 'none';
-                    document.documentElement.style.pointerEvents = 'none';
-                  `).catch(() => {});
-                } catch (e) {
-                  // 静默处理错误
-                }
-              }
-              
               // 创建带倒计时的自定义对话框
+              const isMac = process.platform === 'darwin';
               const confirmWindow = new BrowserWindow({
                 width: 520,
                 height: 420,
                 frame: false,
                 resizable: false,
-                alwaysOnTop: true,
+                alwaysOnTop: false, // 不置顶，允许其他窗口覆盖
                 center: true,
-                modal: true,
+                modal: false, // 不设为模态，允许其他窗口正常交互
                 parent: currentWindow,
                 show: false,
-                transparent: true,
-                backgroundColor: 'rgba(0,0,0,0)',
-                skipTaskbar: true,
+                transparent: !isMac, // Mac上禁用透明以确保窗口可见
+                backgroundColor: isMac ? '#ffffff' : 'rgba(0,0,0,0)', // Mac使用白色背景
+                skipTaskbar: false, // 允许在任务栏显示
                 focusable: true,
+                titleBarStyle: isMac ? 'hidden' : undefined, // Mac专用设置
+                vibrancy: isMac ? 'sidebar' : undefined, // Mac专用毛玻璃效果
                 webPreferences: {
                   nodeIntegration: false,
                   contextIsolation: true,
@@ -125,6 +87,11 @@ class ToolbarManager {
               
               // 监听对话框结果
               confirmWindow.webContents.once('dom-ready', () => {
+                // Mac系统特殊处理：确保窗口可见但不置顶
+                if (isMac) {
+                  confirmWindow.setVisibleOnAllWorkspaces(false); // 不在所有工作区显示
+                }
+                
                 confirmWindow.show();
                 confirmWindow.focus();
                 
@@ -137,73 +104,8 @@ class ToolbarManager {
                 });
               });
 
-              // 防止焦点离开确认窗口
-              confirmWindow.on('blur', () => {
-                if (!confirmWindow.isDestroyed()) {
-                  setTimeout(() => {
-                    if (!confirmWindow.isDestroyed()) {
-                      confirmWindow.focus();
-                    }
-                  }, 10);
-                }
-              });
-
-              // 拦截其他窗口的焦点事件
-              const allWindows = BrowserWindow.getAllWindows();
-              const originalFocusHandlers = new Map();
-              
-              allWindows.forEach(win => {
-                if (win !== confirmWindow && win === currentWindow) {
-                  const focusHandler = () => {
-                    if (!confirmWindow.isDestroyed()) {
-                      confirmWindow.focus();
-                    }
-                  };
-                  originalFocusHandlers.set(win, focusHandler);
-                  win.on('focus', focusHandler);
-                }
-              });
-
               // 等待对话框关闭
               confirmWindow.on('closed', () => {
-                // 移除焦点拦截事件
-                originalFocusHandlers.forEach((handler, win) => {
-                  try {
-                    if (!win.isDestroyed()) {
-                      win.removeListener('focus', handler);
-                    }
-                  } catch (e) {
-                    // 静默处理错误
-                  }
-                });
-                
-                // 重新启用父窗口的交互
-                if (currentWindow && currentWindow.setEnabled && !currentWindow.isDestroyed()) {
-                  currentWindow.setEnabled(true);
-                  // 恢复窗口移动能力
-                  if (currentWindow.setMovable) {
-                    currentWindow.setMovable(originalMovable);
-                  }
-                  
-                  // 移除禁用拖动的样式
-                  try {
-                    currentWindow.webContents.executeJavaScript(`
-                      const dragDisableStyle = document.getElementById('dialog-drag-disable');
-                      if (dragDisableStyle) {
-                        dragDisableStyle.remove();
-                      }
-                      
-                      // 恢复鼠标事件
-                      document.body.style.pointerEvents = '';
-                      document.documentElement.style.pointerEvents = '';
-                    `).catch(() => {});
-                  } catch (e) {
-                    // 静默处理错误
-                  }
-                  
-                  currentWindow.focus();
-                }
-                
                 if (!dialogResult) {
                   return;
                 }
@@ -325,6 +227,15 @@ class ToolbarManager {
       border-radius: 16px;
       scrollbar-width: none;
       -ms-overflow-style: none;
+    }
+
+    /* Mac系统特殊处理 */
+    @supports (-webkit-backdrop-filter: blur(10px)) {
+      html, body {
+        background: rgba(255, 255, 255, 0.95);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+      }
     }
 
     html::-webkit-scrollbar, 
@@ -605,6 +516,7 @@ class ToolbarManager {
     }
 
     function confirm() {
+      console.log('Confirm button clicked');
       if (countdownInterval) {
         clearInterval(countdownInterval);
       }
@@ -612,6 +524,7 @@ class ToolbarManager {
     }
 
     function cancel() {
+      console.log('Cancel button clicked');
       if (countdownInterval) {
         clearInterval(countdownInterval);
       }
@@ -620,12 +533,18 @@ class ToolbarManager {
 
     // 页面加载完成后开始倒计时
     document.addEventListener('DOMContentLoaded', () => {
+      // Mac系统调试信息
+      console.log('Dialog loaded on platform:', navigator.platform);
+      console.log('User agent:', navigator.userAgent);
+      
       startCountdown();
       
-      // 防止窗口失去焦点
-      window.addEventListener('blur', () => {
-        window.focus();
-      });
+      // Mac系统特殊处理：确保窗口可见
+      if (navigator.platform.includes('Mac')) {
+        document.body.style.background = 'rgba(255, 255, 255, 0.98)';
+        document.body.style.backdropFilter = 'blur(10px)';
+        console.log('Applied Mac-specific styling');
+      }
       
       // 拦截所有可能的快捷键
       document.addEventListener('keydown', (e) => {
