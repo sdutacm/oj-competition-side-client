@@ -114,17 +114,6 @@ class MacMenuManager {
               }
             }
           },
-          {
-            label: i18n.t('menu.showAll'),
-            click: () => {
-              try {
-                const { app } = require('electron');
-                app.show();
-              } catch (error) {
-                console.warn('显示所有窗口失败:', error);
-              }
-            }
-          },
           { type: 'separator' },
           {
             label: i18n.t('menu.quit', { appName: appName }),
@@ -258,18 +247,6 @@ class MacMenuManager {
                 console.warn('缩放窗口失败:', error);
               }
             }
-          },
-          { type: 'separator' },
-          {
-            label: i18n.t('menu.front'),
-            click: () => {
-              try {
-                const { app } = require('electron');
-                app.focus();
-              } catch (error) {
-                console.warn('前置窗口失败:', error);
-              }
-            }
           }
         ]
       },
@@ -318,9 +295,18 @@ class MacMenuManager {
     const appName = i18n.t('app.name');
     const version = require('../package.json').version || '1.0.0';
     
+    // 根据语言设置对话框标题
+    const currentLanguage = i18n.getLocale() || 'zh-CN';
+    let title;
+    if (currentLanguage === 'en-US') {
+      title = 'About SDUT OJ Competition Side Client';
+    } else {
+      title = '关于 SDUT OJ 竞赛客户端';
+    }
+    
     dialog.showMessageBox(this.mainWindow, {
       type: 'info',
-      title: i18n.t('menu.about'),
+      title: title,
       message: appName,
       detail: i18n.t('app.description') + '\\n\\n' + i18n.t('app.version', { version }),
       buttons: [i18n.t('dialog.ok')]
