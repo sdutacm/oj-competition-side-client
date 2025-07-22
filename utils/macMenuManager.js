@@ -90,8 +90,12 @@ class MacMenuManager {
             label: i18n.t('menu.hide', { appName: appName }),
             accelerator: 'Cmd+H',
             click: () => {
-              if (this.mainWindow) {
-                this.mainWindow.hide();
+              try {
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                  this.mainWindow.hide();
+                }
+              } catch (error) {
+                console.warn('隐藏窗口失败:', error);
               }
             }
           },
@@ -99,18 +103,26 @@ class MacMenuManager {
             label: i18n.t('menu.hideOthers'),
             accelerator: 'Cmd+Shift+H',
             click: () => {
-              if (this.mainWindow && this.mainWindow.setVisibleOnAllWorkspaces) {
-                // 在macOS上隐藏其他应用程序
-                const { app } = require('electron');
-                app.hide();
+              try {
+                if (this.mainWindow && !this.mainWindow.isDestroyed() && this.mainWindow.setVisibleOnAllWorkspaces) {
+                  // 在macOS上隐藏其他应用程序
+                  const { app } = require('electron');
+                  app.hide();
+                }
+              } catch (error) {
+                console.warn('隐藏其他窗口失败:', error);
               }
             }
           },
           {
             label: i18n.t('menu.showAll'),
             click: () => {
-              const { app } = require('electron');
-              app.show();
+              try {
+                const { app } = require('electron');
+                app.show();
+              } catch (error) {
+                console.warn('显示所有窗口失败:', error);
+              }
             }
           },
           { type: 'separator' },
@@ -118,8 +130,15 @@ class MacMenuManager {
             label: i18n.t('menu.quit', { appName: appName }),
             accelerator: 'Cmd+Q',
             click: () => {
-              if (this.mainWindow) {
-                this.mainWindow.close();
+              try {
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                  this.mainWindow.close();
+                }
+              } catch (error) {
+                console.warn('退出应用失败:', error);
+                // 如果窗口关闭失败，直接退出应用
+                const { app } = require('electron');
+                app.quit();
               }
             }
           }
@@ -134,8 +153,12 @@ class MacMenuManager {
             label: i18n.t('menu.close'),
             accelerator: 'Cmd+W',
             click: () => {
-              if (this.mainWindow && this.mainWindow.isVisible()) {
-                this.mainWindow.close();
+              try {
+                if (this.mainWindow && !this.mainWindow.isDestroyed() && this.mainWindow.isVisible()) {
+                  this.mainWindow.close();
+                }
+              } catch (error) {
+                console.warn('关闭窗口失败:', error);
               }
             }
           }
@@ -211,20 +234,28 @@ class MacMenuManager {
             label: i18n.t('menu.minimize'),
             accelerator: 'Cmd+M',
             click: () => {
-              if (this.mainWindow) {
-                this.mainWindow.minimize();
+              try {
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                  this.mainWindow.minimize();
+                }
+              } catch (error) {
+                console.warn('最小化窗口失败:', error);
               }
             }
           },
           {
             label: i18n.t('menu.zoom'),
             click: () => {
-              if (this.mainWindow) {
-                if (this.mainWindow.isMaximized()) {
-                  this.mainWindow.unmaximize();
-                } else {
-                  this.mainWindow.maximize();
+              try {
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                  if (this.mainWindow.isMaximized()) {
+                    this.mainWindow.unmaximize();
+                  } else {
+                    this.mainWindow.maximize();
+                  }
                 }
+              } catch (error) {
+                console.warn('缩放窗口失败:', error);
               }
             }
           },
@@ -232,8 +263,12 @@ class MacMenuManager {
           {
             label: i18n.t('menu.front'),
             click: () => {
-              const { app } = require('electron');
-              app.focus();
+              try {
+                const { app } = require('electron');
+                app.focus();
+              } catch (error) {
+                console.warn('前置窗口失败:', error);
+              }
             }
           }
         ]
@@ -290,6 +325,98 @@ class MacMenuManager {
       detail: i18n.t('app.description') + '\\n\\n' + i18n.t('app.version', { version }),
       buttons: [i18n.t('dialog.ok')]
     });
+  }
+
+  /**
+   * 执行编辑操作
+   */
+  executeEditAction(action) {
+    try {
+      if (this.mainWindow && !this.mainWindow.isDestroyed() && this.mainWindow._contentViewManager) {
+        const wc = this.mainWindow._contentViewManager.getWebContents();
+        if (wc && !wc.isDestroyed()) {
+          switch (action) {
+            case 'undo':
+              wc.undo();
+              break;
+            case 'redo':
+              wc.redo();
+              break;
+            case 'cut':
+              wc.cut();
+              break;
+            case 'copy':
+              wc.copy();
+              break;
+            case 'paste':
+              wc.paste();
+              break;
+            case 'pasteAndMatchStyle':
+              wc.pasteAndMatchStyle();
+              break;
+            case 'delete':
+              wc.delete();
+              break;
+            case 'selectAll':
+              wc.selectAll();
+              break;
+            default:
+              console.warn('未知的编辑操作:', action);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`执行编辑操作 ${action} 失败:`, error);
+    }
+  }
+
+  /**
+   * 朗读功能
+   */
+  startSpeaking() {
+    try {
+      if (this.mainWindow && !this.mainWindow.isDestroyed() && this.mainWindow._contentViewManager) {
+        const wc = this.mainWindow._contentViewManager.getWebContents();
+        if (wc && !wc.isDestroyed()) {
+          // 获取选中的文本
+          wc.executeJavaScript(`
+            const selection = window.getSelection();
+            selection.toString();
+          `).then(selectedText => {
+            if (selectedText) {
+              // 使用系统语音合成
+              wc.executeJavaScript(`
+                if (window.speechSynthesis) {
+                  const utterance = new SpeechSynthesisUtterance('${selectedText.replace(/'/g, "\\'")}');
+                  window.speechSynthesis.speak(utterance);
+                }
+              `);
+            }
+          }).catch(err => {
+            console.error('朗读失败:', err);
+          });
+        }
+      }
+    } catch (error) {
+      console.warn('开始朗读失败:', error);
+    }
+  }
+
+  stopSpeaking() {
+    try {
+      if (this.mainWindow && !this.mainWindow.isDestroyed() && this.mainWindow._contentViewManager) {
+        const wc = this.mainWindow._contentViewManager.getWebContents();
+        if (wc && !wc.isDestroyed()) {
+          wc.executeJavaScript(`
+            if (window.speechSynthesis) {
+              window.speechSynthesis.cancel();
+            }
+          `);
+        }
+      }
+    } catch (error) {
+      console.warn('停止朗读失败:', error);
+    }
   }
 
   /**

@@ -456,6 +456,12 @@ function initializeManagers() {
 
     // 创建布局管理器
     layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
+    
+    // 设置主窗口的管理器引用，供菜单使用
+    mainWindow._contentViewManager = contentViewManager;
+    mainWindow._toolbarManager = toolbarManager;
+    mainWindow._shortcutManager = shortcutManager;
+    mainWindow._layoutManager = layoutManager;
   } catch (error) {
     console.error('初始化管理器失败:', error);
     throw error;
