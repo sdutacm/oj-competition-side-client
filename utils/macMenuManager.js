@@ -11,7 +11,10 @@ class MacMenuManager {
     
     // 监听语言变更事件
     i18n.on('languageChanged', () => {
-      this.updateMenu();
+      console.log('语言变更事件触发，延迟更新菜单...');
+      setTimeout(() => {
+        this.updateMenu();
+      }, 200);
     });
     
     // 初始化菜单
@@ -27,32 +30,59 @@ class MacMenuManager {
       return;
     }
 
-    this.updateMenu();
+    // 延迟创建菜单，确保 i18n 完全初始化
+    setTimeout(() => {
+      this.updateMenu();
+    }, 100);
   }
 
   /**
    * 更新菜单
    */
   updateMenu() {
-    console.log('更新菜单开始 - 当前语言:', i18n.getCurrentLanguage());
-    console.log('测试翻译 - 视图:', i18n.t('menu.view'));
-    console.log('测试翻译 - 刷新:', i18n.t('menu.refresh'));
-    console.log('测试翻译 - 切换全屏:', i18n.t('menu.toggleFullscreen'));
+    console.log('=== 菜单更新开始 ===');
+    console.log('当前语言:', i18n.getCurrentLanguage());
+    console.log('测试翻译:');
+    console.log('  视图:', i18n.t('menu.view'));
+    console.log('  刷新:', i18n.t('menu.refresh'));
+    console.log('  重新加载:', i18n.t('menu.reload'));
+    console.log('  强制重新加载:', i18n.t('menu.forceReload'));
+    console.log('  切换全屏:', i18n.t('menu.toggleFullscreen'));
+    console.log('  切换开发者工具:', i18n.t('menu.toggleDevTools'));
+    
+    // 清除之前的菜单
+    Menu.setApplicationMenu(null);
     
     const template = this.createMenuTemplate();
     const menu = Menu.buildFromTemplate(template);
     Menu.setApplicationMenu(menu);
-    console.log('Mac 菜单已更新，当前语言:', i18n.getCurrentLanguage());
+    console.log('=== Mac 菜单已更新 ===');
+  }
+
+  /**
+   * 强制刷新菜单
+   */
+  forceRefreshMenu() {
+    console.log('强制刷新菜单...');
+    this.updateMenu();
   }
 
   /**
    * 创建菜单模板
    */
   createMenuTemplate() {
+    // 强制重新获取翻译，避免缓存问题
     const appName = i18n.t('app.name');
-    console.log('创建菜单模板 - 应用名称:', appName);
-    console.log('创建菜单模板 - 文件菜单:', i18n.t('menu.file'));
-    console.log('创建菜单模板 - 当前语言:', i18n.getCurrentLanguage());
+    const viewLabel = i18n.t('menu.view');
+    const refreshLabel = i18n.t('menu.refresh');
+    const toggleFullscreenLabel = i18n.t('menu.toggleFullscreen');
+    
+    console.log('=== 创建菜单模板调试信息 ===');
+    console.log('应用名称:', appName);
+    console.log('视图菜单:', viewLabel);
+    console.log('刷新标签:', refreshLabel);
+    console.log('切换全屏标签:', toggleFullscreenLabel);
+    console.log('当前语言:', i18n.getCurrentLanguage());
     
     return [
       // 应用菜单
@@ -199,8 +229,19 @@ class MacMenuManager {
       
       // 视图菜单
       {
-        label: i18n.t('menu.view'),
+        label: viewLabel,
         submenu: [
+          {
+            label: refreshLabel,
+            accelerator: 'Cmd+R',
+            click: () => this.refresh()
+          },
+          {
+            label: i18n.t('menu.forceReload'),
+            accelerator: 'Cmd+Shift+R',
+            click: () => this.forceReload()
+          },
+          { type: 'separator' },
           {
             label: i18n.t('menu.navigation'),
             submenu: [
@@ -218,17 +259,6 @@ class MacMenuManager {
                 label: i18n.t('menu.goHome'),
                 accelerator: 'Cmd+Shift+H',
                 click: () => this.navigateHome()
-              },
-              { type: 'separator' },
-              {
-                label: i18n.t('menu.refresh'),
-                accelerator: 'Cmd+R',
-                click: () => this.refresh()
-              },
-              {
-                label: i18n.t('menu.forceReload'),
-                accelerator: 'Cmd+Shift+R',
-                click: () => this.forceReload()
               }
             ]
           },
@@ -250,7 +280,7 @@ class MacMenuManager {
           },
           { type: 'separator' },
           {
-            label: i18n.t('menu.toggleFullscreen'),
+            label: toggleFullscreenLabel,
             accelerator: 'Ctrl+Cmd+F',
             click: () => this.toggleFullscreen()
           },
@@ -332,15 +362,32 @@ class MacMenuManager {
     const currentLang = i18n.getCurrentLanguage();
     const availableLanguages = i18n.getAvailableLanguages();
     
-    return availableLanguages.map(lang => ({
+    const languageItems = availableLanguages.map(lang => ({
       label: i18n.getLanguageDisplayName(lang),
       type: 'radio',
       checked: lang === currentLang,
       click: () => {
         i18n.setLanguage(lang);
         console.log(`菜单语言已切换到: ${lang}`);
+        // 语言切换后强制刷新菜单
+        setTimeout(() => {
+          this.forceRefreshMenu();
+        }, 300);
       }
     }));
+
+    // 添加分隔符和刷新选项
+    languageItems.push(
+      { type: 'separator' },
+      {
+        label: '刷新菜单',
+        click: () => {
+          this.forceRefreshMenu();
+        }
+      }
+    );
+
+    return languageItems;
   }
 
   /**
