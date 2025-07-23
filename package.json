@@ -2,15 +2,14 @@
   "name": "oj-competition-side-client",
   "version": "1.0.0",
   "description": "SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端应用程序",
-  "author": {
-    "name": "ATRIOR-LCL",
-    "email": "sdutwujinhao@gmail.com"
-  },
+  "author": "ATRIOR-LCL",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
+    "build:win:nsis": "electron-builder --win --x64 nsis",
+    "build:win:portable": "electron-builder --win --x64 portable",
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -62,7 +61,7 @@
       "artifactName": "SDUTOJCompetitionSideClient_mac_${arch}_${version}.${ext}"
     },
     "win": {
-      "icon": "public/app.ico",
+      "icon": "public/favicon.ico",
       "target": [
         {
           "target": "nsis",
@@ -77,21 +76,15 @@
           ]
         }
       ],
-      "forceCodeSigning": false,
-      "signAndEditExecutable": false,
       "executableName": "SDUT OJ 竞赛客户端",
-      "requestedExecutionLevel": "asInvoker",
       "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}",
-      "extraResources": [
-        {
-          "from": "public/app.ico",
-          "to": "app.ico"
-        }
-      ],
+      "forceCodeSigning": false,
+      "verifyUpdateCodeSignature": false,
+      "signAndEditExecutable": true,
       "extraFiles": [
         {
-          "from": "public/app.ico",
-          "to": "app.ico"
+          "from": "public/favicon.ico",
+          "to": "favicon.ico"
         }
       ],
       "fileAssociations": [],
@@ -138,9 +131,9 @@
       "createStartMenuShortcut": true,
       "license": null,
       "artifactName": "SDUTOJCompetitionSideClient_windows_installer_${arch}_${version}.${ext}",
-      "installerIcon": "public/app.ico",
-      "uninstallerIcon": "public/app.ico",
-      "installerHeaderIcon": "public/app.ico",
+      "installerIcon": "public/favicon.ico",
+      "uninstallerIcon": "public/favicon.ico",
+      "installerHeaderIcon": "public/favicon.ico",
       "installerSidebar": null,
       "uninstallerSidebar": null,
       "shortcutName": "SDUT OJ 竞赛客户端",
@@ -151,7 +144,6 @@
       ],
       "runAfterFinish": true,
       "menuCategory": "Education",
-      "include": "build/installer.nsh",
       "perMachine": false,
       "allowElevation": true,
       "deleteAppDataOnUninstall": false
