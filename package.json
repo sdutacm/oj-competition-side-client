@@ -17,7 +17,8 @@
   },
   "devDependencies": {
     "electron": "^27.0.0",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "rcedit": "^4.0.1"
   },
   "engines": {
     "node": ">=16.0.0"
@@ -66,15 +67,13 @@
         {
           "target": "nsis",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         },
         {
           "target": "portable",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         }
       ],
@@ -146,7 +145,10 @@
       "uninstallerSidebar": null,
       "shortcutName": "SDUT OJ 竞赛客户端",
       "displayLanguageSelector": false,
-      "installerLanguages": ["en_US", "zh_CN"],
+      "installerLanguages": [
+        "en_US",
+        "zh_CN"
+      ],
       "runAfterFinish": true,
       "menuCategory": "Education",
       "include": "build/installer.nsh",

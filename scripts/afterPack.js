@@ -15,38 +15,8 @@ exports.default = async function(context) {
     
     // 检查文件是否存在
     if (fs.existsSync(executablePath) && fs.existsSync(iconPath)) {
-      console.log('Both executable and icon files exist, trying to set icon...');
-      
-      try {
-        // 尝试使用 rcedit 设置图标
-        const { spawn } = require('child_process');
-        
-        // 首先尝试使用系统的 rcedit
-        return new Promise((resolve, reject) => {
-          const rcedit = spawn('rcedit', [executablePath, '--set-icon', iconPath], {
-            stdio: 'inherit'
-          });
-          
-          rcedit.on('close', (code) => {
-            if (code === 0) {
-              console.log('Icon set successfully using rcedit');
-              resolve();
-            } else {
-              console.log('rcedit failed with code:', code);
-              console.log('Icon embedding may not be available on this platform');
-              resolve(); // 不要因为这个失败而阻止构建
-            }
-          });
-          
-          rcedit.on('error', (err) => {
-            console.log('rcedit not available:', err.message);
-            console.log('Icon embedding skipped');
-            resolve(); // 继续构建
-          });
-        });
-      } catch (error) {
-        console.log('Error setting icon:', error.message);
-      }
+      console.log('Both executable and icon files exist');
+      console.log('Relying on electron-builder for icon embedding');
     } else {
       console.log('Missing files:');
       console.log('Executable exists:', fs.existsSync(executablePath));
