@@ -12,29 +12,29 @@ const path = require('path');
 function showBlockedDialog(parentWindow, hostname, reason, type = 'default', callback) {
   const messages = {
     default: [
-      '哎呀~ 🚫 比赛期间不能访问这个网站哦！',
-      '注意 ⚠️ 这里在比赛模式下无法打开。',
-      '抱歉，比赛规则限制了该网站的访问。🛡️',
-      '请专注比赛，暂时无法访问此页面。🏆',
-      '当前环境仅允许访问指定网站。🔒',
-      '比赛模式已开启，请专心答题！😊'
+      '哎呀~比赛期间不能访问这个网站哦！',
+      '注意，这里在比赛模式下无法打开。',
+      '抱歉，比赛规则限制了该网站的访问。',
+      '请专注比赛，暂时无法访问此页面。',
+      '当前环境仅允许访问指定网站。',
+      '比赛模式已开启，请专心答题！'
     ],
     redirect: [
-      '检测到页面发生重定向，目标网站不在允许范围，已为你拦截！🚫',
-      '页面重定向被拦截，保护你的比赛环境！🛡️'
+      '检测到页面发生重定向，目标网站不在允许范围，已为你拦截！',
+      '页面重定向被拦截，保护你的比赛环境！'
     ]
   };
   const details = {
     default: [
-      `目标网站：${hostname}  \n拦截原因：${reason}\n\n比赛期间只能访问指定网站，祝你取得好成绩！🏆`,
-      `被拦截的网站：${hostname}  \n详细说明：${reason}\n\n请将注意力集中在比赛题目上，加油！💪`,
-      `无法访问：${hostname}  \n原因说明：${reason}\n\n比赛模式下仅可使用允许的网站。😊`,
-      `访问限制：${hostname}  \n限制说明：${reason}\n\n专注比赛才能发挥最佳水平！🎯`,
-      `网站屏蔽：${hostname}  \n屏蔽原因：${reason}\n\n比赛环境需要保持纯净，回到题目页面继续努力吧！✨`
+      `目标网站：${hostname}  \n拦截原因：${reason}\n\n比赛期间只能访问指定网站，祝你取得好成绩！`,
+      `被拦截的网站：${hostname}  \n详细说明：${reason}\n\n请将注意力集中在比赛题目上，加油！`,
+      `无法访问：${hostname}  \n原因说明：${reason}\n\n比赛模式下仅可使用允许的网站。`,
+      `访问限制：${hostname}  \n限制说明：${reason}\n\n专注比赛才能发挥最佳水平！`,
+      `网站屏蔽：${hostname}  \n屏蔽原因：${reason}\n\n比赛环境需要保持纯净，回到题目页面继续努力吧！`
     ],
     redirect: [
-      `检测到页面发生重定向，目标网站：${hostname} 已被系统拦截！\n原因：${reason}\n\n比赛期间请勿访问非指定网站，祝你取得好成绩！🏆`,
-      `页面重定向到 ${hostname} 已被拦截，保护你的比赛环境！\n原因：${reason}\n\n继续加油！💪`
+      `检测到页面发生重定向，目标网站：${hostname} 已被系统拦截！\n原因：${reason}\n\n比赛期间请勿访问非指定网站，祝你取得好成绩！`,
+      `页面重定向到 ${hostname} 已被拦截，保护你的比赛环境！\n原因：${reason}\n\n继续加油！`
     ]
   };
   const buttons = [
@@ -49,18 +49,17 @@ function showBlockedDialog(parentWindow, hostname, reason, type = 'default', cal
   const randomMessage = msgArr[Math.floor(Math.random() * msgArr.length)];
   const randomDetail = detArr[Math.floor(Math.random() * detArr.length)];
   const randomButton = buttons[Math.floor(Math.random() * buttons.length)];
-  // 优化 title，使用主流 emoji，兼容三系统
+
   const titles = [
-    '比赛模式提醒 🏅',
-    '访问限制通知 🚦',
-    '安全提示 🔒',
-    '访问被拦截 🚫',
-    '专注比赛 🏆',
-    '系统提示 ℹ️'
+    '比赛模式提醒',
+    '访问限制通知',
+    '安全提示',
+    '访问被拦截',
+    '专注比赛',
+    '系统提示'
   ];
   const randomTitle = titles[Math.floor(Math.random() * titles.length)];
   
-  // Windows 系统使用自定义弹窗以支持彩色 emoji
   const isWindows = process.platform === 'win32';
   
   if (isWindows) {
@@ -78,7 +77,7 @@ function showBlockedDialog(parentWindow, hostname, reason, type = 'default', cal
       icon: null
     };
     if (process.platform === 'darwin') {
-      opts.message = '🚦 ' + randomMessage;
+      opts.message = randomMessage;
       opts.modal = true;
       opts.noLink = true;
     }
