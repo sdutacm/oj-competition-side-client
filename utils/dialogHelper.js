@@ -115,6 +115,16 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
     }
   });
 
+  // Linux平台：设置窗口类名，确保与主窗口保持一致
+  if (process.platform === 'linux' && dialogWindow.setWMClass) {
+    try {
+      dialogWindow.setWMClass('sdut-oj-competition-client', 'SDUT OJ Competition Side Client');
+      console.log('Linux 对话框窗口类名设置成功');
+    } catch (error) {
+      console.log('设置对话框窗口类名失败:', error);
+    }
+  }
+
   // 隐藏菜单栏
   dialogWindow.setMenuBarVisibility(false);
 
@@ -563,6 +573,16 @@ function showInfoDialog(parentWindow) {
       devTools: false, // 禁用开发者工具
     }
   });
+
+  // Linux平台：设置窗口类名，确保与主窗口保持一致
+  if (process.platform === 'linux' && infoWindow.setWMClass) {
+    try {
+      infoWindow.setWMClass('sdut-oj-competition-client', 'SDUT OJ Competition Side Client');
+      console.log('Linux 信息窗口类名设置成功');
+    } catch (error) {
+      console.log('设置信息窗口类名失败:', error);
+    }
+  }
 
   // 确保隐藏菜单栏
   infoWindow.setMenuBarVisibility(false);

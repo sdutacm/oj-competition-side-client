@@ -121,19 +121,19 @@ class StartupManager {
     }
     
     // 创建无框透明启动页窗口
-    const startupWindow = new BrowserWindow({
+    const windowOptions = {
       width: 1000,
       height: 600,
       frame: false, // 完全无框窗口
       transparent: true,
-      alwaysOnTop: true,
+      alwaysOnTop: false, // 不要始终置顶，避免各平台桌面环境特殊处理
       center: true,
       resizable: false,
       minimizable: false,
       maximizable: false,
       fullscreenable: false,
       show: false,
-      skipTaskbar: false,
+      skipTaskbar: false, // 所有平台都确保在任务栏显示，提供一致体验
       icon: iconPath, // 设置应用图标（如果找到的话）
       backgroundColor: 'rgba(0,0,0,0)', // 完全透明背景
       // Mac 下完全移除标题栏相关设置，确保无框
@@ -147,7 +147,32 @@ class StartupManager {
         devTools: false,
         backgroundThrottling: false // 防止后台时动画停止
       }
-    });
+    };
+
+    // 平台特定窗口设置
+    if (process.platform === 'linux') {
+      Object.assign(windowOptions, {
+        title: 'SDUT OJ Competition Side Client', // 使用英文标题避免乱码
+        skipTaskbar: false, // 明确设置显示在任务栏
+        focusable: true, // 确保窗口可以获得焦点
+        // 添加图标路径确保Linux正确识别
+        ...(iconPath && { icon: iconPath }),
+      });
+    } else if (process.platform === 'win32') {
+      Object.assign(windowOptions, {
+        title: 'SDUT OJ Competition Side Client',
+        skipTaskbar: false, // Windows也明确设置显示在任务栏
+        focusable: true,
+      });
+    } else if (process.platform === 'darwin') {
+      // macOS特定设置，虽然Dock通常没问题，但保持一致性
+      Object.assign(windowOptions, {
+        title: 'SDUT OJ Competition Side Client',
+        skipTaskbar: false,
+      });
+    }
+
+    const startupWindow = new BrowserWindow(windowOptions);
 
     // 创建启动页内容
     const startupHTML = this.getStartupHTML();
@@ -164,6 +189,33 @@ class StartupManager {
       console.log('Startup window DOM ready, showing window...');
       
       startupWindow.show();
+
+      // 平台特定的窗口优化
+      if (process.platform === 'linux' && startupWindow.setWMClass) {
+        // Linux：在窗口显示后设置窗口类名，确保与主窗口保持一致
+        setTimeout(() => {
+          try {
+            startupWindow.setWMClass('sdut-oj-competition-client', 'SDUT OJ Competition Side Client');
+            console.log('Linux 启动窗口类名设置成功');
+          } catch (error) {
+            console.log('设置启动窗口类名失败:', error);
+          }
+        }, 100);
+      } else if (process.platform === 'win32') {
+        // Windows：确保窗口在任务栏正确显示
+        setTimeout(() => {
+          try {
+            // Windows特定的窗口优化
+            startupWindow.setTitle('SDUT OJ Competition Side Client');
+            console.log('Windows 启动窗口标题设置成功');
+          } catch (error) {
+            console.log('设置Windows启动窗口标题失败:', error);
+          }
+        }, 50);
+      } else if (process.platform === 'darwin') {
+        // macOS：虽然通常不需要特殊处理，但保持一致性
+        console.log('macOS 启动窗口显示成功');
+      }
 
       // 5秒后关闭启动窗口
       setTimeout(() => {

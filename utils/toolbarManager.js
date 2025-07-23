@@ -235,33 +235,56 @@ class ToolbarManager {
                     } catch (e) { }
                   }
                 });
-                // 关闭所有窗口
-                allWindows.forEach(win => {
-                  try { win.close(); } catch (e) { }
-                });
-
                 // 标记下次启动需要显示启动窗口
                 if (this.startupManager) {
                   // 使用传入的 startupManager 实例
                   this.startupManager.markShowStartupOnNextLaunch();
                   
-                  // 立即显示启动页窗口
-                  this.startupManager.showStartupWindow(() => {
+                  // 所有平台统一处理：先显示启动窗口，再关闭其他窗口，确保应用程序连续性
+                  // 先创建并显示启动窗口
+                  const startupWin = this.startupManager.showStartupWindow(() => {
                     // 启动页关闭后重启主窗口
                     if (app && app.emit) {
                       app.emit('reopen-main-window');
                     }
                   });
+                  
+                  // 等待启动窗口显示后再关闭其他窗口
+                  startupWin.once('show', () => {
+                    // 延迟关闭，确保启动窗口已完全显示，避免闪烁
+                    const delay = process.platform === 'linux' ? 200 : 100; // Linux需要更长延迟
+                    setTimeout(() => {
+                      allWindows.forEach(win => {
+                        if (win !== startupWin) {
+                          try { win.close(); } catch (e) { }
+                        }
+                      });
+                    }, delay);
+                  });
                 } else {
                   // 兼容性逻辑：如果没有传入 startupManager，使用本地方法
                   this.markShowStartupOnNextLaunch();
                   
-                  // 立即显示启动页窗口
-                  this.showStartupWindow(() => {
+                  // 所有平台统一处理
+                  // 先创建并显示启动窗口
+                  const startupWin = this.showStartupWindow(() => {
                     // 启动页关闭后重启主窗口
                     if (app && app.emit) {
                       app.emit('reopen-main-window');
                     }
+                  });
+                  
+                  // 等待启动窗口显示后再关闭其他窗口
+                  startupWin.once('show', () => {
+                    // 延迟关闭，确保启动窗口已完全显示，避免闪烁
+                    const delay = process.platform === 'linux' ? 200 : 100; // Linux需要更长延迟
+                    setTimeout(() => {
+                      allWindows.forEach(win => {
+                        if (win !== startupWin) {
+                          try { win.close(); } catch (e) { }
+                        }
+                      });
+                    }, delay);
                   });
                 }
               });
@@ -1206,25 +1229,47 @@ class ToolbarManager {
     };
 
     // 创建无框启动页窗口
-    const startupWindow = new BrowserWindow({
+    const windowOptions = {
       width: 1000,
       height: 600,
       frame: false, // 无框窗口
       resizable: false,
-      alwaysOnTop: true,
+      alwaysOnTop: false, // 不要始终置顶，避免各平台桌面环境特殊处理
       center: true,
       show: false, // 先不显示，等内容加载完成后再显示
       transparent: true, // 启用透明窗口
       backgroundColor: 'rgba(0,0,0,0)', // 设置透明背景
       hasShadow: false, // 禁用窗口阴影
-      skipTaskbar: true, // 不在任务栏显示
+      skipTaskbar: false, // 所有平台都确保在任务栏显示，提供一致体验
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
         devTools: false,
         backgroundThrottling: false // 防止背景节流
       }
-    });
+    };
+
+    // 平台特定窗口设置
+    if (process.platform === 'linux') {
+      Object.assign(windowOptions, {
+        title: 'SDUT OJ Competition Side Client', // 使用英文标题避免乱码
+        skipTaskbar: false, // 明确设置显示在任务栏
+        focusable: true, // 确保窗口可以获得焦点
+      });
+    } else if (process.platform === 'win32') {
+      Object.assign(windowOptions, {
+        title: 'SDUT OJ Competition Side Client',
+        skipTaskbar: false, // Windows也明确设置显示在任务栏
+        focusable: true,
+      });
+    } else if (process.platform === 'darwin') {
+      Object.assign(windowOptions, {
+        title: 'SDUT OJ Competition Side Client',
+        skipTaskbar: false,
+      });
+    }
+
+    const startupWindow = new BrowserWindow(windowOptions);
 
     // 加载启动页内容
     const startupDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(startupHTML)}`;
@@ -1278,6 +1323,31 @@ class ToolbarManager {
       `).catch(() => { });
 
       startupWindow.show();
+
+      // 平台特定的窗口优化（兼容性方法）
+      if (process.platform === 'linux' && startupWindow.setWMClass) {
+        // Linux：在窗口显示后设置窗口类名，确保与主窗口保持一致
+        setTimeout(() => {
+          try {
+            startupWindow.setWMClass('sdut-oj-competition-client', 'SDUT OJ Competition Side Client');
+            console.log('Linux 启动窗口类名设置成功（兼容性方法）');
+          } catch (error) {
+            console.log('设置启动窗口类名失败（兼容性方法）:', error);
+          }
+        }, 100);
+      } else if (process.platform === 'win32') {
+        // Windows：确保窗口在任务栏正确显示
+        setTimeout(() => {
+          try {
+            startupWindow.setTitle('SDUT OJ Competition Side Client');
+            console.log('Windows 启动窗口标题设置成功（兼容性方法）');
+          } catch (error) {
+            console.log('设置Windows启动窗口标题失败（兼容性方法）:', error);
+          }
+        }, 50);
+      } else if (process.platform === 'darwin') {
+        console.log('macOS 启动窗口显示成功（兼容性方法）');
+      }
 
       // 3秒后关闭启动页窗口并立即开启主窗口
       setTimeout(() => {

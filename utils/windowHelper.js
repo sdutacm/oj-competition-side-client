@@ -29,6 +29,16 @@ function createNewWindow(url, options = {}, useSimpleMode = false) {
 
   const newWin = new BrowserWindow(windowOptions);
 
+  // Linux平台：设置窗口类名，确保与主窗口保持一致
+  if (process.platform === 'linux' && newWin.setWMClass) {
+    try {
+      newWin.setWMClass('sdut-oj-competition-client', 'SDUT OJ Competition Side Client');
+      console.log('Linux 新窗口类名设置成功');
+    } catch (error) {
+      console.log('设置新窗口类名失败:', error);
+    }
+  }
+
   // 设置自定义 User-Agent
   const defaultUserAgent = newWin.webContents.getUserAgent();
   const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
@@ -422,6 +432,16 @@ function createSimpleNewWindow(url, options = {}) {
   const windowOptions = { ...defaultOptions, ...options };
 
   const newWin = new BrowserWindow(windowOptions);
+
+  // Linux平台：设置窗口类名，确保与主窗口保持一致
+  if (process.platform === 'linux' && newWin.setWMClass) {
+    try {
+      newWin.setWMClass('sdut-oj-competition-client', 'SDUT OJ Competition Side Client');
+      console.log('Linux 简单新窗口类名设置成功');
+    } catch (error) {
+      console.log('设置简单新窗口类名失败:', error);
+    }
+  }
 
   // 设置自定义 User-Agent
   const defaultUserAgent = newWin.webContents.getUserAgent();

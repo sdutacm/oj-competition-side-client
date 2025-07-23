@@ -204,6 +204,16 @@ function openNewWindow(url) {
     titleBarStyle: 'default', // 使用默认标题栏
     frame: true, // 保留窗口边框
   });
+
+  // Linux平台：设置窗口类名，确保与主窗口保持一致
+  if (process.platform === 'linux' && win.setWMClass) {
+    try {
+      win.setWMClass('sdut-oj-competition-client', 'SDUT OJ Competition Side Client');
+      console.log('Linux 新打开窗口类名设置成功');
+    } catch (error) {
+      console.log('设置新打开窗口类名失败:', error);
+    }
+  }
   if (process.platform !== 'darwin') {
     win.setMenuBarVisibility(false);
   }
@@ -316,7 +326,7 @@ function createMainWindow() {
     const backgroundColor = nativeTheme.shouldUseDarkColors ? '#1f1f1f' : '#fcfcfc';
 
     // 创建主窗口
-    mainWindow = new BrowserWindow({
+    const windowOptions = {
       width: 1440,
       height: 900,
       icon: iconPath, // 设置应用图标
@@ -334,7 +344,27 @@ function createMainWindow() {
       show: false, // 初始不显示，等待准备完成
       titleBarStyle: process.platform === 'darwin' ? 'default' : 'default', // 使用默认标题栏
       frame: true, // 保留窗口边框
-    });
+    };
+
+    // Linux 特定窗口设置
+    if (process.platform === 'linux') {
+      // 设置窗口管理器类名，这对Dock识别很重要
+      Object.assign(windowOptions, {
+        title: 'SDUT OJ Competition Side Client', // 使用英文标题避免乱码
+      });
+    }
+
+    mainWindow = new BrowserWindow(windowOptions);
+
+    // Linux平台：设置窗口类名
+    if (process.platform === 'linux' && mainWindow.setWMClass) {
+      try {
+        mainWindow.setWMClass('sdut-oj-competition-client', 'SDUT OJ Competition Side Client');
+        console.log('Linux 窗口类名设置成功');
+      } catch (error) {
+        console.log('设置窗口类名失败:', error);
+      }
+    }
 
     // 设置自定义 User-Agent
     const defaultUserAgent = mainWindow.webContents.getUserAgent();
@@ -354,10 +384,12 @@ function createMainWindow() {
           console.log('Linux 主窗口图标设置成功:', iconPath);
         }
         
-        // 设置窗口标题（可能有助于解决 Dock 显示问题）
-        mainWindow.setTitle(windowTitle);
+        // 确保使用英文标题避免乱码
+        const englishTitle = 'SDUT OJ Competition Side Client';
+        mainWindow.setTitle(englishTitle);
+        
       } catch (error) {
-        console.error('设置 Linux 主窗口图标失败:', error);
+        console.error('设置 Linux 主窗口属性失败:', error);
       }
     }
     
@@ -458,9 +490,12 @@ app.whenReady().then(() => {
 
   // Linux 特定设置
   if (PlatformHelper.isLinux()) {
-    // 设置应用程序名称（解决中文名称乱码问题）
-    const appName = i18n.t('app.name');
-    app.setName(appName);
+    // 设置应用程序名称（使用英文名称避免中文乱码）
+    const englishAppName = 'SDUT OJ Competition Side Client';
+    app.setName(englishAppName);
+    
+    // 设置窗口管理器类名（重要：这影响Dock显示）
+    app.setName('sdut-oj-competition-client');
     
     // 尝试设置应用图标
     try {
@@ -468,6 +503,11 @@ app.whenReady().then(() => {
       if (fs.existsSync(iconPath)) {
         // 在 Linux 下，图标通常在窗口创建时设置，但我们也可以尝试设置应用级别的图标
         console.log('Linux 图标路径:', iconPath);
+        
+        // 在应用程序层面设置默认图标
+        app.on('window-all-closed', () => {
+          // 确保应用退出时清理图标
+        });
       }
     } catch (error) {
       console.error('设置 Linux 图标失败:', error);
