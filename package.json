@@ -82,7 +82,12 @@
       "executableName": "SDUT OJ 竞赛客户端",
       "requestedExecutionLevel": "asInvoker",
       "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}",
-
+      "extraResources": [
+        {
+          "from": "public/favicon.ico",
+          "to": "app-icon.ico"
+        }
+      ],
       "fileAssociations": [],
       "protocols": [],
       "publish": null
@@ -137,7 +142,6 @@
       "installerLanguages": ["en_US", "zh_CN"],
       "runAfterFinish": true,
       "menuCategory": "Education",
-      "include": "build/installer.nsh",
       "perMachine": false,
       "allowElevation": true,
       "deleteAppDataOnUninstall": false
