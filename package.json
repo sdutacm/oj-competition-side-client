@@ -38,6 +38,7 @@
     "extraMetadata": {
       "version": "1.0.0"
     },
+    "afterPack": "./scripts/afterPack.js",
     "mac": {
       "icon": "public/favicon.icns",
       "category": "public.app-category.education",

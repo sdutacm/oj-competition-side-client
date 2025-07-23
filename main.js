@@ -183,7 +183,7 @@ function openNewWindow(url) {
   const width = 1400, height = 900;
   let iconPath = undefined;
   if (process.platform === 'win32') {
-    iconPath = path.join(__dirname, 'public/favicon.ico');
+    iconPath = path.join(__dirname, 'public/app.ico');
   }
   
   // 根据系统主题设置背景色
@@ -319,7 +319,7 @@ function createMainWindow() {
       iconPath = path.join(__dirname, 'public/favicon.icns');
     } else {
       // Windows 使用 .ico 文件
-      iconPath = path.join(__dirname, 'public/favicon.ico');
+      iconPath = path.join(__dirname, 'public/app.ico');
     }
 
     // 根据系统主题设置背景色
@@ -522,7 +522,7 @@ app.whenReady().then(() => {
     
     // 设置应用程序图标
     try {
-      const iconPath = path.join(__dirname, 'public/favicon.ico');
+      const iconPath = path.join(__dirname, 'public/app.ico');
       if (fs.existsSync(iconPath)) {
         // 设置应用程序级别的图标（影响任务栏、Alt+Tab等）
         app.setAppUserModelId('org.sdutacm.SDUTOJCompetitionSideClient');
