@@ -751,6 +751,13 @@ class ToolbarManager {
       border-radius: 16px;
     }
 
+    .dialog-container,
+    .loading-overlay {
+      border-radius: 16px !important;
+      overflow: hidden !important;
+      background: transparent !important;
+    }
+
     .loading-overlay.show {
       display: flex;
     }
