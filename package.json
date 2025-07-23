@@ -93,7 +93,10 @@
           "from": "public/favicon.ico",
           "to": "favicon.ico"
         }
-      ]
+      ],
+      "fileAssociations": [],
+      "protocols": [],
+      "publish": null
     },
     "linux": {
       "icon": "public/icon.png",

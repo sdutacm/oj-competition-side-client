@@ -377,6 +377,14 @@ function createMainWindow() {
         if (iconPath && fs.existsSync(iconPath)) {
           mainWindow.setIcon(iconPath);
           console.log('Windows 主窗口图标设置成功:', iconPath);
+          
+          // 确保应用程序 User Model ID 正确设置
+          try {
+            app.setAppUserModelId('org.sdutacm.SDUTOJCompetitionSideClient');
+            console.log('Windows AppUserModelId 重新确认设置完成');
+          } catch (error) {
+            console.log('AppUserModelId 设置警告:', error);
+          }
         }
       } catch (error) {
         console.log('设置Windows主窗口属性失败:', error);
@@ -511,6 +519,19 @@ app.whenReady().then(() => {
     const appName = 'SDUT OJ 竞赛客户端';
     app.setName(appName);
     console.log('Windows 应用名称设置为:', appName);
+    
+    // 设置应用程序图标
+    try {
+      const iconPath = path.join(__dirname, 'public/favicon.ico');
+      if (fs.existsSync(iconPath)) {
+        // 设置应用程序级别的图标（影响任务栏、Alt+Tab等）
+        app.setAppUserModelId('org.sdutacm.SDUTOJCompetitionSideClient');
+        console.log('Windows 应用程序图标路径:', iconPath);
+        console.log('Windows AppUserModelId 设置完成');
+      }
+    } catch (error) {
+      console.error('设置 Windows 应用程序图标失败:', error);
+    }
   }
 
   // Linux 特定设置
