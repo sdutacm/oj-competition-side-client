@@ -84,6 +84,18 @@
     "linux": {
       "icon": "public/icon.png",
       "category": "Education",
+      "executableName": "sdut-oj-competition-client",
+      "desktop": {
+        "entry": {
+          "Name": "SDUT OJ 竞赛客户端",
+          "Comment": "专业的在线评测系统客户端",
+          "GenericName": "SDUT OJ Competition Client",
+          "Icon": "sdut-oj-competition-client",
+          "Type": "Application",
+          "Categories": "Education;Development;",
+          "StartupWMClass": "sdut-oj-competition-client"
+        }
+      },
       "target": [
         {
           "target": "AppImage",

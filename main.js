@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Menu, ipcMain, nativeTheme } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const ToolbarManager = require('./utils/toolbarManager');
 const ContentViewManager = require('./utils/contentViewManager');
 const ShortcutManager = require('./utils/shortcutManager');
@@ -343,6 +344,23 @@ function createMainWindow() {
     // 设置窗口标题
     const windowTitle = i18n.t('app.name');
     mainWindow.setTitle(windowTitle);
+    
+    // Linux 特定：再次尝试设置图标和标题
+    if (process.platform === 'linux') {
+      try {
+        // 确保图标路径正确
+        if (iconPath && fs.existsSync(iconPath)) {
+          mainWindow.setIcon(iconPath);
+          console.log('Linux 主窗口图标设置成功:', iconPath);
+        }
+        
+        // 设置窗口标题（可能有助于解决 Dock 显示问题）
+        mainWindow.setTitle(windowTitle);
+      } catch (error) {
+        console.error('设置 Linux 主窗口图标失败:', error);
+      }
+    }
+    
     // 隐藏菜单栏，但保留菜单以支持快捷键
     try {
       mainWindow.setMenuBarVisibility(false);
@@ -436,6 +454,24 @@ app.whenReady().then(() => {
     // 设置应用程序名称
     const appName = i18n.t('app.name');
     app.setName(appName);
+  }
+
+  // Linux 特定设置
+  if (PlatformHelper.isLinux()) {
+    // 设置应用程序名称（解决中文名称乱码问题）
+    const appName = i18n.t('app.name');
+    app.setName(appName);
+    
+    // 尝试设置应用图标
+    try {
+      const iconPath = path.join(__dirname, 'public/icon.png');
+      if (fs.existsSync(iconPath)) {
+        // 在 Linux 下，图标通常在窗口创建时设置，但我们也可以尝试设置应用级别的图标
+        console.log('Linux 图标路径:', iconPath);
+      }
+    } catch (error) {
+      console.error('设置 Linux 图标失败:', error);
+    }
   }
 
   // 处理应用启动逻辑，包括可能的启动窗口

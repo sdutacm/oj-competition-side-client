@@ -498,6 +498,7 @@ class ToolbarManager {
       padding: 0 !important;
       border: none !important;
       outline: none !important;
+      overflow: hidden !important;
       box-shadow: none !important;
     }
     
@@ -516,7 +517,7 @@ class ToolbarManager {
     }
 
     :root {
-      --bg-primary: #fcfcfc; /* 使用工具栏背景色 */
+      --bg-primary: linear-gradient(135deg, #fdfdfd, #f8fafc); 
       --bg-secondary: #f8fafc;
       --text-primary: #1e293b;
       --text-secondary: #64748b;
@@ -535,7 +536,7 @@ class ToolbarManager {
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg-primary: #1f1f1f; /* 使用工具栏暗色背景色 */
+        --bg-primary: linear-gradient(135deg, #282d34ff, #181d27ff);
         --bg-secondary: #0f172a;
         --text-primary: #f1f5f9;
         --text-secondary: #94a3b8;
@@ -558,12 +559,10 @@ class ToolbarManager {
       width: 100%;
       font-family: "Segoe UI", "Helvetica Neue", sans-serif;
       background: transparent; /* 确保透明背景，避免闪烁 */
-      overflow: hidden;
       border-radius: 16px;
       scrollbar-width: none;
       -ms-overflow-style: none;
-      border: none; /* 移除任何边框 */
-      outline: none; /* 移除轮廓 */
+      outline: gray 3px solid;
       margin: 0;
       padding: 0;
       box-shadow: none; /* 移除任何阴影 */
