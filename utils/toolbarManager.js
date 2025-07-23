@@ -118,7 +118,7 @@ class ToolbarManager {
             this.onActionCallback(action);
             // 如果是 clean，则主窗口也清理 localStorage 和 cookie
             if (action === 'clean') {
-              const { BrowserWindow, app, dialog } = require('electron');
+              const { BrowserWindow, app } = require('electron');
 
               // 显示同步确认对话框
               const currentWindow = BrowserWindow.getFocusedWindow() || this.mainWindow;
