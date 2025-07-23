@@ -33,8 +33,7 @@
       "utils/**/*",
       "public/**/*",
       "locales/**/*",
-      "package.json",
-      "!public/svg/*"
+      "package.json"
     ],
     "extraMetadata": {
       "version": "1.0.0"
@@ -87,6 +86,12 @@
         {
           "from": "public/favicon.ico",
           "to": "app-icon.ico"
+        }
+      ],
+      "extraFiles": [
+        {
+          "from": "public/favicon.ico",
+          "to": "favicon.ico"
         }
       ]
     },

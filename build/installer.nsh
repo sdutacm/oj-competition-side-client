@@ -25,9 +25,19 @@
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_FILENAME}.exe" "" "$INSTDIR\${PRODUCT_FILENAME}.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_FILENAME}.exe" "Path" "$INSTDIR"
   
-  ; Register application icon
+  ; Register application icon for taskbar and system integration
   WriteRegStr HKLM "Software\Classes\Applications\${PRODUCT_FILENAME}.exe\DefaultIcon" "" "$INSTDIR\resources\app-icon.ico,0"
   WriteRegStr HKLM "Software\Classes\Applications\${PRODUCT_FILENAME}.exe\shell\open\command" "" '"$INSTDIR\${PRODUCT_FILENAME}.exe" "%1"'
+  
+  ; Additional registry entries for better Windows integration
+  WriteRegStr HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts" "${PRODUCT_FILENAME}.exe_" "0"
+  WriteRegStr HKLM "SOFTWARE\RegisteredApplications" "SDUT OJ 竞赛客户端" "Software\SDUT\OJ Competition Side Client\Capabilities"
+  WriteRegStr HKLM "SOFTWARE\SDUT\OJ Competition Side Client\Capabilities" "ApplicationDescription" "SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端"
+  WriteRegStr HKLM "SOFTWARE\SDUT\OJ Competition Side Client\Capabilities" "ApplicationIcon" "$INSTDIR\resources\app-icon.ico,0"
+  WriteRegStr HKLM "SOFTWARE\SDUT\OJ Competition Side Client\Capabilities" "ApplicationName" "SDUT OJ 竞赛客户端"
+  
+  ; Refresh icon cache
+  System::Call 'shell32.dll::SHChangeNotify(l, l, p, p) v (0x08000000, 0, 0, 0)'
 !macroend
 
 ; Custom uninstall macro
@@ -42,4 +52,10 @@
   
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_FILENAME}.exe"
   DeleteRegKey HKLM "Software\Classes\Applications\${PRODUCT_FILENAME}.exe"
+  DeleteRegKey HKLM "SOFTWARE\SDUT\OJ Competition Side Client"
+  DeleteRegValue HKLM "SOFTWARE\RegisteredApplications" "SDUT OJ 竞赛客户端"
+  DeleteRegValue HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts" "${PRODUCT_FILENAME}.exe_"
+  
+  ; Refresh icon cache
+  System::Call 'shell32.dll::SHChangeNotify(l, l, p, p) v (0x08000000, 0, 0, 0)'
 !macroend
