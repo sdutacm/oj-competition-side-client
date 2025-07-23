@@ -502,8 +502,8 @@ class ToolbarManager {
       box-shadow: none !important;
     }
     
-    /* 防止任何元素出现白色边框 */
-    *, *::before, *::after {
+    /* 防止body和html出现白色边框，但允许对话框内容有边框 */
+    html, body {
       border-color: transparent !important;
       outline-color: transparent !important;
     }
@@ -536,7 +536,7 @@ class ToolbarManager {
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg-primary: linear-gradient(135deg, #282d34ff, #181d27ff);
+        --bg-primary: linear-gradient(135deg, #292d31ff, #26282dff);
         --bg-secondary: #0f172a;
         --text-primary: #f1f5f9;
         --text-secondary: #94a3b8;
@@ -550,7 +550,7 @@ class ToolbarManager {
         --confirm-disabled: #6b7280;
         --cancel-bg: #475569;
         --cancel-hover: #334155;
-        --box-shadow: 0 0 16px rgba(44, 44, 44, 0.7);
+        --box-shadow: 0 0 16px rgba(62, 62, 62, 0.7);
       }
     }
 
@@ -605,7 +605,7 @@ class ToolbarManager {
     .dialog-content {
       background: var(--bg-primary);
       border-radius: 16px;
-      border: none; /* 移除边框，避免白色直角边 */
+      border: 2px solid rgba(140, 140, 140, 0.2) !important; /* 强制显示灰色边框 */
       box-shadow: 0 25px 50px -12px var(--shadow-color);
       padding: 24px;
       width: calc(100% - 2px); /* 稍微缩小，避免边缘问题 */
@@ -625,7 +625,7 @@ class ToolbarManager {
         background: rgba(252, 252, 252, 0.95) !important; /* 使用工具栏背景色的半透明版本 */
         -webkit-backdrop-filter: blur(20px) !important;
         backdrop-filter: blur(20px) !important;
-        border: none !important; /* 强制移除边框 */
+        border: 3px solid rgba(107, 114, 128, 0.8) !important; /* 更明显的灰色边框 */
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
       }
       
@@ -634,7 +634,7 @@ class ToolbarManager {
           background: rgba(31, 31, 31, 0.95) !important; /* 使用工具栏暗色背景色的半透明版本 */
           -webkit-backdrop-filter: blur(20px) !important;
           backdrop-filter: blur(20px) !important;
-          border: none !important; /* 强制移除边框 */
+          border: 3px solid rgba(156, 163, 175, 0.8) !important; /* 暗色主题灰色边框 */
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
         }
       }
@@ -660,7 +660,6 @@ class ToolbarManager {
       align-items: center;
       margin-bottom: 14px;
       padding-bottom: 10px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.1); /* 使用半透明边框 */
       flex-shrink: 0;
     }
 
@@ -695,7 +694,7 @@ class ToolbarManager {
       color: var(--text-primary);
       font-size: 15px;
       line-height: 1.3;
-      // margin-bottom: 16px;
+      margin-bottom: 16px;
       font-weight: 500;
       flex-shrink: 0;
     }
@@ -745,8 +744,6 @@ class ToolbarManager {
       gap: 16px;
       justify-content: flex-end;
       padding-top: 12px;
-      border-top: 1px solid rgba(0, 0, 0, 0.1); /* 使用半透明边框 */
-      // margin-top: auto;
       flex-shrink: 0;
     }
 
