@@ -1,7 +1,7 @@
 !macro customInstall
-  ; 确保图标文件被复制到安装目录
+  ; 确保图标文件被复制到安装目录（使用正确的路径）
   SetOutPath "$INSTDIR"
-  File "${BUILD_RESOURCES_DIR}\favicon.ico"
+  File "${PROJECT_DIR}\public\favicon.ico"
   
   ; 创建桌面快捷方式并设置图标
   CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_FILENAME}" "" "$INSTDIR\favicon.ico" 0
