@@ -67,19 +67,20 @@
           "arch": [
             "x64",
             "arm64"
-          ]
+          ],
+          "artifactName": "SDUTOJCompetitionSideClient_windows_installer_${arch}_${version}.${ext}"
         },
         {
           "target": "portable",
           "arch": [
             "x64",
             "arm64"
-          ]
+          ],
+          "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}"
         }
       ],
       "forceCodeSigning": false,
-      "signAndEditExecutable": false,
-      "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}"
+      "signAndEditExecutable": false
     },
     "linux": {
       "icon": "public/icon.png",
