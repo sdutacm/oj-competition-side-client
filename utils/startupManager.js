@@ -61,7 +61,7 @@ class StartupManager {
     }
   }
 
-  /**
+    /**
    * 显示启动窗口
    * @param {Function} callback 启动窗口关闭后的回调
    */
@@ -78,7 +78,7 @@ class StartupManager {
 
     const isMac = process.platform === 'darwin';
     
-    // 创建无框启动页窗口
+    // 创建无框透明启动页窗口
     const startupWindow = new BrowserWindow({
       width: 1000,
       height: 600,
@@ -92,12 +92,13 @@ class StartupManager {
       fullscreenable: false,
       show: false,
       skipTaskbar: false,
-      backgroundColor: 'rgba(0,0,0,0)',
+      backgroundColor: 'rgba(0,0,0,0)', // 完全透明背景
       titleBarStyle: isMac ? 'hidden' : undefined,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        devTools: false
+        devTools: false,
+        backgroundThrottling: false // 防止后台时动画停止
       }
     });
 
@@ -110,22 +111,6 @@ class StartupManager {
     startupWindow.webContents.on('dom-ready', () => {
       console.log('Startup window DOM ready, showing window...');
       
-      // 添加全屏遮罩，防止显示白边
-      startupWindow.webContents.executeJavaScript(`
-        const mask = document.createElement('div');
-        mask.style.cssText = \`
-          position: fixed;
-          top: -10px;
-          left: -10px;
-          right: -10px;
-          bottom: -10px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          z-index: -1;
-        \`;
-        
-        document.documentElement.appendChild(mask);
-      `).catch(() => { });
-
       startupWindow.show();
 
       // 5秒后关闭启动窗口
@@ -231,7 +216,7 @@ class StartupManager {
       padding: 0;
       border: none;
       outline: none;
-      border-radius: 12px; /* 确保根元素也有圆角 */
+      border-radius: 16px; /* 确保根元素也有圆角，与 container 保持一致 */
     }
 
     .container {
@@ -243,12 +228,12 @@ class StartupManager {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      border-radius: 12px;
+      border-radius: 16px; /* 增加圆角半径 */
       overflow: hidden;
       background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%);
       background-size: 200% 200%;
-      border: 2px solid var(--border-color); /* 添加边框用于区分 */
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      border: none; /* 移除边框，避免直角边 */
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
       transition: background 0.3s ease;
       animation: gradientShift 6s ease-in-out infinite alternate;
     }
@@ -265,7 +250,7 @@ class StartupManager {
       z-index: -1;
       transition: background 0.3s ease;
       animation: backgroundPulse 8s ease-in-out infinite alternate;
-      border-radius: 12px;
+      border-radius: 16px; /* 与 container 保持一致的圆角半径 */
     }
 
     @media (prefers-color-scheme: light) {
