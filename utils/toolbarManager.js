@@ -1020,8 +1020,8 @@ class ToolbarManager {
           // 网络错误或其他异常
           hideLoading();
           console.error('Logout error:', error);
-          console.log('Logout error occurred, but proceeding with reset anyway');
-          showError('网络错误，但将继续重置本地数据');
+          console.log('Logout error occurred, will show error message with delay');
+          showError('登出时发生网络错误，但将继续重置本地数据');
           // 给用户2秒时间看到错误信息，然后继续重置
           setTimeout(() => {
             console.log('DIALOG_RESULT:confirm');
@@ -1081,21 +1081,18 @@ class ToolbarManager {
         } else {
           console.warn('Logout failed:', result.error, result.message);
           
-          // 根据错误类型决定是否继续重置
+          // 根据错误类型决定是否需要显示错误提示
           if (result.error === 'NO_TOKEN') {
-            console.log('No token found, user might not be logged in, proceeding with reset');
-            return true; // 没有token说明可能未登录，继续重置
-          } else if (result.error === 'NETWORK_ERROR') {
-            console.log('Network error, proceeding with local reset anyway');
-            return true; // 网络错误时仍然允许重置
+            console.log('No token found, user might not be logged in, proceeding with reset silently');
+            return true; // 没有token说明可能未登录，直接继续重置，不显示错误
           } else {
-            console.log('Other logout error, but proceeding with reset anyway');
-            return false; // 其他错误，显示错误信息但允许重置
+            console.log('Logout error, will show error message with delay');
+            return false; // 所有实际的登出错误都需要显示错误信息和延迟
           }
         }
       } catch (error) {
         console.error('Unexpected error during logout process:', error);
-        return true; // 意外错误时仍然允许重置
+        return false; // 意外错误时显示错误信息和延迟
       }
     }
 
