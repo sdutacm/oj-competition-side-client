@@ -82,7 +82,7 @@ class StartupManager {
     const startupWindow = new BrowserWindow({
       width: 1000,
       height: 600,
-      frame: false,
+      frame: false, // 完全无框窗口
       transparent: true,
       alwaysOnTop: true,
       center: true,
@@ -93,7 +93,11 @@ class StartupManager {
       show: false,
       skipTaskbar: false,
       backgroundColor: 'rgba(0,0,0,0)', // 完全透明背景
-      titleBarStyle: isMac ? 'hidden' : undefined,
+      // Mac 下完全移除标题栏相关设置，确保无框
+      ...(isMac && {
+        titleBarStyle: 'hidden',
+        trafficLightPosition: { x: -1000, y: -1000 } // 将交通灯按钮移到视野外
+      }),
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -107,6 +111,11 @@ class StartupManager {
     const startupDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(startupHTML)}`;
 
     startupWindow.loadURL(startupDataURL);
+
+    // Mac 系统额外处理：确保完全隐藏原生控件
+    if (isMac) {
+      startupWindow.setWindowButtonVisibility(false);
+    }
 
     startupWindow.webContents.on('dom-ready', () => {
       console.log('Startup window DOM ready, showing window...');
