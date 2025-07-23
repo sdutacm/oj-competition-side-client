@@ -822,50 +822,33 @@ class ToolbarManager {
       pointer-events: none;
     }
 
-    /* Loading 动画样式 */
-    .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(31,31,31,0.7);
+    /* 按钮内文本状态管理 */
+    .btn-confirm .normal-text,
+    .btn-confirm .loading-text {
+      transition: opacity 0.3s ease;
+    }
+    
+    .btn-confirm .loading-text {
       display: none;
-      justify-content: center;
       align-items: center;
-      z-index: 1000;
-      border-radius: 16px;
+      justify-content: center;
+      gap: 8px;
     }
-
-    .dialog-container,
-    .loading-overlay {
-      border-radius: 16px !important;
-      overflow: hidden !important;
-      background: transparent !important;
+    
+    .btn-confirm.loading .normal-text {
+      display: none;
     }
-
-    .loading-overlay.show {
+    
+    .btn-confirm.loading .loading-text {
       display: flex;
     }
 
-    .loading-content {
-      background: var(--bg-primary);
-      border-radius: 12px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: 16px;
-      box-shadow: var(--box-shadow);
-      min-width: 200px;
-    }
-
+    /* Loading 动画样式 */
     .loading-spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid var(--border-color);
-      border-top: 3px solid var(--confirm-bg);
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid white;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
@@ -873,12 +856,6 @@ class ToolbarManager {
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
-    }
-
-    .loading-text {
-      color: var(--text-primary);
-      font-size: 14px;
-      font-weight: 500;
     }
 
     /* 错误提示样式 */
@@ -895,24 +872,6 @@ class ToolbarManager {
 
     .error-message.show {
       display: block;
-    }
-
-    .loading-logout-icon {
-      width: 32px;
-      height: 32px;
-      stroke: var(--text-primary);
-      margin: 12px auto 0 auto;
-      display: block;
-    }
-    .loading-logout-icon path {
-      stroke-dasharray: 60;
-      stroke-dashoffset: 60;
-      animation: logout-stroke 1.2s cubic-bezier(0.4,0,0.2,1) infinite;
-    }
-    @keyframes logout-stroke {
-      to {
-        stroke-dashoffset: 0;
-      }
     }
   </style>
 </head>
@@ -944,22 +903,14 @@ class ToolbarManager {
         <button class="dialog-btn btn-cancel" onclick="cancel()">取消</button>
         <button class="dialog-btn btn-confirm" id="confirmBtn" disabled onclick="confirm()">
           <span class="countdown" id="countdown">确认重置 (5)</span>
-          <span>确认重置</span>
+          <span class="normal-text">确认重置</span>
+          <span class="loading-text" id="loadingText">
+            <span class="loading-spinner"></span>
+            <span class="loading-message">正在退出登录...</span>
+          </span>
         </button>
         <div class="error-message" id="errorMessage"></div>
       </div>
-    </div>
-  </div>
-
-  <!-- Loading 遮罩层 -->
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-content">
-      <svg class="loading-logout-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 12px auto; display: block; color: #dc2626;">
-        <path d="m16 17 5-5-5-5"/>
-        <path d="M21 12H9"/>
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-      </svg>
-      <div class="loading-text" id="loadingText">正在退出登录...</div>
     </div>
   </div>
 
@@ -1034,20 +985,22 @@ class ToolbarManager {
     }
 
     function showLoading(text) {
-      const loadingOverlay = document.getElementById('loadingOverlay');
-      const loadingText = document.getElementById('loadingText');
-      if (loadingText) {
-        loadingText.textContent = text;
+      const confirmBtn = document.getElementById('confirmBtn');
+      const loadingMessage = confirmBtn?.querySelector('.loading-message');
+      if (loadingMessage) {
+        loadingMessage.textContent = text;
       }
-      if (loadingOverlay) {
-        loadingOverlay.classList.add('show');
+      if (confirmBtn) {
+        confirmBtn.classList.add('loading');
+        confirmBtn.disabled = true;
       }
     }
 
     function hideLoading() {
-      const loadingOverlay = document.getElementById('loadingOverlay');
-      if (loadingOverlay) {
-        loadingOverlay.classList.remove('show');
+      const confirmBtn = document.getElementById('confirmBtn');
+      if (confirmBtn) {
+        confirmBtn.classList.remove('loading');
+        // 注意：不要重新启用按钮，因为重置后会关闭对话框
       }
     }
 
