@@ -33,7 +33,8 @@
       "utils/**/*",
       "public/**/*",
       "locales/**/*",
-      "package.json"
+      "package.json",
+      "!public/svg/*"
     ],
     "extraMetadata": {
       "version": "1.0.0"
@@ -79,8 +80,15 @@
       ],
       "forceCodeSigning": false,
       "signAndEditExecutable": false,
-      "executableName": "SDUT OJ Competition Side Client",
-      "requestedExecutionLevel": "asInvoker"
+      "executableName": "SDUT OJ 竞赛客户端",
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}",
+      "extraResources": [
+        {
+          "from": "public/favicon.ico",
+          "to": "app-icon.ico"
+        }
+      ]
     },
     "linux": {
       "icon": "public/icon.png",
@@ -127,14 +135,19 @@
       "installerHeaderIcon": "public/favicon.ico",
       "installerSidebar": null,
       "uninstallerSidebar": null,
-      "shortcutName": "SDUT OJ Competition Side Client",
+      "shortcutName": "SDUT OJ 竞赛客户端",
       "displayLanguageSelector": false,
       "installerLanguages": ["en_US", "zh_CN"],
       "runAfterFinish": true,
-      "menuCategory": "Education"
+      "menuCategory": "Education",
+      "include": "build/installer.nsh",
+      "perMachine": false,
+      "allowElevation": true,
+      "deleteAppDataOnUninstall": false
     },
     "portable": {
-      "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}"
+      "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}",
+      "requestedExecutionLevel": "asInvoker"
     }
   },
   "dependencies": {

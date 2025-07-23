@@ -507,8 +507,8 @@ app.whenReady().then(() => {
 
   // Windows 特定设置
   if (PlatformHelper.isWindows()) {
-    // 设置应用程序名称
-    const appName = 'SDUT OJ Competition Side Client';
+    // 设置应用程序名称（中文）
+    const appName = 'SDUT OJ 竞赛客户端';
     app.setName(appName);
     console.log('Windows 应用名称设置为:', appName);
   }
