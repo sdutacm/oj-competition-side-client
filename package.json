@@ -67,16 +67,14 @@
           "arch": [
             "x64",
             "arm64"
-          ],
-          "artifactName": "SDUTOJCompetitionSideClient_windows_installer_${arch}_${version}.${ext}"
+          ]
         },
         {
           "target": "portable",
           "arch": [
             "x64",
             "arm64"
-          ],
-          "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}"
+          ]
         }
       ],
       "forceCodeSigning": false,
@@ -120,7 +118,11 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "license": null
+      "license": null,
+      "artifactName": "SDUTOJCompetitionSideClient_windows_installer_${arch}_${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}"
     }
   },
   "dependencies": {
