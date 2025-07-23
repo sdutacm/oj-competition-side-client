@@ -78,6 +78,48 @@ class StartupManager {
 
     const isMac = process.platform === 'darwin';
     
+    // 根据平台选择图标
+    const os = require('os');
+    const platform = os.platform();
+    let iconPath;
+
+    // 确定图标文件名
+    let iconFileName;
+    if (platform === 'linux') {
+      iconFileName = 'icon.png';
+    } else if (platform === 'darwin') {
+      iconFileName = 'favicon.icns';
+    } else {
+      // Windows 使用 .ico 文件
+      iconFileName = 'favicon.ico';
+    }
+
+    // 尝试多个可能的路径来适应不同环境
+    const possibleIconPaths = [
+      path.join(__dirname, '../public', iconFileName), // 开发环境
+      path.join(process.resourcesPath, 'app/public', iconFileName), // 构建后的路径
+      path.join(process.cwd(), 'public', iconFileName), // 当前工作目录
+      path.join(app.getAppPath(), 'public', iconFileName), // 应用路径
+      path.join(path.dirname(app.getAppPath()), 'public', iconFileName) // 应用目录的上级
+    ];
+
+    // 尝试找到存在的图标文件
+    for (const testPath of possibleIconPaths) {
+      try {
+        if (fs.existsSync(testPath)) {
+          iconPath = testPath;
+          console.log('找到图标文件:', iconPath);
+          break;
+        }
+      } catch (error) {
+        console.warn('检查图标路径失败:', testPath, error.message);
+      }
+    }
+
+    if (!iconPath) {
+      console.warn('无法找到图标文件，尝试的路径:', possibleIconPaths);
+    }
+    
     // 创建无框透明启动页窗口
     const startupWindow = new BrowserWindow({
       width: 1000,
@@ -92,6 +134,7 @@ class StartupManager {
       fullscreenable: false,
       show: false,
       skipTaskbar: false,
+      icon: iconPath, // 设置应用图标（如果找到的话）
       backgroundColor: 'rgba(0,0,0,0)', // 完全透明背景
       // Mac 下完全移除标题栏相关设置，确保无框
       ...(isMac && {

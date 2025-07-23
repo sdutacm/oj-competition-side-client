@@ -79,7 +79,7 @@
       ],
       "forceCodeSigning": false,
       "signAndEditExecutable": false,
-      "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}"
+      "artifactName": "SDUTOJCompetitionSideClient-windows-${arch}-${version}.${ext}"
     },
     "linux": {
       "icon": "public/icon.png",
@@ -88,15 +88,13 @@
         {
           "target": "AppImage",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         },
         {
           "target": "deb",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         }
       ],

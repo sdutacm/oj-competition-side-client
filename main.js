@@ -303,7 +303,7 @@ function createMainWindow() {
     let iconPath;
 
     if (platform === 'linux') {
-      iconPath = path.join(__dirname, 'public/favicon.png');
+      iconPath = path.join(__dirname, 'public/icon.png');
     } else if (platform === 'darwin') {
       iconPath = path.join(__dirname, 'public/favicon.icns');
     } else {
