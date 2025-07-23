@@ -132,7 +132,6 @@
       "license": null,
       "artifactName": "SDUTOJCompetitionSideClient_windows_installer_${arch}_${version}.${ext}",
       "installerIcon": "public/favicon.ico",
-      "uninstallerIcon": "public/favicon.ico",
       "installerHeaderIcon": "public/favicon.ico",
       "installerSidebar": null,
       "uninstallerSidebar": null,
@@ -146,7 +145,8 @@
       "menuCategory": "Education",
       "perMachine": false,
       "allowElevation": true,
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
     },
     "portable": {
       "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}",
