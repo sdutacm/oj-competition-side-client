@@ -81,7 +81,7 @@
       "forceCodeSigning": false,
       "signAndEditExecutable": false,
       "executableName": "SDUT OJ 竞赛客户端",
-      "requestExecutionLevel": "asInvoker",
+      "requestedExecutionLevel": "asInvoker",
       "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}",
       "extraResources": [
         {
@@ -147,7 +147,7 @@
     },
     "portable": {
       "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}",
-      "requestExecutionLevel": "asInvoker"
+      "requestExecutionLevel": "user"
     }
   },
   "dependencies": {
