@@ -82,6 +82,12 @@
       "executableName": "SDUT OJ 竞赛客户端",
       "requestedExecutionLevel": "asInvoker",
       "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}",
+      "extraFiles": [
+        {
+          "from": "public/favicon.ico",
+          "to": "favicon.ico"
+        }
+      ],
       "fileAssociations": [],
       "protocols": [],
       "publish": null
