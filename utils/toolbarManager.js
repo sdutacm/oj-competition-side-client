@@ -743,7 +743,7 @@ class ToolbarManager {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(31,31,31,0.7);
       display: none;
       justify-content: center;
       align-items: center;
@@ -771,7 +771,7 @@ class ToolbarManager {
       justify-content: center;
       align-items: center;
       gap: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 0 16px rgba(93, 93, 93, 0.7);
       min-width: 200px;
     }
 
