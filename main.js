@@ -346,23 +346,40 @@ function createMainWindow() {
       frame: true, // 保留窗口边框
     };
 
-    // Linux 特定窗口设置
+    // 平台特定窗口设置
     if (process.platform === 'linux') {
       // 设置窗口管理器类名，这对Dock识别很重要
       Object.assign(windowOptions, {
         title: 'SDUT OJ Competition Side Client', // 使用英文标题避免乱码
       });
+    } else if (process.platform === 'win32') {
+      // Windows 特定设置
+      Object.assign(windowOptions, {
+        title: 'SDUT OJ Competition Side Client',
+        skipTaskbar: false, // 确保在任务栏显示
+      });
     }
 
     mainWindow = new BrowserWindow(windowOptions);
 
-    // Linux平台：设置窗口类名
+    // 平台特定的窗口优化
     if (process.platform === 'linux' && mainWindow.setWMClass) {
       try {
         mainWindow.setWMClass('sdut-oj-competition-client', 'SDUT OJ Competition Side Client');
         console.log('Linux 窗口类名设置成功');
       } catch (error) {
         console.log('设置窗口类名失败:', error);
+      }
+    } else if (process.platform === 'win32') {
+      // Windows：确保图标和标题正确设置
+      try {
+        mainWindow.setTitle('SDUT OJ Competition Side Client');
+        if (iconPath && fs.existsSync(iconPath)) {
+          mainWindow.setIcon(iconPath);
+          console.log('Windows 主窗口图标设置成功:', iconPath);
+        }
+      } catch (error) {
+        console.log('设置Windows主窗口属性失败:', error);
       }
     }
 
@@ -486,6 +503,14 @@ app.whenReady().then(() => {
     // 设置应用程序名称
     const appName = i18n.t('app.name');
     app.setName(appName);
+  }
+
+  // Windows 特定设置
+  if (PlatformHelper.isWindows()) {
+    // 设置应用程序名称
+    const appName = 'SDUT OJ Competition Side Client';
+    app.setName(appName);
+    console.log('Windows 应用名称设置为:', appName);
   }
 
   // Linux 特定设置

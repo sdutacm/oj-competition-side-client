@@ -78,7 +78,9 @@
         }
       ],
       "forceCodeSigning": false,
-      "signAndEditExecutable": false
+      "signAndEditExecutable": false,
+      "executableName": "SDUT OJ Competition Side Client",
+      "requestedExecutionLevel": "asInvoker"
     },
     "linux": {
       "icon": "public/icon.png",
@@ -119,7 +121,17 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "license": null,
-      "artifactName": "SDUTOJCompetitionSideClient_windows_installer_${arch}_${version}.${ext}"
+      "artifactName": "SDUTOJCompetitionSideClient_windows_installer_${arch}_${version}.${ext}",
+      "installerIcon": "public/favicon.ico",
+      "uninstallerIcon": "public/favicon.ico",
+      "installerHeaderIcon": "public/favicon.ico",
+      "installerSidebar": null,
+      "uninstallerSidebar": null,
+      "shortcutName": "SDUT OJ Competition Side Client",
+      "displayLanguageSelector": false,
+      "installerLanguages": ["en_US", "zh_CN"],
+      "runAfterFinish": true,
+      "menuCategory": "Education"
     },
     "portable": {
       "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}"
