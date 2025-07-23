@@ -60,7 +60,7 @@
       "artifactName": "SDUTOJCompetitionSideClient_mac_${arch}_${version}.${ext}"
     },
     "win": {
-      "icon": "public/favicon.ico",
+      "icon": "public/app.ico",
       "target": [
         {
           "target": "nsis",
@@ -84,14 +84,14 @@
       "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}",
       "extraResources": [
         {
-          "from": "public/favicon.ico",
-          "to": "favicon.ico"
+          "from": "public/app.ico",
+          "to": "app.ico"
         }
       ],
       "extraFiles": [
         {
-          "from": "public/favicon.ico",
-          "to": "favicon.ico"
+          "from": "public/app.ico",
+          "to": "app.ico"
         }
       ],
       "fileAssociations": [],
@@ -138,9 +138,9 @@
       "createStartMenuShortcut": true,
       "license": null,
       "artifactName": "SDUTOJCompetitionSideClient_windows_installer_${arch}_${version}.${ext}",
-      "installerIcon": "public/favicon.ico",
-      "uninstallerIcon": "public/favicon.ico",
-      "installerHeaderIcon": "public/favicon.ico",
+      "installerIcon": "public/app.ico",
+      "uninstallerIcon": "public/app.ico",
+      "installerHeaderIcon": "public/app.ico",
       "installerSidebar": null,
       "uninstallerSidebar": null,
       "shortcutName": "SDUT OJ 竞赛客户端",
