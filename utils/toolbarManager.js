@@ -1,12 +1,83 @@
 const { BrowserView } = require('electron');
 const fs = require('fs');
+const path = require('path');
+const { app } = require('electron');
 const PlatformHelper = require('./platformHelper');
 
 class ToolbarManager {
-  constructor(mainWindow, onActionCallback) {
+  constructor(mainWindow, onActionCallback, startupManager = null) {
     this.mainWindow = mainWindow;
     this.toolbarView = null;
     this.onActionCallback = onActionCallback;
+    this.startupManager = startupManager;
+    // 保留兼容性，如果没有传入 startupManager，则保留原有逻辑
+    this.startupStateFile = path.join(app.getPath('userData'), 'startup-state.json');
+  }
+
+  /**
+   * 检查是否需要显示启动窗口
+   */
+  shouldShowStartupWindow() {
+    try {
+      if (!fs.existsSync(this.startupStateFile)) {
+        // 第一次运行程序
+        return true;
+      }
+      
+      const state = JSON.parse(fs.readFileSync(this.startupStateFile, 'utf8'));
+      return state.showStartupOnNextLaunch === true;
+    } catch (error) {
+      console.error('Error reading startup state:', error);
+      // 出错时默认显示启动窗口
+      return true;
+    }
+  }
+
+  /**
+   * 标记启动窗口已显示，后续启动不再显示
+   */
+  markStartupShown() {
+    try {
+      const state = {
+        showStartupOnNextLaunch: false,
+        lastShownTime: Date.now()
+      };
+      fs.writeFileSync(this.startupStateFile, JSON.stringify(state, null, 2), 'utf8');
+    } catch (error) {
+      console.error('Error saving startup state:', error);
+    }
+  }
+
+  /**
+   * 标记下次启动需要显示启动窗口（重置后调用）
+   */
+  markShowStartupOnNextLaunch() {
+    try {
+      const state = {
+        showStartupOnNextLaunch: true,
+        resetTime: Date.now()
+      };
+      fs.writeFileSync(this.startupStateFile, JSON.stringify(state, null, 2), 'utf8');
+    } catch (error) {
+      console.error('Error marking startup for next launch:', error);
+    }
+  }
+
+  /**
+   * 处理应用启动逻辑 - 决定是否显示启动窗口
+   * @param {Function} onStartupComplete 启动完成后的回调
+   */
+  handleAppStartup(onStartupComplete) {
+    if (this.shouldShowStartupWindow()) {
+      console.log('显示启动窗口 - 第一次启动或重置后启动');
+      this.showStartupWindow(() => {
+        console.log('启动窗口显示完成');
+        if (onStartupComplete) onStartupComplete();
+      });
+    } else {
+      console.log('跳过启动窗口 - 非第一次启动');
+      if (onStartupComplete) onStartupComplete();
+    }
   }
 
   /**
@@ -59,15 +130,15 @@ class ToolbarManager {
                 height: 400,
                 frame: false, // 完全无框
                 resizable: false,
-                alwaysOnTop: true, // 设为置顶，确保在所有窗口之上
                 center: true,
-                modal: true, // 设为模态，阻止父窗口交互
+                modal: true, // 设为模态，阻止父窗口交互，自动在父窗口之上
                 parent: currentWindow,
                 show: false, // 重要：先不显示，等内容完全加载后再显示
                 transparent: true, // 所有平台都启用透明
                 backgroundColor: 'rgba(0,0,0,0)', // 所有平台都使用完全透明背景
                 skipTaskbar: false, // 允许在任务栏显示
                 focusable: true,
+                level: 'modal-panel', // 设置窗口层级为模态面板层级
                 titleBarStyle: isMac ? 'hidden' : undefined, // Mac使用hidden而不是customButtonsOnHover
                 trafficLightPosition: undefined, // 移除交通灯位置设置，避免闪烁
                 hasShadow: !isMac, // Mac上禁用阴影，其他系统启用
@@ -169,13 +240,30 @@ class ToolbarManager {
                   try { win.close(); } catch (e) { }
                 });
 
-                // 立即显示启动页窗口
-                this.showStartupWindow(() => {
-                  // 启动页关闭后重启主窗口
-                  if (app && app.emit) {
-                    app.emit('reopen-main-window');
-                  }
-                });
+                // 标记下次启动需要显示启动窗口
+                if (this.startupManager) {
+                  // 使用传入的 startupManager 实例
+                  this.startupManager.markShowStartupOnNextLaunch();
+                  
+                  // 立即显示启动页窗口
+                  this.startupManager.showStartupWindow(() => {
+                    // 启动页关闭后重启主窗口
+                    if (app && app.emit) {
+                      app.emit('reopen-main-window');
+                    }
+                  });
+                } else {
+                  // 兼容性逻辑：如果没有传入 startupManager，使用本地方法
+                  this.markShowStartupOnNextLaunch();
+                  
+                  // 立即显示启动页窗口
+                  this.showStartupWindow(() => {
+                    // 启动页关闭后重启主窗口
+                    if (app && app.emit) {
+                      app.emit('reopen-main-window');
+                    }
+                  });
+                }
               });
             }
           }
@@ -442,6 +530,7 @@ class ToolbarManager {
       --confirm-disabled: #9ca3af;
       --cancel-bg: #6b7280;
       --cancel-hover: #4b5563;
+      --box-shadow: 0 8px 32px rgba(117, 117, 117, 0.23);
     }
 
     @media (prefers-color-scheme: dark) {
@@ -460,6 +549,7 @@ class ToolbarManager {
         --confirm-disabled: #6b7280;
         --cancel-bg: #475569;
         --cancel-hover: #334155;
+        --box-shadow: 0 0 16px rgba(44, 44, 44, 0.7);
       }
     }
 
@@ -771,7 +861,7 @@ class ToolbarManager {
       justify-content: center;
       align-items: center;
       gap: 16px;
-      box-shadow: 0 0 16px rgba(93, 93, 93, 0.7);
+      box-shadow: var(--box-shadow);
       min-width: 200px;
     }
 
@@ -1246,11 +1336,14 @@ class ToolbarManager {
       // 3秒后关闭启动页窗口并立即开启主窗口
       setTimeout(() => {
         try {
+          // 标记启动窗口已显示，后续启动不再显示
+          this.markStartupShown();
           startupWindow.close();
           // 立即触发主窗口重启
           safeCallback();
         } catch (e) {
           // 窗口可能已经关闭，静默处理错误
+          this.markStartupShown();
           safeCallback();
         }
       }, 5000);
@@ -1258,7 +1351,8 @@ class ToolbarManager {
 
     // 处理窗口关闭事件 - 作为备用机制
     startupWindow.on('closed', () => {
-      // 确保回调一定会被调用
+      // 确保启动状态被标记，回调一定会被调用
+      this.markStartupShown();
       safeCallback();
     });
 

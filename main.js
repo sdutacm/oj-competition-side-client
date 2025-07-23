@@ -9,6 +9,7 @@ const { isWhiteDomain } = require('./utils/domainHelper');
 const { showBlockedDialog } = require('./utils/dialogHelper');
 const i18n = require('./utils/i18nManager');
 const MacMenuManager = require('./utils/macMenuManager');
+const StartupManager = require('./utils/startupManager');
 
 let mainWindow = null;
 let toolbarManager = null;
@@ -16,6 +17,7 @@ let contentViewManager = null;
 let shortcutManager = null;
 let layoutManager = null;
 let macMenuManager = null;
+let startupManager = null;
 
 // 应用配置
 const APP_CONFIG = {
@@ -220,7 +222,7 @@ function openNewWindow(url) {
     if (shortcutManager) {
       shortcutManager.handleToolbarAction(action);
     }
-  });
+  }, startupManager);
   toolbarManager.createToolbarView();
   contentViewManager.setToolbarManager(toolbarManager);
   const layoutManager = new LayoutManager(win, toolbarManager, contentViewManager);
@@ -406,6 +408,9 @@ app.whenReady().then(() => {
   console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
   console.log('App ready - 测试翻译:', i18n.t('app.name'));
   
+  // 初始化启动管理器
+  startupManager = new StartupManager();
+  
   // Windows 兼容性设置
   if (PlatformHelper.isWindows()) {
     // 添加 Windows 特定的命令行开关来解决 GPU 问题
@@ -433,8 +438,12 @@ app.whenReady().then(() => {
     app.setName(appName);
   }
 
-  // 创建主窗口
-  createMainWindow();
+  // 处理应用启动逻辑，包括可能的启动窗口
+  startupManager.handleAppStartup(() => {
+    // 启动窗口（如果有）已完成，现在创建主窗口
+    console.log('启动流程完成，创建主窗口');
+    createMainWindow();
+  });
 }).catch(error => {
   console.error('应用启动失败:', error);
 });
@@ -460,12 +469,12 @@ function disableDevTools() {
  */
 function initializeManagers() {
   try {
-    // 创建工具栏管理器
+    // 创建工具栏管理器，传入 startupManager 实例
     toolbarManager = new ToolbarManager(mainWindow, (action) => {
       if (shortcutManager) {
         shortcutManager.handleToolbarAction(action);
       }
-    });
+    }, startupManager);
 
     // 创建内容视图管理器
     contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
