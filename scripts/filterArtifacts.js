@@ -1,37 +1,67 @@
 // 过滤发布文件，排除 .yml 和 .blockmap 文件
 const fs = require('fs').promises;
 const path = require('path');
-const { glob } = require('glob');
 
 module.exports = async function(context) {
-  console.log('afterAllArtifactBuild hook called');
+  console.log('beforePublish hook called');
+  console.log('Context keys:', Object.keys(context));
   
-  const { outDir } = context;
-  console.log('Output directory:', outDir);
+  if (context.outDir) {
+    console.log('Output directory:', context.outDir);
+  }
   
+  // 对于 beforePublish 钩子，我们需要过滤 context 中的发布信息
+  if (context.publishOptions && context.publishOptions.publish) {
+    console.log('Publish options found:', context.publishOptions);
+  }
+  
+  // 尝试访问所有可能的文件路径
+  const possibleDirs = [
+    context.outDir,
+    context.buildDir,
+    context.appDir,
+    path.join(process.cwd(), 'dist')
+  ].filter(Boolean);
+  
+  for (const dir of possibleDirs) {
+    if (await dirExists(dir)) {
+      console.log('Checking directory:', dir);
+      await removeUnwantedFiles(dir);
+    }
+  }
+  
+  console.log('✅ beforePublish 钩子执行完成');
+};
+
+async function dirExists(dir) {
   try {
-    // 查找所有 .yml, .yaml 和 .blockmap 文件
-    const patterns = [
-      '**/*.yml',
-      '**/*.yaml', 
-      '**/*.blockmap'
-    ];
+    const stat = await fs.stat(dir);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function removeUnwantedFiles(dir) {
+  try {
+    const files = await fs.readdir(dir, { recursive: true });
     
-    for (const pattern of patterns) {
-      const files = await glob(pattern, { cwd: outDir, absolute: true });
+    for (const file of files) {
+      const fullPath = path.join(dir, file);
       
-      for (const file of files) {
+      if (file.endsWith('.yml') || file.endsWith('.yaml') || file.endsWith('.blockmap')) {
         try {
-          await fs.unlink(file);
-          console.log('🚫 删除文件:', path.relative(outDir, file));
+          const stat = await fs.stat(fullPath);
+          if (stat.isFile()) {
+            await fs.unlink(fullPath);
+            console.log('🚫 删除文件:', path.relative(dir, fullPath));
+          }
         } catch (error) {
-          console.log('删除文件失败:', file, error.message);
+          console.log('删除文件失败:', fullPath, error.message);
         }
       }
     }
-    
-    console.log('✅ 文件过滤完成');
   } catch (error) {
-    console.error('过滤文件时出错:', error);
+    console.error('扫描目录失败:', dir, error.message);
   }
-};
+}
