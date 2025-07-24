@@ -208,21 +208,35 @@ jobs:
           echo "🔍 Looking for unwanted assets..."
           
           # 删除 .yml, .yaml, .blockmap 文件
-          UNWANTED_ASSETS=$(echo "$ASSETS_RESPONSE" | jq -r '.[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | .id')
+          echo "Finding .yml, .yaml, .blockmap files..."
+          YML_ASSETS=$(echo "$ASSETS_RESPONSE" | jq -r 'if type == "array" then .[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | .id else empty end' 2>/dev/null || echo "")
           
-          # 删除不带架构标识的 Windows 文件
-          WINDOWS_NO_ARCH_ASSETS=$(echo "$ASSETS_RESPONSE" | jq -r '.[] | select(.name | test("windows.*\\.(exe)$") and (.name | test("_(x64|arm64)_") | not)) | .id')
+          # 删除不带架构标识的 Windows 文件  
+          echo "Finding Windows files without architecture identifiers..."
+          WINDOWS_NO_ARCH_ASSETS=$(echo "$ASSETS_RESPONSE" | jq -r 'if type == "array" then .[] | select(.name | test("windows.*\\.(exe)$") and (.name | test("_(x64|arm64)_") | not)) | .id else empty end' 2>/dev/null || echo "")
           
-          # 合并所有要删除的 assets
-          ALL_UNWANTED_ASSETS=$(echo -e "$UNWANTED_ASSETS\n$WINDOWS_NO_ARCH_ASSETS" | grep -v '^$')
+          # 合并所有要删除的 assets，过滤空行
+          ALL_UNWANTED_ASSETS=""
+          if [ -n "$YML_ASSETS" ]; then
+            ALL_UNWANTED_ASSETS="$YML_ASSETS"
+          fi
+          if [ -n "$WINDOWS_NO_ARCH_ASSETS" ]; then
+            if [ -n "$ALL_UNWANTED_ASSETS" ]; then
+              ALL_UNWANTED_ASSETS="$ALL_UNWANTED_ASSETS\n$WINDOWS_NO_ARCH_ASSETS"
+            else
+              ALL_UNWANTED_ASSETS="$WINDOWS_NO_ARCH_ASSETS"
+            fi
+          fi
           
-          if [ -n "$ALL_UNWANTED_ASSETS" ] && [ "$ALL_UNWANTED_ASSETS" != "" ]; then
+          if [ -n "$ALL_UNWANTED_ASSETS" ]; then
             echo "🎯 Found unwanted assets to delete:"
-            echo "$ASSETS_RESPONSE" | jq -r '.[] | select(.name | test("\\.(yml|yaml|blockmap)$") or (.name | test("windows.*\\.(exe)$") and (.name | test("_(x64|arm64)_") | not))) | "- \(.name) (ID: \(.id))"'
             
-            echo "$ALL_UNWANTED_ASSETS" | while read -r asset_id; do
-              if [ -n "$asset_id" ] && [ "$asset_id" != "null" ]; then
-                ASSET_NAME=$(echo "$ASSETS_RESPONSE" | jq -r ".[] | select(.id == $asset_id) | .name")
+            # 显示要删除的文件列表
+            echo "$ASSETS_RESPONSE" | jq -r 'if type == "array" then .[] | select((.name | test("\\.(yml|yaml|blockmap)$")) or (.name | test("windows.*\\.(exe)$") and (.name | test("_(x64|arm64)_") | not))) | "- \(.name) (ID: \(.id))" else empty end' 2>/dev/null || echo "Error displaying file list"
+            
+            echo -e "$ALL_UNWANTED_ASSETS" | while read -r asset_id; do
+              if [ -n "$asset_id" ] && [ "$asset_id" != "null" ] && [ "$asset_id" != "" ]; then
+                ASSET_NAME=$(echo "$ASSETS_RESPONSE" | jq -r "if type == \"array\" then .[] | select(.id == $asset_id) | .name else \"unknown\" end" 2>/dev/null)
                 echo "🗑️  Deleting: $ASSET_NAME (ID: $asset_id)"
                 
                 DELETE_RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null \
