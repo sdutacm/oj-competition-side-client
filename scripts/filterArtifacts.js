@@ -1,24 +1,37 @@
 // 过滤发布文件，排除 .yml 和 .blockmap 文件
+const fs = require('fs').promises;
+const path = require('path');
+const { glob } = require('glob');
+
 module.exports = async function(context) {
-  console.log('artifactBuildCompleted hook called');
-  console.log('Context keys:', Object.keys(context));
+  console.log('afterAllArtifactBuild hook called');
   
-  // 检查 context 中的文件属性
-  if (context.file) {
-    const fileName = context.file.toLowerCase();
+  const { outDir } = context;
+  console.log('Output directory:', outDir);
+  
+  try {
+    // 查找所有 .yml, .yaml 和 .blockmap 文件
+    const patterns = [
+      '**/*.yml',
+      '**/*.yaml', 
+      '**/*.blockmap'
+    ];
     
-    // 如果是 .yml、.yaml 或 .blockmap 文件，阻止发布
-    if (fileName.endsWith('.yml') || 
-        fileName.endsWith('.yaml') || 
-        fileName.endsWith('.blockmap')) {
-      console.log('🚫 过滤掉文件:', context.file);
-      return false; // 返回 false 来阻止这个文件被发布
+    for (const pattern of patterns) {
+      const files = await glob(pattern, { cwd: outDir, absolute: true });
+      
+      for (const file of files) {
+        try {
+          await fs.unlink(file);
+          console.log('🚫 删除文件:', path.relative(outDir, file));
+        } catch (error) {
+          console.log('删除文件失败:', file, error.message);
+        }
+      }
     }
     
-    console.log('✅ 保留文件:', context.file);
-    return true;
+    console.log('✅ 文件过滤完成');
+  } catch (error) {
+    console.error('过滤文件时出错:', error);
   }
-  
-  // 默认保留
-  return true;
 };
