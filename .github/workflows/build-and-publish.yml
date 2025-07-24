@@ -39,7 +39,7 @@ jobs:
       - name: Publish Linux (AppImage and deb)
         run: npm run publish:linux
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.atriordsa }}
           DEBUG: electron-builder
 
   publish-windows:
@@ -71,7 +71,7 @@ jobs:
       - name: Publish Windows
         run: npm run publish:win
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.atriordsa }}
           DEBUG: electron-builder
 
   publish-macos:
@@ -103,83 +103,102 @@ jobs:
       - name: Publish macOS
         run: npm run publish:mac
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.atriordsa }}
           DEBUG: electron-builder
 
   cleanup-release:
     runs-on: ubuntu-latest
     needs: [publish-linux, publish-windows, publish-macos]
     if: always() && (needs.publish-linux.result == 'success' || needs.publish-windows.result == 'success' || needs.publish-macos.result == 'success')
+    permissions:
+      contents: write
+      actions: read
     steps:
+      - name: Debug GitHub token and permissions
+        run: |
+          echo "🔍 Debugging GitHub environment..."
+          echo "Repository: ${{ github.repository }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Token exists: ${{ secrets.atriordsa != '' }}"
+          echo "Token length: ${#GITHUB_TOKEN}"
+          
+          # 尝试不同的 API 调用
+          echo "🧪 Testing different API endpoints..."
+          
+          # 测试基本用户信息
+          echo "Testing /user endpoint:"
+          curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user | jq -r '.login // "Failed"' || echo "curl failed"
+          
+          # 测试仓库信息
+          echo "Testing repository endpoint:"
+          curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/${{ github.repository }} | jq -r '.name // "Failed"' || echo "curl failed"
+        env:
+          GITHUB_TOKEN: ${{ secrets.atriordsa }}
+      
       - name: Clean unwanted files from release
         run: |
           set -e  # 启用错误时退出
           
           echo "🧹 Starting release cleanup for tag: ${{ github.ref_name }}"
           
-          # 检查 GitHub CLI 是否可用
-          if ! command -v gh &> /dev/null; then
-            echo "❌ GitHub CLI not found"
-            exit 1
-          fi
+          # 直接使用 curl 而不是 gh CLI，因为 gh CLI 可能有权限问题
+          echo "🔗 Testing GitHub API with curl..."
           
           # 验证环境变量
-          if [ -z "$GH_TOKEN" ]; then
-            echo "❌ GH_TOKEN not set"
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "❌ GITHUB_TOKEN not set"
             exit 1
           fi
           
-          # 测试 GitHub API 连接
-          echo "🔗 Testing GitHub API connection..."
-          if ! gh api user > /dev/null 2>&1; then
-            echo "❌ Cannot connect to GitHub API"
+          # 测试 API 连接
+          USER_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user)
+          if ! echo "$USER_RESPONSE" | jq -e '.login' > /dev/null 2>&1; then
+            echo "❌ Cannot authenticate with GitHub API"
+            echo "Response: $USER_RESPONSE"
             exit 1
           fi
-          echo "✅ GitHub API connection successful"
+          echo "✅ GitHub API authentication successful"
           
           # 等待确保所有上传完成
-          echo "⏰ Waiting 20 seconds for uploads to complete..."
-          sleep 20
+          echo "⏰ Waiting 30 seconds for uploads to complete..."
+          sleep 30
           
-          echo "📡 Attempting to get release for tag: ${{ github.ref_name }}"
+          echo "📡 Getting release for tag: ${{ github.ref_name }}"
           
-          # 获取 release ID，添加详细错误信息
-          RELEASE_RESPONSE=$(gh api repos/${{ github.repository }}/releases/tags/${{ github.ref_name }} 2>&1) || {
-            echo "❌ Failed to get release information:"
-            echo "$RELEASE_RESPONSE"
-            echo "🔍 Checking if release exists..."
-            gh api repos/${{ github.repository }}/releases --jq '.[] | select(.tag_name == "${{ github.ref_name }}") | {id, tag_name, name}' || true
-            exit 1
-          }
+          # 使用 curl 获取 release 信息
+          RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }})
           
-          RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id' 2>/dev/null)
-          
-          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
-            echo "❌ Could not extract release ID from response"
-            echo "📄 Response: $RELEASE_RESPONSE"
+          if ! echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+            echo "❌ Failed to get release information"
+            echo "Response: $RELEASE_RESPONSE"
+            echo "🔍 Checking all releases..."
+            curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              https://api.github.com/repos/${{ github.repository }}/releases | \
+              jq -r '.[] | select(.tag_name == "${{ github.ref_name }}") | {id, tag_name, name}'
             exit 1
           fi
           
+          RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
           echo "✅ Found release ID: $RELEASE_ID"
           
-          # 列出所有 assets
-          echo "📁 Getting current release assets..."
-          ASSETS_RESPONSE=$(gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets 2>&1) || {
-            echo "❌ Failed to get assets:"
-            echo "$ASSETS_RESPONSE"
+          # 获取 assets
+          echo "📁 Getting release assets..."
+          ASSETS_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets)
+          
+          if ! echo "$ASSETS_RESPONSE" | jq -e '. | length' > /dev/null 2>&1; then
+            echo "❌ Failed to get assets"
+            echo "Response: $ASSETS_RESPONSE"
             exit 1
-          }
+          fi
           
           echo "📁 Current release assets:"
-          echo "$ASSETS_RESPONSE" | jq -r '.[] | "- \(.name) (ID: \(.id))"' || {
-            echo "❌ Failed to parse assets response"
-            echo "📄 Raw response: $ASSETS_RESPONSE"
-            exit 1
-          }
+          echo "$ASSETS_RESPONSE" | jq -r '.[] | "- \(.name) (ID: \(.id))"'
           
           # 查找并删除不需要的文件
           echo "🔍 Looking for unwanted assets..."
-          UNWANTED_ASSETS=$(echo "$ASSETS_RESPONSE" | jq -r '.[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | .id' 2>/dev/null)
+          UNWANTED_ASSETS=$(echo "$ASSETS_RESPONSE" | jq -r '.[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | .id')
           
           if [ -n "$UNWANTED_ASSETS" ] && [ "$UNWANTED_ASSETS" != "" ]; then
             echo "🎯 Found unwanted assets to delete:"
@@ -187,13 +206,18 @@ jobs:
             
             echo "$UNWANTED_ASSETS" | while read -r asset_id; do
               if [ -n "$asset_id" ] && [ "$asset_id" != "null" ]; then
-                ASSET_NAME=$(echo "$ASSETS_RESPONSE" | jq -r ".[] | select(.id == $asset_id) | .name" 2>/dev/null)
+                ASSET_NAME=$(echo "$ASSETS_RESPONSE" | jq -r ".[] | select(.id == $asset_id) | .name")
                 echo "🗑️  Deleting: $ASSET_NAME (ID: $asset_id)"
                 
-                if gh api --method DELETE repos/${{ github.repository }}/releases/assets/$asset_id 2>/dev/null; then
+                DELETE_RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null \
+                  -X DELETE \
+                  -H "Authorization: token $GITHUB_TOKEN" \
+                  https://api.github.com/repos/${{ github.repository }}/releases/assets/$asset_id)
+                
+                if [ "$DELETE_RESPONSE" = "204" ]; then
                   echo "✅ Successfully deleted: $ASSET_NAME"
                 else
-                  echo "❌ Failed to delete: $ASSET_NAME"
+                  echo "❌ Failed to delete: $ASSET_NAME (HTTP: $DELETE_RESPONSE)"
                 fi
               fi
             done
@@ -203,4 +227,4 @@ jobs:
           
           echo "🏁 Cleanup completed successfully!"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.atriordsa }}
