@@ -1,6 +1,6 @@
 {
   "name": "oj-competition-side-client",
-  "version": "1.0.1",
+  "version": "1.0.7",
   "description": "SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端应用程序",
   "author": {
     "name": "ATRIOR-LCL",
@@ -51,7 +51,7 @@
       "package.json"
     ],
     "extraMetadata": {
-      "version": "1.0.5"
+      "version": "1.0.7"
     },
     "publish": {
       "provider": "github",
