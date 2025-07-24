@@ -165,18 +165,26 @@ jobs:
           
           echo "📡 Getting release for tag: ${{ github.ref_name }}"
           
-          # 使用 curl 获取 release 信息
+          # 首先尝试通过标签获取 release，如果失败则从所有 releases 中查找
           RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }})
           
+          # 如果直接通过标签获取失败，则从所有 releases 中查找
           if ! echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-            echo "❌ Failed to get release information"
-            echo "Response: $RELEASE_RESPONSE"
-            echo "🔍 Checking all releases..."
-            curl -s -H "Authorization: token $GITHUB_TOKEN" \
-              https://api.github.com/repos/${{ github.repository }}/releases | \
-              jq -r '.[] | select(.tag_name == "${{ github.ref_name }}") | {id, tag_name, name}'
-            exit 1
+            echo "⚠️  Direct tag lookup failed, searching in all releases..."
+            echo "Direct response: $RELEASE_RESPONSE"
+            
+            ALL_RELEASES=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              https://api.github.com/repos/${{ github.repository }}/releases)
+            
+            RELEASE_RESPONSE=$(echo "$ALL_RELEASES" | jq ".[] | select(.tag_name == \"${{ github.ref_name }}\")")
+            
+            if ! echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+              echo "❌ Could not find release for tag ${{ github.ref_name }}"
+              echo "Available releases:"
+              echo "$ALL_RELEASES" | jq -r '.[] | "- \(.tag_name) (ID: \(.id))"' | head -10
+              exit 1
+            fi
           fi
           
           RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
