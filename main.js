@@ -403,10 +403,33 @@ function createMainWindow() {
     // Linux 特定：再次尝试设置图标和标题
     if (process.platform === 'linux') {
       try {
+        // 在 AppImage 环境中，图标可能在不同位置
+        let finalIconPath = iconPath;
+        
+        // 检查多个可能的图标位置
+        const possibleIconPaths = [
+          iconPath, // 原始路径
+          path.join(process.resourcesPath, 'icon.png'), // AppImage 中的资源路径
+          path.join(__dirname, '..', 'icon.png'), // 上级目录
+          path.join(process.cwd(), 'icon.png'), // 当前工作目录
+        ];
+        
+        for (const testPath of possibleIconPaths) {
+          if (testPath && fs.existsSync(testPath)) {
+            finalIconPath = testPath;
+            break;
+          }
+        }
+        
         // 确保图标路径正确
-        if (iconPath && fs.existsSync(iconPath)) {
-          mainWindow.setIcon(iconPath);
-          console.log('Linux 主窗口图标设置成功:', iconPath);
+        if (finalIconPath && fs.existsSync(finalIconPath)) {
+          mainWindow.setIcon(finalIconPath);
+          console.log('Linux 主窗口图标设置成功:', finalIconPath);
+          
+          // 也尝试设置应用级别的图标
+          app.setName('SDUT OJ Competition Side Client');
+        } else {
+          console.log('Linux 图标文件未找到，尝试的路径:', possibleIconPaths);
         }
         
         // 确保使用英文标题避免乱码

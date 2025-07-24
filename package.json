@@ -19,6 +19,7 @@
     "fix:mac": "chmod +x scripts/fix-macos.sh && ./scripts/fix-macos.sh",
     "build:linux": "electron-builder --linux",
     "run:linux": "chmod +x scripts/run-linux.sh && ./scripts/run-linux.sh",
+    "install:linux": "chmod +x scripts/install-linux.sh && ./scripts/install-linux.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
@@ -118,9 +119,24 @@
           "Categories": "Education;Development;",
           "StartupWMClass": "sdut-oj-competition-client",
           "Name[zh_CN]": "SDUT OJ 竞赛客户端",
-          "Comment[zh_CN]": "专业的在线评测系统客户端"
+          "Comment[zh_CN]": "专业的在线评测系统客户端",
+          "Keywords": "OJ;ACM;Programming;Contest;Judge;"
         }
       },
+      "extraFiles": [
+        {
+          "from": "public/icon.png",
+          "to": "icon.png"
+        },
+        {
+          "from": "public/icon.png",
+          "to": "resources/icon.png"
+        },
+        {
+          "from": "build/sdut-oj-competition-client.desktop",
+          "to": "sdut-oj-competition-client.desktop"
+        }
+      ],
       "target": [
         {
           "target": "AppImage",

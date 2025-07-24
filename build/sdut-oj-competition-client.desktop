@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=SDUT OJ 竞赛客户端
+Name[en_US]=SDUT OJ Competition Side Client
+Comment=专业的在线评测系统客户端
+Comment[en_US]=Professional Online Judge System Client
+GenericName=SDUT OJ Competition Side Client
+Exec=./SDUTOJCompetitionSideClient_linux_x86_64_1.0.0.AppImage
+Icon=sdut-oj-competition-client
+Terminal=false
+StartupNotify=true
+Categories=Education;Development;
+StartupWMClass=sdut-oj-competition-client
+Keywords=OJ;ACM;Programming;Contest;Judge;
