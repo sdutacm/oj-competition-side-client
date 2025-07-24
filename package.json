@@ -14,6 +14,9 @@
     "build:win:nsis": "electron-builder --win --x64 nsis",
     "build:win:portable": "electron-builder --win --x64 portable",
     "build:mac": "electron-builder --mac",
+    "build:mac:zip": "electron-builder --mac --x64 zip",
+    "build:mac:dmg": "electron-builder --mac --x64 dmg",
+    "fix:mac": "chmod +x scripts/fix-macos.sh && ./scripts/fix-macos.sh",
     "build:linux": "electron-builder --linux",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -45,6 +48,12 @@
     "mac": {
       "icon": "public/favicon.icns",
       "category": "public.app-category.education",
+      "identity": null,
+      "entitlements": null,
+      "entitlementsInherit": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "type": "development",
       "target": [
         {
           "target": "zip",
@@ -69,15 +78,13 @@
         {
           "target": "nsis",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         },
         {
           "target": "portable",
           "arch": [
-            "x64",
-            "arm64"
+            "x64"
           ]
         }
       ],

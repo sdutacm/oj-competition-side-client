@@ -38,6 +38,38 @@
 			"problemMatcher": []
 		},
 		{
+			"label": "构建 macOS 版本",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build:mac"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "修复 macOS 应用程序",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"fix:mac"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "修复 macOS 应用程序",
+			"type": "shell",
+			"command": "./scripts/fix-macos.sh",
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
 			"label": "清理构建目录",
 			"type": "shell",
 			"command": "rm",
