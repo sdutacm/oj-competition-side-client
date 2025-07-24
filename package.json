@@ -73,13 +73,15 @@
         {
           "target": "nsis",
           "arch": [
-            "x64"
+            "x64",
+            "arm64"
           ]
         },
         {
           "target": "portable",
           "arch": [
-            "x64"
+            "x64",
+            "arm64"
           ]
         }
       ],
@@ -134,13 +136,15 @@
         {
           "target": "AppImage",
           "arch": [
-            "x64"
+            "x64",
+            "arm64"
           ]
         },
         {
           "target": "deb",
           "arch": [
-            "x64"
+            "x64",
+            "arm64"
           ]
         }
       ],
@@ -172,7 +176,7 @@
       "include": "build/installer.nsh"
     },
     "portable": {
-      "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}",
+      "artifactName": "SDUTOJCompetitionSideClient_windows_protable_${arch}_${version}.${ext}",
       "requestExecutionLevel": "user"
     }
   },
