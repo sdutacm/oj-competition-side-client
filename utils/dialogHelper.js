@@ -367,6 +367,9 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
         // ESC 键关闭
         document.addEventListener('keydown', function(event) {
           if (event.key === 'Escape') {
+            // 阻止默认行为和事件冒泡，防止macOS意外退出
+            event.preventDefault();
+            event.stopPropagation();
             closeDialog();
           }
         });
@@ -1005,7 +1008,10 @@ function showInfoDialog(parentWindow) {
         // 添加键盘事件监听（ESC键关闭窗口）
         document.addEventListener('keydown', function(event) {
           if (event.key === 'Escape') {
-            
+            // 阻止默认行为和事件冒泡，防止macOS意外退出
+            event.preventDefault();
+            event.stopPropagation();
+            // 这里可以添加关闭窗口的逻辑
           }
         });
       </script>

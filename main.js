@@ -814,8 +814,25 @@ app.on('window-all-closed', (event) => {
     event.preventDefault && event.preventDefault();
     console.log('正在重启，阻止应用退出');
   } else {
-    // 正常关闭时主动退出应用
-    console.log('所有窗口已关闭，应用将退出');
-    app.quit();
+    // macOS特殊处理：检查是否是意外的窗口关闭
+    if (process.platform === 'darwin') {
+      // 在macOS上，给一个短暂的延迟，确保不是因为对话框关闭导致的意外退出
+      setTimeout(() => {
+        // 再次检查是否真的没有窗口了
+        const remainingWindows = BrowserWindow.getAllWindows();
+        console.log(`macOS: 延迟检查后还有 ${remainingWindows.length} 个窗口`);
+        
+        if (remainingWindows.length === 0) {
+          console.log('macOS: 确认所有窗口已关闭，应用将退出');
+          app.quit();
+        } else {
+          console.log('macOS: 仍有窗口存在，不退出应用');
+        }
+      }, 100); // 100ms延迟
+    } else {
+      // 其他平台正常关闭时主动退出应用
+      console.log('所有窗口已关闭，应用将退出');
+      app.quit();
+    }
   }
 });

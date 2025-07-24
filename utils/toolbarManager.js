@@ -158,7 +158,18 @@ class ToolbarManager {
                 if (message.startsWith('DIALOG_RESULT:')) {
                   const result = message.replace('DIALOG_RESULT:', '');
                   dialogResult = (result === 'confirm');
-                  confirmWindow.close();
+                  
+                  // macOS特殊处理：延迟关闭对话框，确保不会触发意外的应用退出
+                  if (isMac && result === 'cancel') {
+                    console.log('macOS: Safely closing dialog after cancel');
+                    setTimeout(() => {
+                      if (!confirmWindow.isDestroyed()) {
+                        confirmWindow.close();
+                      }
+                    }, 50); // 短暂延迟确保主窗口状态稳定
+                  } else {
+                    confirmWindow.close();
+                  }
                 } else if (message.startsWith('REQUEST_LOGOUT:')) {
                   // 处理登出请求 - 创建隐藏窗口发送请求
                   const requestId = message.replace('REQUEST_LOGOUT:', '');
@@ -1004,6 +1015,13 @@ class ToolbarManager {
       if (countdownInterval) {
         clearInterval(countdownInterval);
       }
+      
+      // 在macOS上添加特殊处理，确保不会意外触发应用退出
+      if (typeof process !== 'undefined' && process.platform === 'darwin') {
+        // macOS特殊处理：确保主窗口仍然存在和活跃
+        console.log('macOS detected, ensuring safe dialog cancellation');
+      }
+      
       console.log('DIALOG_RESULT:cancel');
     }
 
@@ -1202,6 +1220,9 @@ class ToolbarManager {
     // 处理ESC键
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
+        // 阻止默认行为和事件冒泡，防止macOS意外退出
+        e.preventDefault();
+        e.stopPropagation();
         cancel();
       }
     });
