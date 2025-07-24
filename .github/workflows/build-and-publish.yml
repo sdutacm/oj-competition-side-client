@@ -51,12 +51,24 @@ jobs:
           TAG_NAME="${{ github.ref_name }}"
           echo "Cleaning up release assets for tag: $TAG_NAME"
           
+          # 检查 release 是否存在，如果不存在则跳过
+          if ! gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME >/dev/null 2>&1; then
+            echo "Release for tag $TAG_NAME not found, skipping cleanup"
+            exit 0
+          fi
+          
           # 使用 GitHub API 获取 release 信息并删除不需要的 assets
-          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME --jq '.id')
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME --jq '.id' 2>/dev/null || echo "")
+          
+          if [ -z "$RELEASE_ID" ]; then
+            echo "Could not get release ID, skipping cleanup"
+            exit 0
+          fi
+          
           echo "Release ID: $RELEASE_ID"
           
           # 获取所有 assets 并过滤需要删除的文件
-          gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets --jq '.[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | {id: .id, name: .name}' | while read -r line; do
+          gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets --jq '.[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | {id: .id, name: .name}' 2>/dev/null | while read -r line; do
             if [ -n "$line" ]; then
               ASSET_ID=$(echo "$line" | jq -r '.id')
               ASSET_NAME=$(echo "$line" | jq -r '.name')
@@ -146,13 +158,25 @@ jobs:
           # 等待一段时间确保所有发布操作完成
           sleep 30
           
+          # 检查 release 是否存在
+          if ! gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME >/dev/null 2>&1; then
+            echo "Release for tag $TAG_NAME not found, nothing to clean up"
+            exit 0
+          fi
+          
           # 获取 release 信息
-          RELEASE_DATA=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME)
+          RELEASE_DATA=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME 2>/dev/null)
+          
+          if [ -z "$RELEASE_DATA" ]; then
+            echo "Could not retrieve release data"
+            exit 0
+          fi
+          
           RELEASE_ID=$(echo "$RELEASE_DATA" | jq -r '.id')
           echo "Release ID: $RELEASE_ID"
           
           # 获取所有需要删除的 assets
-          ASSETS_TO_DELETE=$(echo "$RELEASE_DATA" | jq -r '.assets[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | .id')
+          ASSETS_TO_DELETE=$(echo "$RELEASE_DATA" | jq -r '.assets[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | .id' 2>/dev/null)
           
           if [ -n "$ASSETS_TO_DELETE" ]; then
             echo "Found assets to delete:"
@@ -160,10 +184,14 @@ jobs:
             
             # 逐个删除
             echo "$ASSETS_TO_DELETE" | while read -r asset_id; do
-              if [ -n "$asset_id" ]; then
+              if [ -n "$asset_id" ] && [ "$asset_id" != "null" ]; then
                 ASSET_NAME=$(echo "$RELEASE_DATA" | jq -r ".assets[] | select(.id == $asset_id) | .name")
                 echo "Deleting asset: $ASSET_NAME (ID: $asset_id)"
-                gh api --method DELETE repos/${{ github.repository }}/releases/assets/$asset_id && echo "✅ Deleted $ASSET_NAME" || echo "❌ Failed to delete $ASSET_NAME"
+                if gh api --method DELETE repos/${{ github.repository }}/releases/assets/$asset_id 2>/dev/null; then
+                  echo "✅ Deleted $ASSET_NAME"
+                else
+                  echo "❌ Failed to delete $ASSET_NAME"
+                fi
               fi
             done
           else
