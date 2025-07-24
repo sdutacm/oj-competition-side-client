@@ -336,7 +336,7 @@ function createMainWindow() {
         contextIsolation: platformConfig.contextIsolation,
         webSecurity: platformConfig.webSecurity,
         allowRunningInsecureContent: platformConfig.allowRunningInsecureContent,
-        sandbox: platformConfig.sandbox,
+        sandbox: false, // 禁用沙箱来解决 Linux 权限问题
         experimentalFeatures: platformConfig.experimentalFeatures,
         devTools: false, // 禁用开发者工具
         preload: path.join(__dirname, 'preload.js') // 注入 preload 脚本

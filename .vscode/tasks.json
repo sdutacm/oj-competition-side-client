@@ -38,6 +38,18 @@
 			"problemMatcher": []
 		},
 		{
+			"label": "运行 Linux 应用程序",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"run:linux"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
 			"label": "构建 macOS 版本",
 			"type": "shell",
 			"command": "npm",
