@@ -25,8 +25,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Linux (x64 only)
-        run: npm run build:linux:appimage
+      - name: Build Linux (x64 - both AppImage and deb)
+        run: npm run build:linux:both
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -34,7 +34,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-build
-          path: dist/*.AppImage
+          path: |
+            dist/*.AppImage
+            dist/*.deb
 
   build-windows:
     runs-on: windows-latest
