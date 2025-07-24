@@ -42,6 +42,27 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEBUG: electron-builder
 
+      - name: Clean up unwanted release assets
+        if: success()
+        run: |
+          # 安装 GitHub CLI 如果没有安装
+          if ! command -v gh &> /dev/null; then
+            curl -fsSL https://github.com/cli/cli/releases/latest/download/gh_linux_amd64.tar.gz | tar -xz
+            sudo mv gh_*/bin/gh /usr/local/bin/
+          fi
+          
+          # 删除不需要的文件
+          TAG_NAME="${{ github.ref_name }}"
+          gh release list --repo ${{ github.repository }}
+          
+          # 获取 release 中的所有 assets
+          gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME | jq -r '.assets[] | select(.name | endswith(".yml") or endswith(".yaml") or endsWith(".blockmap")) | .id' | while read asset_id; do
+            echo "Deleting asset ID: $asset_id"
+            gh api --method DELETE repos/${{ github.repository }}/releases/assets/$asset_id || true
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   publish-windows:
     runs-on: windows-latest
     timeout-minutes: 30
