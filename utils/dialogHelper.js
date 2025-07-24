@@ -364,15 +364,7 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
           console.log('CLOSE_DIALOG');
         }
         
-        // ESC 键关闭
-        document.addEventListener('keydown', function(event) {
-          if (event.key === 'Escape') {
-            // 阻止默认行为和事件冒泡，防止macOS意外退出
-            event.preventDefault();
-            event.stopPropagation();
-            closeDialog();
-          }
-        });
+        // ESC键绑定已删除，仅使用按钮关闭对话框
         
         // 自动聚焦按钮并绑定点击事件
         window.addEventListener('load', function() {
@@ -602,11 +594,8 @@ function showInfoDialog(parentWindow) {
 
     // 禁用开发者工具快捷键
     webContents.on('before-input-event', (event, input) => {
-      // ESC 键关闭窗口（macOS 用户习惯）
-      if (input.key === 'Escape') {
-        infoWindow.close();
-        return;
-      }
+      // ESC键绑定已删除，仅使用关闭按钮关闭窗口
+      
       // 只拦截开发者工具相关快捷键
       if (
         input.key === 'F12' ||
@@ -1005,15 +994,7 @@ function showInfoDialog(parentWindow) {
           console.log('OPEN_EXTERNAL_LINK:' + url);
         }
         
-        // 添加键盘事件监听（ESC键关闭窗口）
-        document.addEventListener('keydown', function(event) {
-          if (event.key === 'Escape') {
-            // 阻止默认行为和事件冒泡，防止macOS意外退出
-            event.preventDefault();
-            event.stopPropagation();
-            // 这里可以添加关闭窗口的逻辑
-          }
-        });
+        // ESC键绑定已删除，仅使用按钮关闭信息窗口
       </script>
     </body>
     </html>`;
