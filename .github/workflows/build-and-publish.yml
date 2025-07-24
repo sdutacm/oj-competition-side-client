@@ -1,3 +1,4 @@
+
 name: Build and Publish Release
 
 on:
@@ -76,10 +77,10 @@ jobs:
 
       - name: Check publish conditions
         run: |
-          if [[ ! "${{ github.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Warning: Tag format doesn't match semantic versioning pattern"
-          fi
-          echo "Ready to publish"
+          if (!("${{ github.ref }}" -match "^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$")) {
+            Write-Host "Warning: Tag format doesn't match semantic versioning pattern"
+          }
+          Write-Host "Ready to publish"
 
       - name: Publish Windows
         run: npm run publish:win
