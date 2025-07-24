@@ -32,6 +32,8 @@ jobs:
 
       - name: Build Linux (x64 - both AppImage and deb)
         run: npm run build:linux:both
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -59,6 +61,8 @@ jobs:
 
       - name: Build Windows
         run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -84,6 +88,8 @@ jobs:
 
       - name: Build macOS
         run: npm run build:mac:dmg
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4

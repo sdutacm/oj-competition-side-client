@@ -22,6 +22,9 @@
     "build:linux:appimage": "electron-builder --linux --x64 AppImage",
     "build:linux:deb": "electron-builder --linux --x64 deb",
     "build:linux:both": "electron-builder --linux --x64",
+    "publish:win": "electron-builder --win --publish=onTagOrDraft",
+    "publish:mac": "electron-builder --mac --publish=onTagOrDraft",
+    "publish:linux": "electron-builder --linux --publish=onTagOrDraft",
     "run:linux": "chmod +x scripts/run-linux.sh && ./scripts/run-linux.sh",
     "install:linux": "chmod +x scripts/install-linux.sh && ./scripts/install-linux.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -49,6 +52,11 @@
     ],
     "extraMetadata": {
       "version": "1.0.0"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "ATRIOR-LCL",
+      "repo": "oj-competition-side-client"
     },
     "afterPack": "./scripts/afterPack.js",
     "mac": {
@@ -101,8 +109,7 @@
         }
       ],
       "fileAssociations": [],
-      "protocols": [],
-      "publish": null
+      "protocols": []
     },
     "linux": {
       "icon": "public/icon.png",
