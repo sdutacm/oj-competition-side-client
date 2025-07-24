@@ -42,45 +42,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEBUG: electron-builder
 
-      - name: Clean up unwanted release assets
-        if: success()
-        run: |
-          sleep 10  # 等待发布完成
-          
-          # 删除不需要的文件
-          TAG_NAME="${{ github.ref_name }}"
-          echo "Cleaning up release assets for tag: $TAG_NAME"
-          
-          # 检查 release 是否存在，如果不存在则跳过
-          if ! gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME >/dev/null 2>&1; then
-            echo "Release for tag $TAG_NAME not found, skipping cleanup"
-            exit 0
-          fi
-          
-          # 使用 GitHub API 获取 release 信息并删除不需要的 assets
-          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME --jq '.id' 2>/dev/null || echo "")
-          
-          if [ -z "$RELEASE_ID" ]; then
-            echo "Could not get release ID, skipping cleanup"
-            exit 0
-          fi
-          
-          echo "Release ID: $RELEASE_ID"
-          
-          # 获取所有 assets 并过滤需要删除的文件
-          gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets --jq '.[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | {id: .id, name: .name}' 2>/dev/null | while read -r line; do
-            if [ -n "$line" ]; then
-              ASSET_ID=$(echo "$line" | jq -r '.id')
-              ASSET_NAME=$(echo "$line" | jq -r '.name')
-              echo "Deleting asset: $ASSET_NAME (ID: $ASSET_ID)"
-              gh api --method DELETE repos/${{ github.repository }}/releases/assets/$ASSET_ID || echo "Failed to delete $ASSET_NAME"
-            fi
-          done
-          
-          echo "Cleanup completed"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   publish-windows:
     runs-on: windows-latest
     timeout-minutes: 30
@@ -150,54 +111,50 @@ jobs:
     needs: [publish-linux, publish-windows, publish-macos]
     if: always() && (needs.publish-linux.result == 'success' || needs.publish-windows.result == 'success' || needs.publish-macos.result == 'success')
     steps:
-      - name: Final cleanup of release assets
+      - name: Clean unwanted files from release
         run: |
-          echo "Starting final cleanup of release assets"
-          TAG_NAME="${{ github.ref_name }}"
+          echo "🧹 Starting release cleanup for tag: ${{ github.ref_name }}"
           
-          # 等待一段时间确保所有发布操作完成
-          sleep 30
+          # 等待确保所有上传完成
+          sleep 20
           
-          # 检查 release 是否存在
-          if ! gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME >/dev/null 2>&1; then
-            echo "Release for tag $TAG_NAME not found, nothing to clean up"
+          # 获取 release ID
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/${{ github.ref_name }} --jq '.id' 2>/dev/null)
+          
+          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
+            echo "❌ Could not find release for tag ${{ github.ref_name }}"
             exit 0
           fi
           
-          # 获取 release 信息
-          RELEASE_DATA=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME 2>/dev/null)
+          echo "✅ Found release ID: $RELEASE_ID"
           
-          if [ -z "$RELEASE_DATA" ]; then
-            echo "Could not retrieve release data"
-            exit 0
-          fi
+          # 列出所有 assets
+          echo "📁 Current release assets:"
+          gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets --jq '.[] | "- \(.name) (ID: \(.id))"'
           
-          RELEASE_ID=$(echo "$RELEASE_DATA" | jq -r '.id')
-          echo "Release ID: $RELEASE_ID"
+          # 查找并删除不需要的文件
+          UNWANTED_ASSETS=$(gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets --jq '.[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | .id')
           
-          # 获取所有需要删除的 assets
-          ASSETS_TO_DELETE=$(echo "$RELEASE_DATA" | jq -r '.assets[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | .id' 2>/dev/null)
-          
-          if [ -n "$ASSETS_TO_DELETE" ]; then
-            echo "Found assets to delete:"
-            echo "$RELEASE_DATA" | jq -r '.assets[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | "- \(.name) (ID: \(.id))"'
+          if [ -n "$UNWANTED_ASSETS" ]; then
+            echo "🎯 Found unwanted assets to delete:"
+            gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets --jq '.[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | "- \(.name) (ID: \(.id))"'
             
-            # 逐个删除
-            echo "$ASSETS_TO_DELETE" | while read -r asset_id; do
+            echo "$UNWANTED_ASSETS" | while read -r asset_id; do
               if [ -n "$asset_id" ] && [ "$asset_id" != "null" ]; then
-                ASSET_NAME=$(echo "$RELEASE_DATA" | jq -r ".assets[] | select(.id == $asset_id) | .name")
-                echo "Deleting asset: $ASSET_NAME (ID: $asset_id)"
-                if gh api --method DELETE repos/${{ github.repository }}/releases/assets/$asset_id 2>/dev/null; then
-                  echo "✅ Deleted $ASSET_NAME"
+                ASSET_NAME=$(gh api repos/${{ github.repository }}/releases/assets/$asset_id --jq '.name' 2>/dev/null)
+                echo "🗑️  Deleting: $ASSET_NAME (ID: $asset_id)"
+                
+                if gh api --method DELETE repos/${{ github.repository }}/releases/assets/$asset_id; then
+                  echo "✅ Successfully deleted: $ASSET_NAME"
                 else
-                  echo "❌ Failed to delete $ASSET_NAME"
+                  echo "❌ Failed to delete: $ASSET_NAME"
                 fi
               fi
             done
           else
-            echo "No .yml, .yaml, or .blockmap files found in release"
+            echo "🎉 No unwanted files found!"
           fi
           
-          echo "Final cleanup completed"
+          echo "🏁 Cleanup completed!"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
