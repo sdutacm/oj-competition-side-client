@@ -113,38 +113,84 @@ jobs:
     steps:
       - name: Clean unwanted files from release
         run: |
+          set -e  # 启用错误时退出
+          
           echo "🧹 Starting release cleanup for tag: ${{ github.ref_name }}"
           
+          # 检查 GitHub CLI 是否可用
+          if ! command -v gh &> /dev/null; then
+            echo "❌ GitHub CLI not found"
+            exit 1
+          fi
+          
+          # 验证环境变量
+          if [ -z "$GH_TOKEN" ]; then
+            echo "❌ GH_TOKEN not set"
+            exit 1
+          fi
+          
+          # 测试 GitHub API 连接
+          echo "🔗 Testing GitHub API connection..."
+          if ! gh api user > /dev/null 2>&1; then
+            echo "❌ Cannot connect to GitHub API"
+            exit 1
+          fi
+          echo "✅ GitHub API connection successful"
+          
           # 等待确保所有上传完成
+          echo "⏰ Waiting 20 seconds for uploads to complete..."
           sleep 20
           
-          # 获取 release ID
-          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/${{ github.ref_name }} --jq '.id' 2>/dev/null)
+          echo "📡 Attempting to get release for tag: ${{ github.ref_name }}"
+          
+          # 获取 release ID，添加详细错误信息
+          RELEASE_RESPONSE=$(gh api repos/${{ github.repository }}/releases/tags/${{ github.ref_name }} 2>&1) || {
+            echo "❌ Failed to get release information:"
+            echo "$RELEASE_RESPONSE"
+            echo "🔍 Checking if release exists..."
+            gh api repos/${{ github.repository }}/releases --jq '.[] | select(.tag_name == "${{ github.ref_name }}") | {id, tag_name, name}' || true
+            exit 1
+          }
+          
+          RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id' 2>/dev/null)
           
           if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
-            echo "❌ Could not find release for tag ${{ github.ref_name }}"
-            exit 0
+            echo "❌ Could not extract release ID from response"
+            echo "📄 Response: $RELEASE_RESPONSE"
+            exit 1
           fi
           
           echo "✅ Found release ID: $RELEASE_ID"
           
           # 列出所有 assets
+          echo "📁 Getting current release assets..."
+          ASSETS_RESPONSE=$(gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets 2>&1) || {
+            echo "❌ Failed to get assets:"
+            echo "$ASSETS_RESPONSE"
+            exit 1
+          }
+          
           echo "📁 Current release assets:"
-          gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets --jq '.[] | "- \(.name) (ID: \(.id))"'
+          echo "$ASSETS_RESPONSE" | jq -r '.[] | "- \(.name) (ID: \(.id))"' || {
+            echo "❌ Failed to parse assets response"
+            echo "📄 Raw response: $ASSETS_RESPONSE"
+            exit 1
+          }
           
           # 查找并删除不需要的文件
-          UNWANTED_ASSETS=$(gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets --jq '.[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | .id')
+          echo "🔍 Looking for unwanted assets..."
+          UNWANTED_ASSETS=$(echo "$ASSETS_RESPONSE" | jq -r '.[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | .id' 2>/dev/null)
           
-          if [ -n "$UNWANTED_ASSETS" ]; then
+          if [ -n "$UNWANTED_ASSETS" ] && [ "$UNWANTED_ASSETS" != "" ]; then
             echo "🎯 Found unwanted assets to delete:"
-            gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets --jq '.[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | "- \(.name) (ID: \(.id))"'
+            echo "$ASSETS_RESPONSE" | jq -r '.[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | "- \(.name) (ID: \(.id))"'
             
             echo "$UNWANTED_ASSETS" | while read -r asset_id; do
               if [ -n "$asset_id" ] && [ "$asset_id" != "null" ]; then
-                ASSET_NAME=$(gh api repos/${{ github.repository }}/releases/assets/$asset_id --jq '.name' 2>/dev/null)
+                ASSET_NAME=$(echo "$ASSETS_RESPONSE" | jq -r ".[] | select(.id == $asset_id) | .name" 2>/dev/null)
                 echo "🗑️  Deleting: $ASSET_NAME (ID: $asset_id)"
                 
-                if gh api --method DELETE repos/${{ github.repository }}/releases/assets/$asset_id; then
+                if gh api --method DELETE repos/${{ github.repository }}/releases/assets/$asset_id 2>/dev/null; then
                   echo "✅ Successfully deleted: $ASSET_NAME"
                 else
                   echo "❌ Failed to delete: $ASSET_NAME"
@@ -155,6 +201,6 @@ jobs:
             echo "🎉 No unwanted files found!"
           fi
           
-          echo "🏁 Cleanup completed!"
+          echo "🏁 Cleanup completed successfully!"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
