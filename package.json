@@ -1,6 +1,6 @@
 {
   "name": "oj-competition-side-client",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端应用程序",
   "author": {
     "name": "ATRIOR-LCL",
@@ -52,7 +52,7 @@
       "package.json"
     ],
     "extraMetadata": {
-      "version": "1.1.0"
+      "version": "1.1.2"
     },
     "publish": {
       "provider": "github",
@@ -70,7 +70,6 @@
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "type": "development",
-      "publisherName": "ATRIOR-LCL",
       "target": [
         {
           "target": "dmg",
@@ -84,7 +83,6 @@
     },
     "win": {
       "icon": "public/favicon.ico",
-      "publisherName": "ATRIOR-LCL",
       "target": [
         {
           "target": "nsis",
