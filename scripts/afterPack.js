@@ -6,12 +6,18 @@ const fs = require('fs');
  * Handles platform-specific post-packaging tasks
  */
 module.exports = async function afterPack(context) {
-  console.log('AfterPack hook called for:', context.platformName);
+  const platformName = context.platformName || context.platform?.name || process.platform;
+  console.log('AfterPack hook called for:', platformName);
   console.log('Build platform:', process.platform);
+  console.log('Context platform info:', {
+    platformName: context.platformName,
+    platform: context.platform,
+    arch: context.arch
+  });
 
   // Only process Windows builds for icon embedding
-  if (context.platformName !== 'win32') {
-    console.log('Skipping afterPack for non-Windows platform:', context.platformName);
+  if (platformName !== 'win32') {
+    console.log('Skipping afterPack for non-Windows platform:', platformName);
     return;
   }
 
