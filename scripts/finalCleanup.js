@@ -47,10 +47,28 @@ async function cleanAllUnwantedFiles(dir) {
         await cleanAllUnwantedFiles(fullPath);
       } else if (entry.isFile()) {
         const fileName = entry.name;
+        let shouldDelete = false;
+        let reason = '';
+        
+        // 删除 .yml, .yaml, .blockmap 文件
         if (fileName.endsWith('.yml') || fileName.endsWith('.yaml') || fileName.endsWith('.blockmap')) {
+          shouldDelete = true;
+          reason = '配置/映射文件';
+        }
+        
+        // 删除不带架构标识的 Windows 文件
+        const isWindowsFile = fileName.includes('windows') && fileName.endsWith('.exe');
+        const hasArchIdentifier = fileName.includes('_x64_') || fileName.includes('_arm64_');
+        
+        if (isWindowsFile && !hasArchIdentifier) {
+          shouldDelete = true;
+          reason = '不带架构标识的 Windows 文件';
+        }
+        
+        if (shouldDelete) {
           try {
             await fs.unlink(fullPath);
-            console.log('🚫 物理删除文件:', path.relative(process.cwd(), fullPath));
+            console.log(`🚫 物理删除文件 (${reason}):`, path.relative(process.cwd(), fullPath));
           } catch (error) {
             console.log('删除文件失败:', fileName, error.message);
           }

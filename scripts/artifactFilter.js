@@ -6,28 +6,40 @@ module.exports = async function(context) {
   console.log('artifactBuildCompleted hook called');
   console.log('Artifact file:', context.file);
   console.log('Context keys:', Object.keys(context));
+  console.log('Context arch:', context.arch);
+  console.log('Context target:', context.target);
   
   const fileName = path.basename(context.file);
+  console.log('Processing file:', fileName);
   
   // 如果是 .yml 或 .blockmap 文件，不发布此文件
   if (fileName.endsWith('.yml') || fileName.endsWith('.yaml') || fileName.endsWith('.blockmap')) {
-    console.log('🚫 跳过发布文件:', fileName);
+    console.log('🚫 跳过发布文件 (配置/映射文件):', fileName);
     return null; // 返回 null 表示不发布此文件
   }
   
-  // 过滤不带架构标识的 Windows 文件
-  // 这些文件通常是默认生成的，我们只要带有 x64 或 arm64 标识的版本
+  // 更精确的 Windows 文件过滤逻辑
   const isWindowsFile = fileName.includes('windows');
-  const hasArchIdentifier = fileName.includes('_x64_') || fileName.includes('_arm64_');
   
-  if (isWindowsFile && !hasArchIdentifier) {
-    // 检查是否存在对应的带架构标识的文件
-    const hasX64Version = fileName.replace(/(_\d+\.\d+\.\d+)\./, '_x64$1.');
-    const hasArm64Version = fileName.replace(/(_\d+\.\d+\.\d+)\./, '_arm64$1.');
+  if (isWindowsFile) {
+    // 检查文件名是否包含架构标识符
+    const hasX64 = fileName.includes('_x64_');
+    const hasArm64 = fileName.includes('_arm64_');
+    const hasArchIdentifier = hasX64 || hasArm64;
     
-    console.log('🚫 跳过不带架构标识的 Windows 文件:', fileName);
-    console.log('   (应该有对应的 x64 和 arm64 版本)');
-    return null; // 不发布不带架构标识的文件
+    console.log(`Windows file analysis for: ${fileName}`);
+    console.log(`  - Has x64 identifier: ${hasX64}`);
+    console.log(`  - Has arm64 identifier: ${hasArm64}`);
+    console.log(`  - Has any arch identifier: ${hasArchIdentifier}`);
+    
+    if (!hasArchIdentifier) {
+      // 这是一个不带架构标识符的 Windows 文件，需要过滤掉
+      console.log('🚫 跳过不带架构标识的 Windows 文件:', fileName);
+      console.log('   理由: Windows 文件必须包含 _x64_ 或 _arm64_ 标识符');
+      return null; // 不发布不带架构标识的文件
+    } else {
+      console.log('✅ 允许发布带架构标识的 Windows 文件:', fileName);
+    }
   }
   
   console.log('✅ 允许发布文件:', fileName);
