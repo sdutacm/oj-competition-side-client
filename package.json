@@ -1,6 +1,6 @@
 {
   "name": "oj-competition-side-client",
-  "version": "1.1.20",
+  "version": "1.1.21",
   "description": "SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端应用程序",
   "author": {
     "name": "ATRIOR-LCL",
@@ -57,7 +57,7 @@
       "!**/*.blockmap"
     ],
     "extraMetadata": {
-      "version": "1.1.20"
+      "version": "1.1.21"
     },
     "publish": [
       {
@@ -69,6 +69,7 @@
     "artifactBuildStarted": "./scripts/buildStarted.js",
     "artifactBuildCompleted": "./scripts/artifactFilter.js",
     "afterAllArtifactBuild": "./scripts/finalCleanup.js",
+    "beforePublish": "./scripts/beforePublish.js",
     "afterPack": "./scripts/afterPack.js",
     "mac": {
       "icon": "public/favicon.icns",
@@ -192,7 +193,8 @@
       "perMachine": false,
       "allowElevation": false,
       "deleteAppDataOnUninstall": false,
-      "include": "build/installer.nsh"
+      "include": "build/installer.nsh",
+      "differentialPackage": false
     },
     "portable": {
       "artifactName": "SDUTOJCompetitionSideClient_windows_protable_${arch}_${version}.${ext}",
