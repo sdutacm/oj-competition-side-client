@@ -32,7 +32,7 @@
     "rcedit": "^4.0.1"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=20.0.0"
   },
   "build": {
     "appId": "org.sdutacm.SDUTOJCompetitionSideClient",
