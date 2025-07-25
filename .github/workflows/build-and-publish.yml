@@ -261,6 +261,7 @@ jobs:
 
   upload-to-cos:
     runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3小时超时，适合大文件上传
     needs: [cleanup-release]
     if: always() && needs.cleanup-release.result == 'success'
     steps:
@@ -563,11 +564,12 @@ jobs:
               print("⏱️  Creating COS configuration...", flush=True)
 
               try:
+                  # 配置，增加超时设置到30分钟用于大文件上传
                   config = CosConfig(
                       Region=region, 
                       SecretId=secret_id, 
                       SecretKey=secret_key,
-                      Timeout=300
+                      Timeout=1800  # 30分钟超时，适合大文件上传
                   )
                   print("✅ COS configuration created successfully", flush=True)
                   
@@ -672,12 +674,12 @@ jobs:
           echo "✅ Python script file created"
           echo "📄 Script size: $(wc -l upload_cos.py | cut -d' ' -f1) lines"
           
-          # 运行Python脚本并添加超时
-          echo "🚀 Executing Python script with timeout..."
-          timeout 1800 python3 upload_cos.py || {
+          # 运行Python脚本并添加超时（2小时用于大文件上传）
+          echo "🚀 Executing Python script with 2-hour timeout for large files..."
+          timeout 7200 python3 upload_cos.py || {
             TIMEOUT_EXIT=$?
             if [ $TIMEOUT_EXIT -eq 124 ]; then
-              echo "❌ Python script timed out after 30 minutes"
+              echo "❌ Python script timed out after 2 hours"
             else
               echo "❌ Python script failed with exit code: $TIMEOUT_EXIT"
             fi
