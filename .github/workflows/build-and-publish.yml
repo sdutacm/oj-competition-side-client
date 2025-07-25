@@ -476,222 +476,186 @@ jobs:
             console.log(`✅ Created index with ${files.length} files`);
             console.log(`📁 Version directory: ${cdnUrl.replace(/\/$/, '')}/${versionPath}/`);
 
-      - name: Upload all files to COS using Python SDK
-        run: |
-          echo "🔧 Setting up Tencent Cloud COS upload..."
-          
-          # 显示Python和pip版本
-          echo "🐍 Python version: $(python3 --version)"
-          echo "📦 pip version: $(pip3 --version)"
-          
-          # 安装Python COS SDK，添加超时和详细输出
-          echo "📥 Installing Python COS SDK with timeout..."
-          timeout 300 pip3 install --verbose --timeout=60 cos-python-sdk-v5 || {
-            echo "❌ pip install timeout or failed, trying with different mirror..."
-            timeout 300 pip3 install --verbose --timeout=60 -i https://pypi.tuna.tsinghua.edu.cn/simple cos-python-sdk-v5 || {
-              echo "❌ Failed to install COS SDK, exiting..."
-              exit 1
+      - name: Upload all files to COS using JavaScript SDK
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.atriordsa }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            console.log('� Setting up Tencent Cloud COS upload with JavaScript SDK...');
+            
+            // 安装腾讯云COS JavaScript SDK
+            console.log('� Installing Tencent Cloud COS JavaScript SDK...');
+            const { execSync } = require('child_process');
+            
+            try {
+              execSync('npm install cos-nodejs-sdk-v5', { stdio: 'inherit' });
+              console.log('✅ COS JavaScript SDK installed successfully');
+            } catch (error) {
+              console.error('❌ Failed to install COS SDK:', error.message);
+              process.exit(1);
             }
-          }
-          echo "✅ COS SDK installed successfully"
-          
-          # 验证installation
-          echo "🔍 Verifying installation..."
-          python3 -c "import qcloud_cos; print('✅ COS SDK import successful')" || {
-            echo "❌ Failed to import COS SDK"
-            exit 1
-          }
-          
-          # 创建内嵌的Python上传脚本
-          echo "📁 Starting upload to COS using embedded Python script..."
-          
-          # 首先创建一个简单的测试脚本验证Python环境
-          echo "🧪 Testing Python environment first..."
-          python3 -c "
-          import sys
-          print('🐍 Python executable:', sys.executable, flush=True)
-          print('🔧 Python version:', sys.version, flush=True)
-          import os
-          print('📁 Current directory:', os.getcwd())
-          print('📄 Files in current directory:', flush=True)
-          for f in os.listdir('.'):
-              print(f'  - {f}', flush=True)
-          print('✅ Python environment test completed', flush=True)
-          "
-          
-          # 创建Python脚本文件而不是使用heredoc
-          cat > upload_cos.py << 'PYTHON_SCRIPT_END'
-          #!/usr/bin/env python3
-          import os
-          import sys
-          import time
-          print("🔧 Python script started...", flush=True)
-          
-          try:
-              print("📦 Importing COS libraries...", flush=True)
-              from qcloud_cos import CosConfig
-              from qcloud_cos import CosS3Client
-              print("✅ COS libraries imported successfully", flush=True)
-          except Exception as e:
-              print(f"❌ Failed to import COS libraries: {e}", flush=True)
-              sys.exit(1)
-
-          def format_file_size(size_bytes):
-              if size_bytes == 0:
-                  return "0B"
-              size_names = ['B', 'KB', 'MB', 'GB']
-              i = 0
-              while size_bytes >= 1024 and i < len(size_names) - 1:
-                  size_bytes /= 1024.0
-                  i += 1
-              return f"{size_bytes:.1f}{size_names[i]}"
-
-          def main():
-              print("🚀 Main function started...", flush=True)
+            
+            // 导入COS SDK
+            console.log('📦 Importing COS SDK...');
+            const COS = require('cos-nodejs-sdk-v5');
+            console.log('✅ COS SDK imported successfully');
+            
+            // 从环境变量获取配置
+            console.log('🔍 Reading environment variables...');
+            const secretId = process.env.COS_SECRET_ID;
+            const secretKey = process.env.COS_SECRET_KEY;
+            const region = process.env.COS_REGION;
+            const bucket = process.env.COS_BUCKET;
+            const tagName = process.env.TAG_NAME;
+            
+            if (!secretId || !secretKey || !region || !bucket || !tagName) {
+              console.error('❌ Missing required environment variables');
+              process.exit(1);
+            }
+            
+            console.log(`🔧 Configuring COS client for region: ${region}, bucket: ${bucket}`);
+            
+            // 创建COS客户端
+            const cos = new COS({
+              SecretId: secretId,
+              SecretKey: secretKey,
+              Timeout: 1800000, // 30分钟超时，适合大文件上传
+            });
+            console.log('✅ COS client created successfully');
+            
+            // 工具函数：格式化文件大小
+            function formatFileSize(bytes) {
+              if (bytes === 0) return '0B';
+              const k = 1024;
+              const sizes = ['B', 'KB', 'MB', 'GB'];
+              const i = Math.floor(Math.log(bytes) / Math.log(k));
+              return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
+            }
+            
+            // 检查下载目录
+            console.log('📁 Checking downloads directory...');
+            const downloadsDir = './downloads';
+            if (!fs.existsSync(downloadsDir)) {
+              console.error('❌ Downloads directory not found');
+              process.exit(1);
+            }
+            
+            // 扫描文件
+            console.log(`📁 Scanning directory: ${downloadsDir}`);
+            const allFiles = fs.readdirSync(downloadsDir);
+            const files = allFiles.filter(f => {
+              const filePath = path.join(downloadsDir, f);
+              return fs.statSync(filePath).isFile() && f !== 'assets.json';
+            });
+            
+            console.log(`📦 Found ${files.length} files to upload`);
+            
+            // 计算总大小
+            let totalSize = 0;
+            const fileSizes = {};
+            
+            for (const filename of files) {
+              const filePath = path.join(downloadsDir, filename);
+              const size = fs.statSync(filePath).size;
+              fileSizes[filename] = size;
+              totalSize += size;
+            }
+            
+            console.log(`📊 Total size to upload: ${formatFileSize(totalSize)}`);
+            
+            // 上传文件函数
+            function uploadFile(filePath, key) {
+              return new Promise((resolve, reject) => {
+                const startTime = Date.now();
+                
+                cos.uploadFile({
+                  Bucket: bucket,
+                  Region: region,
+                  Key: key,
+                  FilePath: filePath,
+                  onProgress: function(progressData) {
+                    // 可选：显示上传进度
+                    // console.log(`Progress: ${Math.round(progressData.percent * 100)}%`);
+                  }
+                }, function(err, data) {
+                  const uploadTime = (Date.now() - startTime) / 1000;
+                  
+                  if (err) {
+                    console.error(`❌ Upload failed: ${err.message}`);
+                    reject(err);
+                  } else {
+                    const fileSize = fileSizes[path.basename(filePath)];
+                    const speed = uploadTime > 0 ? fileSize / uploadTime : 0;
+                    
+                    console.log(`✅ Successfully uploaded: ${path.basename(filePath)}`);
+                    console.log(`   Time: ${uploadTime.toFixed(1)}s, Speed: ${formatFileSize(speed)}/s`);
+                    resolve(data);
+                  }
+                });
+              });
+            }
+            
+            // 开始上传
+            const uploadedFiles = [];
+            let uploadedSize = 0;
+            let success = true;
+            
+            for (let i = 0; i < files.length; i++) {
+              const filename = files[i];
+              const filePath = path.join(downloadsDir, filename);
+              const fileSize = fileSizes[filename];
               
-              print("🔍 Reading environment variables...", flush=True)
-              secret_id = os.environ.get('COS_SECRET_ID')
-              secret_key = os.environ.get('COS_SECRET_KEY')  
-              region = os.environ.get('COS_REGION')
-              bucket = os.environ.get('COS_BUCKET')
-              tag_name = os.environ.get('TAG_NAME')
-
-              if not all([secret_id, secret_key, region, bucket, tag_name]):
-                  print("❌ Missing required environment variables", flush=True)
-                  sys.exit(1)
-
-              print(f"🔧 Configuring COS client for region: {region}, bucket: {bucket}", flush=True)
-              print("⏱️  Creating COS configuration...", flush=True)
-
-              try:
-                  # 配置，增加超时设置到30分钟用于大文件上传
-                  config = CosConfig(
-                      Region=region, 
-                      SecretId=secret_id, 
-                      SecretKey=secret_key,
-                      Timeout=1800  # 30分钟超时，适合大文件上传
-                  )
-                  print("✅ COS configuration created successfully", flush=True)
-                  
-                  print("🌐 Creating COS client...", flush=True)
-                  client = CosS3Client(config)
-                  print("✅ COS client created successfully", flush=True)
-                  
-              except Exception as e:
-                  print(f"❌ Failed to create COS client: {e}", flush=True)
-                  sys.exit(1)
-
-              print("📁 Checking downloads directory...", flush=True)
-              downloads_dir = './downloads'
-              if not os.path.exists(downloads_dir):
-                  print("❌ Downloads directory not found", flush=True)
-                  sys.exit(1)
-
-              print(f"📁 Scanning directory: {downloads_dir}", flush=True)
-              files = [f for f in os.listdir(downloads_dir) if os.path.isfile(os.path.join(downloads_dir, f)) and f != 'assets.json']
-              print(f"📦 Found {len(files)} files to upload")
-
-              total_size = 0
-              file_sizes = {}
-              for filename in files:
-                  filepath = os.path.join(downloads_dir, filename)
-                  size = os.path.getsize(filepath)
-                  file_sizes[filename] = size
-                  total_size += size
+              try {
+                const key = `atrior/oj-competition-side-client/releases/${tagName}/${filename}`;
+                console.log(`📤 [${i + 1}/${files.length}] Uploading: ${filename} (${formatFileSize(fileSize)})`);
+                console.log(`   Local: ${filePath}`);
+                console.log(`   Remote: ${key}`);
+                
+                await uploadFile(filePath, key);
+                
+                uploadedSize += fileSize;
+                const progress = (uploadedSize / totalSize * 100).toFixed(1);
+                console.log(`   Progress: ${uploadedSize}/${totalSize} (${progress}%)`);
+                
+                uploadedFiles.push(filename);
+              } catch (error) {
+                console.error(`❌ Failed to upload ${filename}: ${error.message}`);
+                success = false;
+              }
+            }
+            
+            // 上传摘要
+            console.log('\n📊 Upload Summary:');
+            console.log(`✅ Successfully uploaded: ${uploadedFiles.length} files`);
+            if (uploadedFiles.length > 0) {
+              uploadedFiles.forEach(f => console.log(`  - ${f}`));
+            }
+            
+            if (success) {
+              console.log(`\n🎉 All ${files.length} files uploaded successfully to COS!`);
+              console.log(`📂 Remote path: atrior/oj-competition-side-client/releases/${tagName}/`);
               
-              print(f"📊 Total size to upload: {format_file_size(total_size)}")
-
-              success = True
-              uploaded_files = []
-              uploaded_size = 0
-
-              for i, filename in enumerate(files, 1):
-                  filepath = os.path.join(downloads_dir, filename)
-                  file_size = file_sizes[filename]
+              // 上传index.json
+              const indexFile = path.join(downloadsDir, 'index.json');
+              if (fs.existsSync(indexFile)) {
+                try {
+                  const indexSize = fs.statSync(indexFile).size;
+                  const indexKey = `atrior/oj-competition-side-client/releases/${tagName}/index.json`;
+                  console.log(`📋 Uploading index.json (${formatFileSize(indexSize)})...`);
                   
-                  try:
-                      key = f'atrior/oj-competition-side-client/releases/{tag_name}/{filename}'
-                      print(f"📤 [{i}/{len(files)}] Uploading: {filename} ({format_file_size(file_size)})")
-                      print(f"   Local: {filepath}", flush=True)
-                      print(f"   Remote: {key}", flush=True)
-                      
-                      start_time = time.time()
-                      client.upload_file(
-                          Bucket=bucket,
-                          LocalFilePath=filepath,
-                          Key=key
-                      )
-                      upload_time = time.time() - start_time
-                      
-                      uploaded_size += file_size
-                      speed = file_size / upload_time if upload_time > 0 else 0
-                      
-                      print(f"✅ Successfully uploaded: {filename}", flush=True)
-                      print(f"   Time: {upload_time:.1f}s, Speed: {format_file_size(speed)}/s")
-                      print(f"   Progress: {uploaded_size}/{total_size} ({100*uploaded_size/total_size:.1f}%)")
-                      uploaded_files.append(filename)
-                      
-                  except Exception as e:
-                      print(f"❌ Failed to upload {filename}: {str(e)}")
-                      success = False
-
-              print(f"\n📊 Upload Summary:", flush=True)
-              print(f"✅ Successfully uploaded: {len(uploaded_files)} files")
-              if uploaded_files:
-                  for f in uploaded_files:
-                      print(f"  - {f}", flush=True)
-
-              if success:
-                  print(f"\n🎉 All {len(files)} files uploaded successfully to COS!")
-                  print(f"📂 Remote path: atrior/oj-competition-side-client/releases/{tag_name}/", flush=True)
-                  
-                  index_file = os.path.join(downloads_dir, 'index.json')
-                  if os.path.exists(index_file):
-                      try:
-                          index_size = os.path.getsize(index_file)
-                          index_key = f'atrior/oj-competition-side-client/releases/{tag_name}/index.json'
-                          print(f"📋 Uploading index.json ({format_file_size(index_size)})...")
-                          
-                          start_time = time.time()
-                          client.upload_file(
-                              Bucket=bucket,
-                              LocalFilePath=index_file,
-                              Key=index_key
-                          )
-                          upload_time = time.time() - start_time
-                          print(f"✅ Successfully uploaded index.json in {upload_time:.1f}s", flush=True)
-                      except Exception as e:
-                          print(f"❌ Failed to upload index.json: {str(e)}")
-              else:
-                  print("\n❌ Some uploads failed", flush=True)
-                  sys.exit(1)
-
-          if __name__ == "__main__":
-              main()
-          PYTHON_SCRIPT_END
-
-          # 显示脚本文件已创建
-          echo "✅ Python script file created"
-          echo "📄 Script size: $(wc -l upload_cos.py | cut -d' ' -f1) lines"
-          
-          # 运行Python脚本并添加超时（2小时用于大文件上传）
-          echo "🚀 Executing Python script with 2-hour timeout for large files..."
-          timeout 7200 python3 upload_cos.py || {
-            TIMEOUT_EXIT=$?
-            if [ $TIMEOUT_EXIT -eq 124 ]; then
-              echo "❌ Python script timed out after 2 hours"
-            else
-              echo "❌ Python script failed with exit code: $TIMEOUT_EXIT"
-            fi
-            exit 1
-          }
-          
-          if [ $? -eq 0 ]; then
-            echo "✅ COS upload completed successfully!"
-          else
-            echo "❌ COS upload failed"
-            exit 1
-          fi
+                  await uploadFile(indexFile, indexKey);
+                  console.log('✅ Successfully uploaded index.json');
+                } catch (error) {
+                  console.error(`❌ Failed to upload index.json: ${error.message}`);
+                }
+              }
+            } else {
+              console.error('\n❌ Some uploads failed');
+              process.exit(1);
+            }
         env:
           COS_SECRET_ID: ${{ secrets.COS_SECRET_ID }}
           COS_SECRET_KEY: ${{ secrets.COS_SECRET_KEY }}
