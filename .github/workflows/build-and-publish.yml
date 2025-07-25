@@ -523,8 +523,7 @@ jobs:
                   Region=region, 
                   SecretId=secret_id, 
                   SecretKey=secret_key,
-                  Timeout=300,  # 5分钟超时
-                  Max_retry=3   # 最多重试3次
+                  Timeout=300  # 5分钟超时
               )
               client = CosS3Client(config)
 
