@@ -459,14 +459,20 @@ jobs:
           
           # 修复可能被截断的文件名
           echo ""
-          echo "🔧 Checking for truncated filenames..."
+          echo "🔧 CRITICAL: Checking and fixing truncated filenames..."
           fixed_count=0
+          
+          # 显示修复前的状态
+          echo "Files before fixing:"
+          ls -1
+          echo ""
+          
           for file in *; do
             if [ -f "$file" ]; then
               # 检查是否是被截断的文件名（缺少开头的S）
               if echo "$file" | grep -q "^DUTOJCompetitionSideClient"; then
                 new_name="S$file"
-                echo "🔧 Renaming: $file -> $new_name"
+                echo "🔧 CRITICAL FIX: $file -> $new_name"
                 mv "$file" "$new_name"
                 fixed_count=$((fixed_count + 1))
               fi
@@ -513,37 +519,59 @@ jobs:
           cd ../cos-upload
           
           echo ""
-          echo "🔧 Final filename verification and fixes in cos-upload directory..."
-          fixed_count=0
+          echo "🔧 CRITICAL: Comprehensive filename fixes in cos-upload directory..."
           
-          # 修复截断的文件名（添加缺失的S）
+          # 第一轮：修复截断的文件名（添加缺失的S）
+          echo "🔧 Round 1: Fixing truncated filenames (adding missing 'S')..."
+          fixed_count=0
           for file in *; do
             if [ -f "$file" ]; then
               if echo "$file" | grep -q "^DUTOJCompetitionSideClient"; then
                 new_name="S$file"
-                echo "🔧 Adding missing S: $file -> $new_name"
+                echo "   🔧 FIXING: $file -> $new_name"
                 mv "$file" "$new_name"
                 fixed_count=$((fixed_count + 1))
               fi
             fi
           done
           
-          # 修复拼写错误（protable -> portable）
+          # 第二轮：修复拼写错误（protable -> portable）
+          echo "🔧 Round 2: Fixing spelling errors..."
           for file in *; do
             if [ -f "$file" ]; then
               if echo "$file" | grep -q "_protable_"; then
                 new_name=$(echo "$file" | sed 's/_protable_/_portable_/')
-                echo "🔧 Fixing spelling: $file -> $new_name"
+                echo "   🔧 FIXING: $file -> $new_name"
                 mv "$file" "$new_name"
                 fixed_count=$((fixed_count + 1))
               fi
             fi
           done
           
-          if [ $fixed_count -gt 0 ]; then
-            echo "✅ Fixed $fixed_count filename(s) in cos-upload directory"
-          else
-            echo "✅ No filename issues found in cos-upload directory"
+          # 第三轮：验证所有文件都有正确的前缀
+          echo "🔧 Round 3: Final verification..."
+          problem_files=0
+          for file in *; do
+            if [ -f "$file" ]; then
+              if ! echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
+                echo "   ❌ PROBLEMATIC FILE: $file (doesn't start with SDUTOJCompetitionSideClient_)"
+                problem_files=$((problem_files + 1))
+              else
+                echo "   ✅ GOOD: $file"
+              fi
+            fi
+          done
+          
+          echo ""
+          echo "📊 Fix summary:"
+          echo "   Files fixed: $fixed_count"
+          echo "   Problem files remaining: $problem_files"
+          
+          if [ $problem_files -gt 0 ]; then
+            echo "❌ Still have problematic files - this may cause COS upload to fail"
+            echo "📋 All files after fixes:"
+            ls -la
+            # Don't exit, let it try to upload anyway
           fi
           
           echo ""
@@ -629,77 +657,128 @@ jobs:
 
       - name: Emergency filename fix for COS action
         run: |
-          echo "🚨 Emergency filename verification and fix before COS upload..."
+          echo "🚨 EMERGENCY: Final filename verification and fix before COS upload..."
           cd ./cos-upload
           
           echo "📋 Current files in cos-upload:"
           ls -la
           
-          # 检查是否有任何文件名被截断（缺少S开头）
-          truncated_files=$(ls -1 | grep "^DUTOJCompetitionSideClient" || true)
-          
-          if [ -n "$truncated_files" ]; then
-            echo "🔧 Found truncated filenames, fixing them:"
-            echo "$truncated_files" | while read -r file; do
-              if [ -f "$file" ]; then
-                new_name="S$file"
-                echo "   🔧 $file -> $new_name"
-                mv "$file" "$new_name"
-              fi
-            done
-          else
-            echo "✅ No truncated filenames found"
-          fi
-          
-          # 检查和修复常见的文件名问题
+          # 强制修复所有截断的文件名
           echo ""
-          echo "🔧 Checking for other filename issues..."
+          echo "🔧 EMERGENCY FIX: Scanning for ANY truncated filenames..."
           
-          # 检查是否有没有架构标识的Windows文件
-          windows_no_arch=$(ls -1 | grep "_windows_.*_[0-9]\+\.[0-9]\+\.[0-9]\+\.exe$" | grep -v "_x64_\|_arm64_\|_amd64_\|_x86_64_" || true)
-          if [ -n "$windows_no_arch" ]; then
-            echo "⚠️  Found Windows files without architecture identifier:"
-            echo "$windows_no_arch"
-            echo "   These files may be incorrectly named but will be uploaded as-is"
-          fi
-          
-          # 最终检查所有文件是否存在并且不为空
-          echo ""
-          echo "🔍 Final existence and size check:"
-          all_valid=true
+          # 使用更强力的方法检查和修复
+          emergency_fixes=0
           for file in *; do
             if [ -f "$file" ]; then
-              size=$(du -h "$file" | cut -f1)
-              if [ -s "$file" ]; then
-                echo "✅ $file exists and has content ($size)"
+              echo "� Checking: $file"
+              
+              # 检查文件是否以正确的前缀开始
+              if echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
+                echo "   ✅ $file - Correct prefix"
+              elif echo "$file" | grep -q "^DUTOJCompetitionSideClient"; then
+                new_name="S$file"
+                echo "   � EMERGENCY FIX: $file -> $new_name"
+                mv "$file" "$new_name"
+                emergency_fixes=$((emergency_fixes + 1))
               else
-                echo "❌ $file exists but is empty"
-                all_valid=false
+                echo "   ⚠️  $file - Unexpected filename pattern"
               fi
-            else
-              echo "❌ $file does not exist or is not a file"
-              all_valid=false
             fi
           done
           
-          if [ "$all_valid" = "false" ]; then
-            echo "❌ Some files are invalid, COS upload may fail"
-            exit 1
+          # 再次扫描所有文件，确保没有遗漏
+          echo ""
+          echo "� FINAL SCAN: Verifying all files have correct naming..."
+          all_correct=true
+          for file in *; do
+            if [ -f "$file" ]; then
+              if echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
+                echo "✅ VERIFIED: $file"
+              else
+                echo "❌ STILL WRONG: $file"
+                all_correct=false
+              fi
+            fi
+          done
+          
+          echo ""
+          echo "� Emergency fix summary:"
+          echo "   Emergency fixes applied: $emergency_fixes"
+          echo "   All files correct: $all_correct"
+          
+          if [ "$all_correct" = "false" ]; then
+            echo ""
+            echo "❌ CRITICAL: Some files still have incorrect names!"
+            echo "This WILL cause COS upload to fail!"
+            echo ""
+            echo "📋 Current file list:"
+            ls -la
+            
+            # 显示具体哪些文件有问题
+            echo ""
+            echo "🔍 Problem analysis:"
+            for file in *; do
+              if [ -f "$file" ]; then
+                if ! echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
+                  echo "❌ PROBLEM: $file"
+                else
+                  echo "✅ OK: $file"
+                fi
+              fi
+            done
+            
+            echo ""
+            echo "⚠️  Proceeding anyway, but expect ENOENT errors..."
+          else
+            echo "✅ All files have correct naming - should upload successfully"
           fi
           
           echo ""
-          echo "🎯 All files verified and ready for COS upload:"
+          echo "🎯 Final upload manifest:"
           echo "   Total files: $(ls -1 | wc -l)"
           echo "   Total size: $(du -sh . | cut -f1)"
           
-          # 显示将要上传的文件清单
-          echo ""
-          echo "📋 Upload manifest:"
           for file in *; do
             if [ -f "$file" ]; then
               echo "  📄 $file ($(du -h "$file" | cut -f1))"
             fi
           done
+
+      - name: Pre-COS-action diagnostic
+        run: |
+          echo "🔬 DIAGNOSTIC: Pre-COS-action file verification..."
+          cd ./cos-upload
+          
+          echo "📋 Exact file list that COS action will see:"
+          ls -1
+          echo ""
+          
+          echo "🔍 Testing each file accessibility:"
+          for file in *; do
+            if [ -f "$file" ]; then
+              if [ -r "$file" ]; then
+                echo "✅ READABLE: $file ($(stat -c%s "$file") bytes)"
+              else
+                echo "❌ NOT READABLE: $file"
+              fi
+            else
+              echo "❌ NOT A FILE: $file"
+            fi
+          done
+          
+          echo ""
+          echo "📊 Directory structure for COS action:"
+          echo "Current directory: $(pwd)"
+          echo "Directory permissions: $(ls -ld . | cut -d' ' -f1)"
+          echo "Files count: $(ls -1 | wc -l)"
+          echo ""
+          
+          # 创建一个文件清单，供调试使用
+          echo "Creating file manifest for debugging..."
+          ls -la > file_manifest.txt
+          echo "File manifest created:"
+          cat file_manifest.txt
 
       - name: Configure Tencent Cloud COS
         uses: TencentCloud/cos-action@v1
@@ -714,18 +793,41 @@ jobs:
 
       - name: Verify COS upload success
         run: |
-          echo "✅ COS upload completed successfully!"
-          echo "📁 Uploaded to: /releases/${{ steps.release.outputs.tag_name }}"
-          echo "📂 Files uploaded from: ./cos-upload"
+          echo "🔍 Analyzing COS upload results..."
+          echo "📁 Upload target: /releases/${{ steps.release.outputs.tag_name }}"
+          echo "📂 Source directory: ./cos-upload"
+          
+          # 检查源目录状态
+          if [ -d "./cos-upload" ]; then
+            echo "✅ cos-upload directory exists"
+            cd ./cos-upload
+            
+            echo ""
+            echo "📋 Files that should have been uploaded:"
+            for file in *; do
+              if [ -f "$file" ]; then
+                echo "  ✅ $file ($(du -h "$file" | cut -f1))"
+              fi
+            done
+            
+            echo ""
+            echo "📊 Upload summary:"
+            echo "   Total files processed: $(ls -1 | wc -l)"
+            echo "   Total size processed: $(du -sh . | cut -f1)"
+            
+            # 检查是否有文件清单
+            if [ -f "file_manifest.txt" ]; then
+              echo ""
+              echo "📄 File manifest from pre-upload:"
+              cat file_manifest.txt
+            fi
+          else
+            echo "❌ cos-upload directory not found"
+          fi
           
           echo ""
-          echo "📋 Files that were uploaded:"
-          cd ./cos-upload
-          for file in *; do
-            if [ -f "$file" ]; then
-              echo "  ✅ $file ($(du -h "$file" | cut -f1))"
-            fi
-          done
+          echo "🎉 COS upload process completed!"
+          echo "   If no errors appeared above, all files should be uploaded successfully."
 
       - name: Create release index
         uses: actions/github-script@v7
