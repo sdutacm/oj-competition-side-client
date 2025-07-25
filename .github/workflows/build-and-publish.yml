@@ -484,7 +484,7 @@ jobs:
           
           # 使用外部Python脚本上传所有文件（包括index.json）
           echo "📁 Starting upload to COS using Python SDK..."
-          python3 .github/scripts/upload_to_cos.py
+          python3 scripts/upload_to_cos.py
           
           if [ $? -eq 0 ]; then
             echo "✅ COS upload completed successfully!"
