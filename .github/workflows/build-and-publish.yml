@@ -17,8 +17,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Nod            console.log(`🔍 Looking for release with tag: ${tag}`);.js
+        uses: action          echo "📂 Downloaded files:"/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
@@ -273,27 +273,66 @@ jobs:
             const tag = context.ref.replace('refs/tags/', '');
             console.log(`� Looking for release with tag: ${tag}`);
             
-            try {
-              // 首先尝试通过标签获取 release
-              const release = await github.rest.repos.getReleaseByTag({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag: tag
-              });
-              
-              console.log(`✅ Found release: ${release.data.name} (ID: ${release.data.id})`);
-              console.log(`📦 Assets count: ${release.data.assets.length}`);
-              
-              // 输出 release 信息和 assets 列表
-              core.setOutput('release_id', release.data.id);
-              core.setOutput('tag_name', release.data.tag_name);
-              core.setOutput('assets', JSON.stringify(release.data.assets));
-              
-              return release.data;
-            } catch (error) {
-              console.error(`❌ Error getting release: ${error.message}`);
-              core.setFailed(`Failed to get release for tag ${tag}`);
+            // 等待 release 被创建的重试机制
+            let release = null;
+            const maxRetries = 10;
+            const retryDelay = 30000; // 30 seconds
+            
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+              try {
+                console.log(`🔄 Attempt ${attempt}/${maxRetries} to find release...`);
+                
+                // 首先尝试通过标签获取 release
+                const releaseResponse = await github.rest.repos.getReleaseByTag({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag: tag
+                });
+                
+                release = releaseResponse.data;
+                console.log(`✅ Found release: ${release.name} (ID: ${release.id})`);
+                break;
+                
+              } catch (error) {
+                if (error.status === 404) {
+                  console.log(`⚠️  Release not found (attempt ${attempt}/${maxRetries})`);
+                  
+                  if (attempt < maxRetries) {
+                    console.log(`⏰ Waiting ${retryDelay/1000} seconds before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                  } else {
+                    console.log(`❌ Release not found after ${maxRetries} attempts`);
+                    console.log(`💡 This might happen if the previous jobs haven't completed yet`);
+                    core.setFailed(`Release for tag ${tag} not found after ${maxRetries} attempts`);
+                    return;
+                  }
+                } else {
+                  console.error(`❌ API Error: ${error.message}`);
+                  throw error;
+                }
+              }
             }
+            
+            if (!release) {
+              core.setFailed(`Failed to find release for tag ${tag}`);
+              return;
+            }
+            
+            console.log(`📦 Assets count: ${release.assets.length}`);
+            
+            if (release.assets.length === 0) {
+              console.log(`⚠️  No assets found in release`);
+              core.setFailed(`Release ${tag} has no assets to upload`);
+              return;
+            }
+            
+            // 输出 release 信息和 assets 列表
+            core.setOutput('release_id', release.id);
+            core.setOutput('tag_name', release.tag_name);
+            core.setOutput('assets', JSON.stringify(release.assets));
+            
+            console.log(`✅ Release info prepared for COS upload`);
+            return release;
 
       - name: Download release assets
         id: download
