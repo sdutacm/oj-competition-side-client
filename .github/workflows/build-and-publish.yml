@@ -511,11 +511,162 @@ jobs:
           done
           
           cd ../cos-upload
+          
+          echo ""
+          echo "🔧 Final filename verification and fixes in cos-upload directory..."
+          fixed_count=0
+          
+          # 修复截断的文件名（添加缺失的S）
+          for file in *; do
+            if [ -f "$file" ]; then
+              if echo "$file" | grep -q "^DUTOJCompetitionSideClient"; then
+                new_name="S$file"
+                echo "🔧 Adding missing S: $file -> $new_name"
+                mv "$file" "$new_name"
+                fixed_count=$((fixed_count + 1))
+              fi
+            fi
+          done
+          
+          # 修复拼写错误（protable -> portable）
+          for file in *; do
+            if [ -f "$file" ]; then
+              if echo "$file" | grep -q "_protable_"; then
+                new_name=$(echo "$file" | sed 's/_protable_/_portable_/')
+                echo "🔧 Fixing spelling: $file -> $new_name"
+                mv "$file" "$new_name"
+                fixed_count=$((fixed_count + 1))
+              fi
+            fi
+          done
+          
+          if [ $fixed_count -gt 0 ]; then
+            echo "✅ Fixed $fixed_count filename(s) in cos-upload directory"
+          else
+            echo "✅ No filename issues found in cos-upload directory"
+          fi
+          
           echo ""
           echo "✅ Files ready for COS upload:"
           ls -la
           echo ""
           echo "📊 Upload summary:"
+          echo "   Total files: $(ls -1 | wc -l)"
+          echo "   Total size: $(du -sh . | cut -f1)"
+
+      - name: Final COS upload verification
+        run: |
+          echo "🔍 Final verification before COS upload..."
+          cd ./cos-upload
+          
+          echo "📂 Files in cos-upload directory:"
+          ls -la
+          
+          echo ""
+          echo "🔍 Checking for expected filename patterns..."
+          expected_count=0
+          found_count=0
+          
+          # 检查各种预期的文件类型
+          echo "Looking for Windows files..."
+          for pattern in "_windows_installer_" "_windows_portable_"; do
+            for arch in "x64" "arm64"; do
+              if ls -1 | grep -q "SDUTOJCompetitionSideClient${pattern}${arch}_1\.2\.12\.exe"; then
+                file=$(ls -1 | grep "SDUTOJCompetitionSideClient${pattern}${arch}_1\.2\.12\.exe")
+                echo "✅ Found: $file"
+                found_count=$((found_count + 1))
+              else
+                echo "⚠️  Missing: SDUTOJCompetitionSideClient${pattern}${arch}_1.2.12.exe"
+              fi
+              expected_count=$((expected_count + 1))
+            done
+          done
+          
+          echo "Looking for macOS files..."
+          for arch in "x64" "arm64"; do
+            if ls -1 | grep -q "SDUTOJCompetitionSideClient_mac_${arch}_1\.2\.12\.dmg"; then
+              file=$(ls -1 | grep "SDUTOJCompetitionSideClient_mac_${arch}_1\.2\.12\.dmg")
+              echo "✅ Found: $file"
+              found_count=$((found_count + 1))
+            else
+              echo "⚠️  Missing: SDUTOJCompetitionSideClient_mac_${arch}_1.2.12.dmg"
+            fi
+            expected_count=$((expected_count + 1))
+          done
+          
+          echo "Looking for Linux files..."
+          for arch in "x64" "arm64"; do
+            for ext in "AppImage" "deb"; do
+              if ls -1 | grep -q "SDUTOJCompetitionSideClient_linux_${arch}_1\.2\.12\.${ext}"; then
+                file=$(ls -1 | grep "SDUTOJCompetitionSideClient_linux_${arch}_1\.2\.12\.${ext}")
+                echo "✅ Found: $file"
+                found_count=$((found_count + 1))
+              else
+                echo "⚠️  Missing: SDUTOJCompetitionSideClient_linux_${arch}_1.2.12.${ext}"
+              fi
+              expected_count=$((expected_count + 1))
+            done
+          done
+          
+          echo ""
+          echo "📊 Verification summary:"
+          echo "   Expected files: $expected_count"
+          echo "   Found files: $found_count"
+          echo "   Total files in directory: $(ls -1 | wc -l)"
+          
+          if [ $found_count -eq 0 ]; then
+            echo "❌ No expected files found! This may cause COS upload to fail."
+            echo "📋 All files in directory:"
+            ls -la
+            exit 1
+          else
+            echo "✅ Verification completed - $found_count files ready for upload"
+          fi
+
+      - name: Emergency filename fix for COS action
+        run: |
+          echo "🚨 Emergency filename verification and fix before COS upload..."
+          cd ./cos-upload
+          
+          echo "📋 Current files in cos-upload:"
+          ls -la
+          
+          # 检查是否有任何文件名被截断（缺少S开头）
+          truncated_files=$(ls -1 | grep "^DUTOJCompetitionSideClient" || true)
+          
+          if [ -n "$truncated_files" ]; then
+            echo "🔧 Found truncated filenames, fixing them:"
+            echo "$truncated_files" | while read -r file; do
+              if [ -f "$file" ]; then
+                new_name="S$file"
+                echo "   🔧 $file -> $new_name"
+                mv "$file" "$new_name"
+              fi
+            done
+          else
+            echo "✅ No truncated filenames found"
+          fi
+          
+          # 最终检查所有文件是否存在
+          echo ""
+          echo "🔍 Final existence check:"
+          all_exist=true
+          for file in *; do
+            if [ -f "$file" ]; then
+              echo "✅ $file exists ($(du -h "$file" | cut -f1))"
+            else
+              echo "❌ $file does not exist or is not a file"
+              all_exist=false
+            fi
+          done
+          
+          if [ "$all_exist" = "false" ]; then
+            echo "❌ Some files are missing, COS upload may fail"
+            exit 1
+          fi
+          
+          echo ""
+          echo "🎯 All files verified and ready for COS upload:"
           echo "   Total files: $(ls -1 | wc -l)"
           echo "   Total size: $(du -sh . | cut -f1)"
 
@@ -529,6 +680,21 @@ jobs:
           local_path: ./cos-upload
           remote_path: /releases/${{ steps.release.outputs.tag_name }}
           clean: false
+
+      - name: Verify COS upload success
+        run: |
+          echo "✅ COS upload completed successfully!"
+          echo "📁 Uploaded to: /releases/${{ steps.release.outputs.tag_name }}"
+          echo "📂 Files uploaded from: ./cos-upload"
+          
+          echo ""
+          echo "📋 Files that were uploaded:"
+          cd ./cos-upload
+          for file in *; do
+            if [ -f "$file" ]; then
+              echo "  ✅ $file ($(du -h "$file" | cut -f1))"
+            fi
+          done
 
       - name: Create release index
         uses: actions/github-script@v7
