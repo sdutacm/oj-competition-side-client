@@ -457,6 +457,31 @@ jobs:
               fi
             fi
           done
+          
+          # 修复可能被截断的文件名
+          echo ""
+          echo "🔧 Checking for truncated filenames..."
+          fixed_count=0
+          for file in *; do
+            if [ -f "$file" ]; then
+              # 检查是否是被截断的文件名（缺少开头的S）
+              if echo "$file" | grep -q "^DUTOJCompetitionSideClient"; then
+                new_name="S$file"
+                echo "🔧 Renaming: $file -> $new_name"
+                mv "$file" "$new_name"
+                fixed_count=$((fixed_count + 1))
+              fi
+            fi
+          done
+          
+          if [ $fixed_count -gt 0 ]; then
+            echo "✅ Fixed $fixed_count filename(s)"
+            echo ""
+            echo "Files after fixing:"
+            ls -la
+          else
+            echo "✅ No filename issues found"
+          fi
 
       - name: Configure Tencent Cloud COS
         uses: TencentCloud/cos-action@v1
