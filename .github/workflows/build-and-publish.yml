@@ -190,14 +190,36 @@ jobs:
           RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
           echo "✅ Found release ID: $RELEASE_ID"
           
-          # 获取 assets
-          echo "📁 Getting release assets..."
-          ASSETS_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets)
+          # 验证 RELEASE_ID 不为空且为数字
+          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ] || ! echo "$RELEASE_ID" | grep -q '^[0-9]\+$'; then
+            echo "❌ Invalid release ID: '$RELEASE_ID'"
+            exit 1
+          fi
           
+          # 获取 assets，添加超时和重试
+          echo "📁 Getting release assets..."
+          for attempt in 1 2 3; do
+            echo "   Attempt $attempt/3..."
+            ASSETS_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets)
+            
+            if echo "$ASSETS_RESPONSE" | jq -e '. | length' > /dev/null 2>&1; then
+              echo "✅ Successfully retrieved $(echo "$ASSETS_RESPONSE" | jq length) assets"
+              break
+            else
+              echo "⚠️  Attempt $attempt failed. Response: $ASSETS_RESPONSE"
+              if [ $attempt -lt 3 ]; then
+                echo "   Waiting 10 seconds before retry..."
+                sleep 10
+              fi
+            fi
+          done
+          
+          # 最终验证assets获取是否成功
           if ! echo "$ASSETS_RESPONSE" | jq -e '. | length' > /dev/null 2>&1; then
-            echo "❌ Failed to get assets"
-            echo "Response: $ASSETS_RESPONSE"
+            echo "❌ Failed to get assets after 3 attempts"
+            echo "Final response: $ASSETS_RESPONSE"
             exit 1
           fi
           
