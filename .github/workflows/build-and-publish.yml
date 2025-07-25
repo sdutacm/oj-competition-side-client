@@ -350,15 +350,17 @@ jobs:
             exit 1
           fi
           
-          # 使用 jq 处理每个 asset
-          jq -r '.[] | "\(.name)|\(.browser_download_url)"' assets.json | while IFS='|' read -r name url; do
+          # 直接从tagged release构建正确的URL
+          TAG_NAME="${{ steps.release.outputs.tag_name }}"
+          REPO="${{ github.repository }}"
+          
+          # 使用 jq 处理每个 asset，但构建正确的URL
+          jq -r '.[] | .name' assets.json | while read -r name; do
             echo "📥 Downloading: $name"
-            echo "   URL: $url"
             
-            # 检查URL是否包含untagged问题
-            if [[ "$url" == *"untagged"* ]]; then
-              echo "⚠️  Warning: URL contains 'untagged' - this may cause download issues"
-            fi
+            # 构建正确的下载URL（使用tag而不是untagged）
+            CORRECT_URL="https://github.com/${REPO}/releases/download/${TAG_NAME}/${name}"
+            echo "   URL: $CORRECT_URL"
             
             # 下载文件，使用认证和更详细的错误处理
             if curl -L -H "Authorization: token $GITHUB_TOKEN" \
@@ -366,7 +368,7 @@ jobs:
                    --fail --show-error --silent \
                    --connect-timeout 30 \
                    --max-time 300 \
-                   -o "$name" "$url"; then
+                   -o "$name" "$CORRECT_URL"; then
               echo "✅ Downloaded: $name ($(du -h "$name" | cut -f1))"
               
               # 验证文件不为空
@@ -382,11 +384,32 @@ jobs:
               if curl -L --fail --show-error --silent \
                      --connect-timeout 30 \
                      --max-time 300 \
-                     -o "$name" "$url"; then
+                     -o "$name" "$CORRECT_URL"; then
                 echo "✅ Downloaded without auth: $name ($(du -h "$name" | cut -f1))"
               else
                 echo "❌ Failed even without authentication"
-                exit 1
+                echo "❌ Trying alternative URL construction..."
+                
+                # 最后尝试：使用GitHub API下载
+                ASSET_ID=$(echo '${{ steps.release.outputs.assets }}' | jq -r ".[] | select(.name == \"$name\") | .id")
+                if [ -n "$ASSET_ID" ] && [ "$ASSET_ID" != "null" ]; then
+                  echo "🔄 Trying GitHub API download (Asset ID: $ASSET_ID)..."
+                  if curl -L -H "Authorization: token $GITHUB_TOKEN" \
+                         -H "Accept: application/octet-stream" \
+                         --fail --show-error --silent \
+                         --connect-timeout 30 \
+                         --max-time 300 \
+                         -o "$name" \
+                         "https://api.github.com/repos/${REPO}/releases/assets/${ASSET_ID}"; then
+                    echo "✅ Downloaded via API: $name ($(du -h "$name" | cut -f1))"
+                  else
+                    echo "❌ API download also failed"
+                    exit 1
+                  fi
+                else
+                  echo "❌ Could not find asset ID"
+                  exit 1
+                fi
               fi
             fi
           done
@@ -502,16 +525,26 @@ jobs:
             console.log(`✅ Created index with ${files.length} files`);
             console.log(`📁 Version directory: ${cdnUrl.replace(/\/$/, '')}/${versionPath}/`);
 
-      - name: Upload index to COS
-        uses: TencentCloud/cos-action@v1
-        with:
-          secret_id: ${{ secrets.COS_SECRET_ID }}
-          secret_key: ${{ secrets.COS_SECRET_KEY }}
-          cos_bucket: ${{ secrets.COS_BUCKET }}
-          cos_region: ${{ secrets.COS_REGION }}
-          local_path: ./downloads/index.json
-          remote_path: /releases/${{ steps.release.outputs.tag_name }}/index.json
-          clean: false
+      - name: Upload index to COS using CLI
+        run: |
+          echo "📤 Uploading index.json to COS..."
+          
+          cd ./downloads
+          if [ -f "index.json" ]; then
+            echo "📋 Uploading index file..."
+            coscli cp "index.json" "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/index.json"
+            
+            # 验证上传
+            if coscli ls "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/index.json" &>/dev/null; then
+              echo "✅ Successfully uploaded index.json"
+            else
+              echo "❌ Failed to verify index.json upload"
+              exit 1
+            fi
+          else
+            echo "❌ index.json not found"
+            exit 1
+          fi
 
       - name: Display upload summary
         run: |
