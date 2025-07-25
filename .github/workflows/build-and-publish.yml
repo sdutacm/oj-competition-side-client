@@ -489,8 +489,20 @@ jobs:
           #!/usr/bin/env python3
           import os
           import sys
+          import time
           from qcloud_cos import CosConfig
           from qcloud_cos import CosS3Client
+
+          def format_file_size(size_bytes):
+              """格式化文件大小显示"""
+              if size_bytes == 0:
+                  return "0B"
+              size_names = ['B', 'KB', 'MB', 'GB']
+              i = 0
+              while size_bytes >= 1024 and i < len(size_names) - 1:
+                  size_bytes /= 1024.0
+                  i += 1
+              return f"{size_bytes:.1f}{size_names[i]}"
 
           def main():
               # 从环境变量获取配置
@@ -506,8 +518,14 @@ jobs:
 
               print(f"🔧 Configuring COS client for region: {region}, bucket: {bucket}")
 
-              # 配置
-              config = CosConfig(Region=region, SecretId=secret_id, SecretKey=secret_key)
+              # 配置，增加超时设置
+              config = CosConfig(
+                  Region=region, 
+                  SecretId=secret_id, 
+                  SecretKey=secret_key,
+                  Timeout=300,  # 5分钟超时
+                  Max_retry=3   # 最多重试3次
+              )
               client = CosS3Client(config)
 
               # 上传文件
@@ -520,24 +538,47 @@ jobs:
               files = [f for f in os.listdir(downloads_dir) if os.path.isfile(os.path.join(downloads_dir, f)) and f != 'assets.json']
               print(f"📦 Found {len(files)} files to upload")
 
-              success = True
-              uploaded_files = []
-
+              # 计算总文件大小
+              total_size = 0
+              file_sizes = {}
               for filename in files:
                   filepath = os.path.join(downloads_dir, filename)
+                  size = os.path.getsize(filepath)
+                  file_sizes[filename] = size
+                  total_size += size
+              
+              print(f"📊 Total size to upload: {format_file_size(total_size)}")
+
+              success = True
+              uploaded_files = []
+              uploaded_size = 0
+
+              for i, filename in enumerate(files, 1):
+                  filepath = os.path.join(downloads_dir, filename)
+                  file_size = file_sizes[filename]
+                  
                   try:
                       key = f'atrior/oj-competition-side-client/releases/{tag_name}/{filename}'
-                      print(f"📤 Uploading: {filename}")
+                      print(f"📤 [{i}/{len(files)}] Uploading: {filename} ({format_file_size(file_size)})")
                       print(f"   Local: {filepath}")
                       print(f"   Remote: {key}")
                       
+                      start_time = time.time()
                       client.upload_file(
                           Bucket=bucket,
                           LocalFilePath=filepath,
                           Key=key
                       )
+                      upload_time = time.time() - start_time
+                      
+                      uploaded_size += file_size
+                      speed = file_size / upload_time if upload_time > 0 else 0
+                      
                       print(f"✅ Successfully uploaded: {filename}")
+                      print(f"   Time: {upload_time:.1f}s, Speed: {format_file_size(speed)}/s")
+                      print(f"   Progress: {uploaded_size}/{total_size} ({100*uploaded_size/total_size:.1f}%)")
                       uploaded_files.append(filename)
+                      
                   except Exception as e:
                       print(f"❌ Failed to upload {filename}: {str(e)}")
                       success = False
@@ -556,14 +597,18 @@ jobs:
                   index_file = os.path.join(downloads_dir, 'index.json')
                   if os.path.exists(index_file):
                       try:
+                          index_size = os.path.getsize(index_file)
                           index_key = f'atrior/oj-competition-side-client/releases/{tag_name}/index.json'
-                          print(f"📋 Uploading index.json...")
+                          print(f"📋 Uploading index.json ({format_file_size(index_size)})...")
+                          
+                          start_time = time.time()
                           client.upload_file(
                               Bucket=bucket,
                               LocalFilePath=index_file,
                               Key=index_key
                           )
-                          print(f"✅ Successfully uploaded index.json")
+                          upload_time = time.time() - start_time
+                          print(f"✅ Successfully uploaded index.json in {upload_time:.1f}s")
                       except Exception as e:
                           print(f"❌ Failed to upload index.json: {str(e)}")
               else:
