@@ -266,64 +266,60 @@ jobs:
     steps:
       - name: Get release info
         id: release
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.atriordsa }}
-          script: |
-            const tag = context.ref.replace('refs/tags/', '');
-            console.log(`� Looking for release with tag: ${tag}`);
+        run: |
+          set -e
+          
+          echo "🔍 Getting release info for tag: ${{ github.ref_name }}"
+          
+          # 验证环境变量
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "❌ GITHUB_TOKEN not set"
+            exit 1
+          fi
+          
+          # 等待确保 cleanup 完成
+          echo "⏰ Waiting 15 seconds for cleanup to complete..."
+          sleep 15
+          
+          # 首先尝试通过标签获取 release（与 cleanup-release 相同的方法）
+          RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }})
+          
+          # 如果直接通过标签获取失败，则从所有 releases 中查找
+          if ! echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+            echo "⚠️  Direct tag lookup failed, searching in all releases..."
+            echo "Direct response: $RELEASE_RESPONSE"
             
-            // 等待 release 被创建的重试机制
-            let release = null;
-            const maxRetries = 3; // 减少重试次数
-            const retryDelay = 10000; // 减少等待时间到 10 秒
+            ALL_RELEASES=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              https://api.github.com/repos/${{ github.repository }}/releases)
             
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-              try {
-                console.log(`🔄 Attempt ${attempt}/${maxRetries} to find release ${tag}...`);
-                
-                const releaseResponse = await github.rest.repos.getReleaseByTag({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  tag: tag
-                });
-                
-                release = releaseResponse.data;
-                console.log(`✅ Found release: ${release.name} (ID: ${release.id})`);
-                console.log(`   Published: ${release.published_at || 'Draft'}`);
-                console.log(`   Assets: ${release.assets.length}`);
-                break;
-                
-              } catch (error) {
-                console.log(`⚠️  Attempt ${attempt} failed: ${error.status} - ${error.message}`);
-                
-                if (attempt < maxRetries) {
-                  console.log(`⏰ Waiting ${retryDelay/1000} seconds before retry...`);
-                  await new Promise(resolve => setTimeout(resolve, retryDelay));
-                }
-              }
-            }
+            RELEASE_RESPONSE=$(echo "$ALL_RELEASES" | jq ".[] | select(.tag_name == \"${{ github.ref_name }}\")")
             
-            if (!release) {
-              console.log(`❌ Release ${tag} not found after ${maxRetries} attempts`);
-              console.log(`💡 Please check if the release exists and is published`);
-              core.setFailed(`Release for tag ${tag} not found`);
-              return;
-            }
-            
-            if (release.assets.length === 0) {
-              console.log(`⚠️  Release ${tag} has no assets`);
-              core.setFailed(`Release ${tag} has no assets to upload`);
-              return;
-            }
-            
-            // 输出 release 信息和 assets 列表
-            core.setOutput('release_id', release.id);
-            core.setOutput('tag_name', release.tag_name);
-            core.setOutput('assets', JSON.stringify(release.assets));
-            
-            console.log(`✅ Release info prepared for COS upload`);
-            return release;
+            if ! echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+              echo "❌ Could not find release for tag ${{ github.ref_name }}"
+              echo "Available releases:"
+              echo "$ALL_RELEASES" | jq -r '.[] | "- \(.tag_name) (ID: \(.id))"' | head -10
+              exit 1
+            fi
+          fi
+          
+          RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+          TAG_NAME=$(echo "$RELEASE_RESPONSE" | jq -r '.tag_name')
+          ASSETS=$(echo "$RELEASE_RESPONSE" | jq -c '.assets')
+          
+          echo "✅ Found release: $TAG_NAME (ID: $RELEASE_ID)"
+          echo "📦 Assets count: $(echo "$ASSETS" | jq length)"
+          
+          # 输出到 GitHub Actions outputs
+          echo "release_id=$RELEASE_ID" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "assets<<EOF" >> $GITHUB_OUTPUT
+          echo "$ASSETS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "✅ Release info prepared for COS upload"
+        env:
+          GITHUB_TOKEN: ${{ secrets.atriordsa }}
 
       - name: Download release assets
         id: download
