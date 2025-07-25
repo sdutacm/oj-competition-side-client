@@ -479,9 +479,27 @@ jobs:
         run: |
           echo "🔧 Setting up Tencent Cloud COS upload..."
           
-          # 安装Python COS SDK
-          echo "Installing Python COS SDK..."
-          pip3 install --quiet cos-python-sdk-v5
+          # 显示Python和pip版本
+          echo "🐍 Python version: $(python3 --version)"
+          echo "📦 pip version: $(pip3 --version)"
+          
+          # 安装Python COS SDK，添加超时和详细输出
+          echo "📥 Installing Python COS SDK with timeout..."
+          timeout 300 pip3 install --verbose --timeout=60 cos-python-sdk-v5 || {
+            echo "❌ pip install timeout or failed, trying with different mirror..."
+            timeout 300 pip3 install --verbose --timeout=60 -i https://pypi.tuna.tsinghua.edu.cn/simple cos-python-sdk-v5 || {
+              echo "❌ Failed to install COS SDK, exiting..."
+              exit 1
+            }
+          }
+          echo "✅ COS SDK installed successfully"
+          
+          # 验证installation
+          echo "🔍 Verifying installation..."
+          python3 -c "import qcloud_cos; print('✅ COS SDK import successful')" || {
+            echo "❌ Failed to import COS SDK"
+            exit 1
+          }
           
           # 创建内嵌的Python上传脚本
           echo "📁 Starting upload to COS using embedded Python script..."
