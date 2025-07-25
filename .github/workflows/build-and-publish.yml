@@ -367,19 +367,74 @@ jobs:
             echo "📥 Downloading: $name"
             echo "   URL: $url"
             
+            # 验证文件名不为空且符合预期格式
+            if [ -z "$name" ] || [ "$name" = "null" ]; then
+              echo "❌ Invalid file name: '$name'"
+              continue
+            fi
+            
             # 下载文件，使用认证
             if curl -L -H "Authorization: token ${{ secrets.atriordsa }}" \
                    -H "Accept: application/octet-stream" \
                    --fail --show-error --silent \
                    -o "$name" "$url"; then
-              echo "✅ Downloaded: $name ($(du -h "$name" | cut -f1))"
+              # 验证下载的文件大小
+              if [ -s "$name" ]; then
+                echo "✅ Downloaded: $name ($(du -h "$name" | cut -f1))"
+              else
+                echo "⚠️  Downloaded but file is empty: $name"
+                rm -f "$name"
+              fi
             else
               echo "❌ Failed to download: $name"
+              # 清理可能的空文件
+              rm -f "$name"
             fi
           done
           
-          echo "� Downloaded files:"
+          echo "📂 Downloaded files:"
           ls -la
+          
+          # 验证下载的文件
+          echo "🔍 Verifying downloaded files..."
+          for file in *; do
+            if [ -f "$file" ] && [ "$file" != "assets.json" ]; then
+              echo "✅ $file: $(du -h "$file" | cut -f1) - $(file "$file" | cut -d: -f2-)"
+            fi
+          done
+          
+          # 检查是否有文件名问题
+          if ls -1 | grep -q "^[^S].*AppImage$\|^[^S].*\.deb$\|^[^S].*\.dmg$\|^[^S].*\.exe$"; then
+            echo "⚠️  WARNING: Found files with potentially truncated names:"
+            ls -1 | grep "^[^S].*AppImage$\|^[^S].*\.deb$\|^[^S].*\.dmg$\|^[^S].*\.exe$" || true
+          fi
+
+      - name: Pre-upload file verification
+        run: |
+          echo "🔍 Final file verification before COS upload..."
+          cd ./downloads
+          
+          # 移除 assets.json 文件以避免上传
+          rm -f assets.json
+          
+          echo "Files to be uploaded:"
+          ls -la
+          echo ""
+          echo "File count: $(ls -1 | wc -l)"
+          echo ""
+          echo "Detailed file analysis:"
+          for file in *; do
+            if [ -f "$file" ]; then
+              echo "📄 $file:"
+              echo "   Size: $(du -h "$file" | cut -f1)"
+              echo "   Type: $(file "$file" | cut -d: -f2-)"
+              echo "   Permissions: $(ls -l "$file" | cut -d' ' -f1)"
+              # 检查文件名是否包含特殊字符
+              if echo "$file" | grep -q '[^a-zA-Z0-9._-]'; then
+                echo "   ⚠️  Contains special characters"
+              fi
+            fi
+          done
 
       - name: Configure Tencent Cloud COS
         uses: TencentCloud/cos-action@v1
