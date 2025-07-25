@@ -67,15 +67,32 @@ async function uploadToCOS() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
     }
     
-    // 检查下载目录
-    console.log('📁 Checking downloads directory...');
-    const downloadsDir = './downloads';
-    if (!fs.existsSync(downloadsDir)) {
-        console.error('❌ Downloads directory not found');
+// 检查下载目录
+console.log('📁 Checking downloads directory...');
+const downloadsDir = './downloads';
+
+// 如果不是在 GitHub Actions 环境中，检查是否有 dist 目录作为备选
+if (!fs.existsSync(downloadsDir)) {
+    console.log('⚠️  Downloads directory not found, checking for alternative directories...');
+    
+    // 检查是否有 dist 目录（本地构建目录）
+    const distDir = './dist';
+    if (fs.existsSync(distDir)) {
+        console.log(`📁 Using dist directory: ${distDir}`);
+        // 可以在这里添加从 dist 目录上传的逻辑
+        console.log('💡 Note: This script is designed to run in GitHub Actions environment.');
+        console.log('💡 If you want to upload local build files, please ensure they are in the downloads directory.');
+        process.exit(0);
+    } else {
+        console.error('❌ Neither downloads nor dist directory found');
+        console.error('💡 This script is designed to run in GitHub Actions workflow after downloading release assets.');
+        console.error('💡 To run locally, you need to:');
+        console.error('   1. Create a "downloads" directory');
+        console.error('   2. Place the files you want to upload in that directory');
+        console.error('   3. Set the required environment variables: COS_SECRET_ID, COS_SECRET_KEY, COS_REGION, COS_BUCKET, TAG_NAME');
         process.exit(1);
     }
-    
-    // 扫描文件
+}    // 扫描文件
     console.log(`📁 Scanning directory: ${downloadsDir}`);
     const allFiles = fs.readdirSync(downloadsDir);
     const files = allFiles.filter(f => {

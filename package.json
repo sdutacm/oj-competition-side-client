@@ -88,7 +88,7 @@
           "arch": "x64"
         },
         {
-          "target": "nsis", 
+          "target": "nsis",
           "arch": "arm64"
         },
         {
@@ -193,8 +193,7 @@
     }
   },
   "dependencies": {
+    "cos-nodejs-sdk-v5": "^2.16.0-beta.3",
     "i18n-js": "^4.5.1"
   }
 }
-
-
