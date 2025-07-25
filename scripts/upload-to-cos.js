@@ -160,7 +160,7 @@ if (!fs.existsSync(downloadsDir)) {
         const fileSize = fileSizes[filename];
         
         try {
-            const key = `release/${tagName}/${filename}`;
+            const key = `oj-competition-side-client/release/${tagName}/${filename}`;
             console.log(`📤 [${i + 1}/${files.length}] Uploading: ${filename} (${formatFileSize(fileSize)})`);
             console.log(`   Local: ${filePath}`);
             console.log(`   Remote: ${key}`);
@@ -187,14 +187,14 @@ if (!fs.existsSync(downloadsDir)) {
     
     if (success) {
         console.log(`\n🎉 All ${files.length} files uploaded successfully to COS!`);
-        console.log(`📂 Remote path: release/${tagName}/`);
+        console.log(`📂 Remote path: oj-competition-side-client/release/${tagName}/`);
         
         // 上传index.json
         const indexFile = path.join(downloadsDir, 'index.json');
         if (fs.existsSync(indexFile)) {
             try {
                 const indexSize = fs.statSync(indexFile).size;
-                const indexKey = `release/${tagName}/index.json`;
+                const indexKey = `oj-competition-side-client/release/${tagName}/index.json`;
                 console.log(`📋 Uploading index.json (${formatFileSize(indexSize)})...`);
                 
                 await uploadFile(indexFile, indexKey);
