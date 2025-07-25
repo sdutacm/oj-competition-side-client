@@ -115,7 +115,7 @@ jobs:
     steps:
       - name: Debug GitHub token and permissions
         run: |
-          echo "🔍 Debugging GitHub environment..."
+          echo "DEBUG: Debugging GitHub environment..."
           echo "Repository: ${{ github.repository }}"
           echo "Actor: ${{ github.actor }}"
           echo "Token exists: ${{ secrets.atriordsa != '' }}"
@@ -141,22 +141,22 @@ jobs:
           echo "🧹 Starting release cleanup for tag: ${{ github.ref_name }}"
           
           # 直接使用 curl 而不是 gh CLI，因为 gh CLI 可能有权限问题
-          echo "🔗 Testing GitHub API with curl..."
+          echo "TESTING: Testing GitHub API with curl..."
           
           # 验证环境变量
           if [ -z "$GITHUB_TOKEN" ]; then
-            echo "❌ GITHUB_TOKEN not set"
+            echo "ERROR: GITHUB_TOKEN not set"
             exit 1
           fi
           
           # 测试 API 连接
           USER_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user)
           if ! echo "$USER_RESPONSE" | jq -e '.login' > /dev/null 2>&1; then
-            echo "❌ Cannot authenticate with GitHub API"
+            echo "ERROR: Cannot authenticate with GitHub API"
             echo "Response: $USER_RESPONSE"
             exit 1
           fi
-          echo "✅ GitHub API authentication successful"
+          echo "SUCCESS: GitHub API authentication successful"
           
           # 等待确保所有上传完成
           echo "⏰ Waiting 30 seconds for uploads to complete..."
@@ -170,7 +170,7 @@ jobs:
           
           # 如果直接通过标签获取失败，则从所有 releases 中查找
           if ! echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-            echo "⚠️  Direct tag lookup failed, searching in all releases..."
+            echo "WARNING:  Direct tag lookup failed, searching in all releases..."
             echo "Direct response: $RELEASE_RESPONSE"
             
             ALL_RELEASES=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
@@ -179,7 +179,7 @@ jobs:
             RELEASE_RESPONSE=$(echo "$ALL_RELEASES" | jq ".[] | select(.tag_name == \"${{ github.ref_name }}\")")
             
             if ! echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-              echo "❌ Could not find release for tag ${{ github.ref_name }}"
+              echo "ERROR: Could not find release for tag ${{ github.ref_name }}"
               echo "Available releases:"
               echo "$ALL_RELEASES" | jq -r '.[] | "- \(.tag_name) (ID: \(.id))"' | head -10
               exit 1
@@ -187,16 +187,16 @@ jobs:
           fi
           
           RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
-          echo "✅ Found release ID: $RELEASE_ID"
+          echo "SUCCESS: Found release ID: $RELEASE_ID"
           
           # 验证 RELEASE_ID 不为空且为数字
           if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ] || ! echo "$RELEASE_ID" | grep -q '^[0-9]\+$'; then
-            echo "❌ Invalid release ID: '$RELEASE_ID'"
+            echo "ERROR: Invalid release ID: '$RELEASE_ID'"
             exit 1
           fi
           
           # 获取 assets，添加超时和重试
-          echo "📁 Getting release assets..."
+          echo "FOLDER: Getting release assets..."
           for attempt in 1 2 3; do
             echo "   Attempt $attempt/3..."
             ASSETS_RESPONSE=$(curl -s --connect-timeout 30 --max-time 60 \
@@ -204,10 +204,10 @@ jobs:
               https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets)
             
             if echo "$ASSETS_RESPONSE" | jq -e '. | length' > /dev/null 2>&1; then
-              echo "✅ Successfully retrieved $(echo "$ASSETS_RESPONSE" | jq length) assets"
+              echo "SUCCESS: Successfully retrieved $(echo "$ASSETS_RESPONSE" | jq length) assets"
               break
             else
-              echo "⚠️  Attempt $attempt failed. Response: $ASSETS_RESPONSE"
+              echo "WARNING:  Attempt $attempt failed. Response: $ASSETS_RESPONSE"
               if [ $attempt -lt 3 ]; then
                 echo "   Waiting 10 seconds before retry..."
                 sleep 10
@@ -217,16 +217,16 @@ jobs:
           
           # 最终验证assets获取是否成功
           if ! echo "$ASSETS_RESPONSE" | jq -e '. | length' > /dev/null 2>&1; then
-            echo "❌ Failed to get assets after 3 attempts"
+            echo "ERROR: Failed to get assets after 3 attempts"
             echo "Final response: $ASSETS_RESPONSE"
             exit 1
           fi
           
-          echo "📁 Current release assets:"
+          echo "FOLDER: Current release assets:"
           echo "$ASSETS_RESPONSE" | jq -r '.[] | "- \(.name) (ID: \(.id))"'
           
           # 查找并删除不需要的文件
-          echo "🔍 Looking for unwanted assets..."
+          echo "DEBUG: Looking for unwanted assets..."
           
           # 删除 .yml, .yaml, .blockmap 文件
           echo "Finding .yml, .yaml, .blockmap files..."
@@ -250,7 +250,7 @@ jobs:
           fi
           
           if [ -n "$ALL_UNWANTED_ASSETS" ]; then
-            echo "🎯 Found unwanted assets to delete:"
+            echo "TARGET: Found unwanted assets to delete:"
             
             # 显示要删除的文件列表
             echo "$ASSETS_RESPONSE" | jq -r 'if type == "array" then .[] | select((.name | test("\\.(yml|yaml|blockmap)$")) or (.name | test("windows.*\\.(exe)$") and (.name | test("_(x64|arm64)_") | not))) | "- \(.name) (ID: \(.id))" else empty end' 2>/dev/null || echo "Error displaying file list"
@@ -258,7 +258,7 @@ jobs:
             echo -e "$ALL_UNWANTED_ASSETS" | while read -r asset_id; do
               if [ -n "$asset_id" ] && [ "$asset_id" != "null" ] && [ "$asset_id" != "" ]; then
                 ASSET_NAME=$(echo "$ASSETS_RESPONSE" | jq -r "if type == \"array\" then .[] | select(.id == $asset_id) | .name else \"unknown\" end" 2>/dev/null)
-                echo "🗑️  Deleting: $ASSET_NAME (ID: $asset_id)"
+                echo "DELETE:  Deleting: $ASSET_NAME (ID: $asset_id)"
                 
                 DELETE_RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null \
                   -X DELETE \
@@ -266,14 +266,14 @@ jobs:
                   https://api.github.com/repos/${{ github.repository }}/releases/assets/$asset_id)
                 
                 if [ "$DELETE_RESPONSE" = "204" ]; then
-                  echo "✅ Successfully deleted: $ASSET_NAME"
+                  echo "SUCCESS: Successfully deleted: $ASSET_NAME"
                 else
-                  echo "❌ Failed to delete: $ASSET_NAME (HTTP: $DELETE_RESPONSE)"
+                  echo "ERROR: Failed to delete: $ASSET_NAME (HTTP: $DELETE_RESPONSE)"
                 fi
               fi
             done
           else
-            echo "🎉 No unwanted files found!"
+            echo "DONE: No unwanted files found!"
           fi
           
           # 检查并发布 draft release
@@ -288,13 +288,13 @@ jobs:
               https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID)
             
             if [ "$PUBLISH_RESPONSE" = "200" ]; then
-              echo "✅ Successfully published release"
+              echo "SUCCESS: Successfully published release"
             else
-              echo "⚠️  Failed to publish release (HTTP: $PUBLISH_RESPONSE)"
+              echo "WARNING:  Failed to publish release (HTTP: $PUBLISH_RESPONSE)"
               echo "   This may affect subsequent download steps"
             fi
           else
-            echo "✅ Release is already published"
+            echo "SUCCESS: Release is already published"
           fi
           
           echo "🏁 Cleanup completed successfully!"
@@ -311,11 +311,11 @@ jobs:
         run: |
           set -e
           
-          echo "🔍 Getting release info for tag: ${{ github.ref_name }}"
+          echo "DEBUG: Getting release info for tag: ${{ github.ref_name }}"
           
           # 验证环境变量
           if [ -z "$GITHUB_TOKEN" ]; then
-            echo "❌ GITHUB_TOKEN not set"
+            echo "ERROR: GITHUB_TOKEN not set"
             exit 1
           fi
           
@@ -329,7 +329,7 @@ jobs:
           
           # 如果直接通过标签获取失败，则从所有 releases 中查找
           if ! echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-            echo "⚠️  Direct tag lookup failed, searching in all releases..."
+            echo "WARNING:  Direct tag lookup failed, searching in all releases..."
             echo "Direct response: $RELEASE_RESPONSE"
             
             ALL_RELEASES=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
@@ -338,7 +338,7 @@ jobs:
             RELEASE_RESPONSE=$(echo "$ALL_RELEASES" | jq ".[] | select(.tag_name == \"${{ github.ref_name }}\")")
             
             if ! echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-              echo "❌ Could not find release for tag ${{ github.ref_name }}"
+              echo "ERROR: Could not find release for tag ${{ github.ref_name }}"
               echo "Available releases:"
               echo "$ALL_RELEASES" | jq -r '.[] | "- \(.tag_name) (ID: \(.id))"' | head -10
               exit 1
@@ -349,12 +349,12 @@ jobs:
           TAG_NAME=$(echo "$RELEASE_RESPONSE" | jq -r '.tag_name')
           ASSETS=$(echo "$RELEASE_RESPONSE" | jq -c '.assets')
           
-          echo "✅ Found release: $TAG_NAME (ID: $RELEASE_ID)"
-          echo "📦 Assets count: $(echo "$ASSETS" | jq length)"
+          echo "SUCCESS: Found release: $TAG_NAME (ID: $RELEASE_ID)"
+          echo "PACKAGE: Assets count: $(echo "$ASSETS" | jq length)"
           
           # 检查是否是 untagged release
           if echo "$ASSETS" | jq -r '.[0].browser_download_url' | grep -q "untagged"; then
-            echo "⚠️  WARNING: Found untagged release URLs!"
+            echo "WARNING:  WARNING: Found untagged release URLs!"
             echo "   This may indicate a draft release or tagging issue."
             echo "   Expected tag: ${{ github.ref_name }}"
             echo "   Found in URL: $(echo "$ASSETS" | jq -r '.[0].browser_download_url' | sed 's|.*/download/||' | sed 's|/.*||')"
@@ -367,7 +367,7 @@ jobs:
           echo "$ASSETS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           
-          echo "✅ Release info prepared for COS upload"
+          echo "SUCCESS: Release info prepared for COS upload"
         env:
           GITHUB_TOKEN: ${{ secrets.atriordsa }}
 
@@ -390,7 +390,7 @@ jobs:
             
             # 验证文件名不为空且符合预期格式
             if [ -z "$name" ] || [ "$name" = "null" ]; then
-              echo "❌ Invalid file name: '$name'"
+              echo "ERROR: Invalid file name: '$name'"
               continue
             fi
             
@@ -401,38 +401,38 @@ jobs:
                    -o "$name" "$url"; then
               # 验证下载的文件大小
               if [ -s "$name" ]; then
-                echo "✅ Downloaded: $name ($(du -h "$name" | cut -f1))"
+                echo "SUCCESS: Downloaded: $name ($(du -h "$name" | cut -f1))"
               else
-                echo "⚠️  Downloaded but file is empty: $name"
+                echo "WARNING:  Downloaded but file is empty: $name"
                 rm -f "$name"
               fi
             else
-              echo "❌ Failed to download: $name"
+              echo "ERROR: Failed to download: $name"
               # 清理可能的空文件
               rm -f "$name"
             fi
           done
           
-          echo "📂 Downloaded files:"
+          echo "DIR: Downloaded files:"
           ls -la
           
           # 验证下载的文件
-          echo "🔍 Verifying downloaded files..."
+          echo "DEBUG: Verifying downloaded files..."
           for file in *; do
             if [ -f "$file" ] && [ "$file" != "assets.json" ]; then
-              echo "✅ $file: $(du -h "$file" | cut -f1) - $(file "$file" | cut -d: -f2-)"
+              echo "SUCCESS: $file: $(du -h "$file" | cut -f1) - $(file "$file" | cut -d: -f2-)"
             fi
           done
           
           # 检查是否有文件名问题
           if ls -1 | grep -q "^[^S].*AppImage$\|^[^S].*\.deb$\|^[^S].*\.dmg$\|^[^S].*\.exe$"; then
-            echo "⚠️  WARNING: Found files with potentially truncated names:"
+            echo "WARNING:  WARNING: Found files with potentially truncated names:"
             ls -1 | grep "^[^S].*AppImage$\|^[^S].*\.deb$\|^[^S].*\.dmg$\|^[^S].*\.exe$" || true
           fi
 
       - name: Pre-upload file verification
         run: |
-          echo "🔍 Final file verification before COS upload..."
+          echo "DEBUG: Final file verification before COS upload..."
           cd ./downloads
           
           # 移除 assets.json 文件以避免上传
@@ -446,20 +446,20 @@ jobs:
           echo "Detailed file analysis:"
           for file in *; do
             if [ -f "$file" ]; then
-              echo "📄 $file:"
+              echo "FILE: $file:"
               echo "   Size: $(du -h "$file" | cut -f1)"
               echo "   Type: $(file "$file" | cut -d: -f2-)"
               echo "   Permissions: $(ls -l "$file" | cut -d' ' -f1)"
               # 检查文件名是否包含特殊字符
               if echo "$file" | grep -q '[^a-zA-Z0-9._-]'; then
-                echo "   ⚠️  Contains special characters"
+                echo "   WARNING:  Contains special characters"
               fi
             fi
           done
           
           # 修复可能被截断的文件名
           echo ""
-          echo "🔧 CRITICAL: Checking and fixing truncated filenames..."
+          echo "FIX: CRITICAL: Checking and fixing truncated filenames..."
           fixed_count=0
           
           # 显示修复前的状态
@@ -472,7 +472,7 @@ jobs:
               # 检查是否是被截断的文件名（缺少开头的S）
               if echo "$file" | grep -q "^DUTOJCompetitionSideClient"; then
                 new_name="S$file"
-                echo "🔧 CRITICAL FIX: $file -> $new_name"
+                echo "FIX: CRITICAL FIX: $file -> $new_name"
                 mv "$file" "$new_name"
                 fixed_count=$((fixed_count + 1))
               fi
@@ -481,12 +481,12 @@ jobs:
           
           # 修复拼写错误（protable -> portable）
           echo ""
-          echo "🔧 Checking for spelling errors..."
+          echo "FIX: Checking for spelling errors..."
           for file in *; do
             if [ -f "$file" ]; then
               if echo "$file" | grep -q "_protable_"; then
                 new_name=$(echo "$file" | sed 's/_protable_/_portable_/')
-                echo "🔧 Fixing spelling: $file -> $new_name"
+                echo "FIX: Fixing spelling: $file -> $new_name"
                 mv "$file" "$new_name"
                 fixed_count=$((fixed_count + 1))
               fi
@@ -494,24 +494,24 @@ jobs:
           done
           
           if [ $fixed_count -gt 0 ]; then
-            echo "✅ Fixed $fixed_count filename(s)"
+            echo "SUCCESS: Fixed $fixed_count filename(s)"
             echo ""
             echo "Files after fixing:"
             ls -la
           else
-            echo "✅ No filename issues found"
+            echo "SUCCESS: No filename issues found"
           fi
 
       - name: Prepare COS upload directory
         run: |
-          echo "📁 Creating clean upload directory..."
+          echo "FOLDER: Creating clean upload directory..."
           mkdir -p ./cos-upload
           cd ./downloads
           
-          echo "📋 Copying files to upload directory..."
+          echo "INFO: Copying files to upload directory..."
           for file in *; do
             if [ -f "$file" ]; then
-              echo "📄 Copying: $file"
+              echo "FILE: Copying: $file"
               cp "$file" "../cos-upload/$file"
             fi
           done
@@ -519,16 +519,16 @@ jobs:
           cd ../cos-upload
           
           echo ""
-          echo "🔧 CRITICAL: Comprehensive filename fixes in cos-upload directory..."
+          echo "FIX: CRITICAL: Comprehensive filename fixes in cos-upload directory..."
           
           # 第一轮：修复截断的文件名（添加缺失的S）
-          echo "🔧 Round 1: Fixing truncated filenames (adding missing 'S')..."
+          echo "FIX: Round 1: Fixing truncated filenames (adding missing 'S')..."
           fixed_count=0
           for file in *; do
             if [ -f "$file" ]; then
               if echo "$file" | grep -q "^DUTOJCompetitionSideClient"; then
                 new_name="S$file"
-                echo "   🔧 FIXING: $file -> $new_name"
+                echo "   FIX: FIXING: $file -> $new_name"
                 mv "$file" "$new_name"
                 fixed_count=$((fixed_count + 1))
               fi
@@ -536,12 +536,12 @@ jobs:
           done
           
           # 第二轮：修复拼写错误（protable -> portable）
-          echo "🔧 Round 2: Fixing spelling errors..."
+          echo "FIX: Round 2: Fixing spelling errors..."
           for file in *; do
             if [ -f "$file" ]; then
               if echo "$file" | grep -q "_protable_"; then
                 new_name=$(echo "$file" | sed 's/_protable_/_portable_/')
-                echo "   🔧 FIXING: $file -> $new_name"
+                echo "   FIX: FIXING: $file -> $new_name"
                 mv "$file" "$new_name"
                 fixed_count=$((fixed_count + 1))
               fi
@@ -549,56 +549,56 @@ jobs:
           done
           
           # 第三轮：验证所有文件都有正确的前缀
-          echo "🔧 Round 3: Final verification..."
+          echo "FIX: Round 3: Final verification..."
           problem_files=0
           for file in *; do
             if [ -f "$file" ]; then
               if ! echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
-                echo "   ❌ PROBLEMATIC FILE: $file (doesn't start with SDUTOJCompetitionSideClient_)"
+                echo "   ERROR: PROBLEMATIC FILE: $file (doesn't start with SDUTOJCompetitionSideClient_)"
                 problem_files=$((problem_files + 1))
               else
-                echo "   ✅ GOOD: $file"
+                echo "   SUCCESS: GOOD: $file"
               fi
             fi
           done
           
           echo ""
-          echo "📊 Fix summary:"
+          echo "STATS: Fix summary:"
           echo "   Files fixed: $fixed_count"
           echo "   Problem files remaining: $problem_files"
           
           if [ $problem_files -gt 0 ]; then
-            echo "❌ Still have problematic files - this may cause COS upload to fail"
-            echo "📋 All files after fixes:"
+            echo "ERROR: Still have problematic files - this may cause COS upload to fail"
+            echo "INFO: All files after fixes:"
             ls -la
             # Don't exit, let it try to upload anyway
           fi
           
           echo ""
-          echo "✅ Files ready for COS upload:"
+          echo "SUCCESS: Files ready for COS upload:"
           ls -la
           echo ""
-          echo "📊 Upload summary:"
+          echo "STATS: Upload summary:"
           echo "   Total files: $(ls -1 | wc -l)"
           echo "   Total size: $(du -sh . | cut -f1)"
 
       - name: Final COS upload verification
         run: |
-          echo "🔍 Final verification before COS upload..."
+          echo "DEBUG: Final verification before COS upload..."
           cd ./cos-upload
           
-          echo "📂 Files in cos-upload directory:"
+          echo "DIR: Files in cos-upload directory:"
           ls -la
           
           echo ""
-          echo "🔍 Analyzing actual file patterns..."
+          echo "DEBUG: Analyzing actual file patterns..."
           
           # 动态获取版本号（从任意文件名中提取）
           VERSION=$(ls -1 | head -1 | grep -o '_[0-9]\+\.[0-9]\+\.[0-9]\+\.' | sed 's/_//g' | sed 's/\.$//g' || echo "unknown")
-          echo "📋 Detected version: $VERSION"
+          echo "INFO: Detected version: $VERSION"
           
           if [ "$VERSION" = "unknown" ]; then
-            echo "⚠️  Could not detect version from filenames"
+            echo "WARNING:  Could not detect version from filenames"
             VERSION="1.2.14"  # 使用默认版本
           fi
           
@@ -606,37 +606,37 @@ jobs:
           total_files=$(ls -1 | wc -l)
           
           echo ""
-          echo "📋 File analysis:"
+          echo "INFO: File analysis:"
           for file in *; do
             if [ -f "$file" ]; then
-              echo "✅ Found: $file ($(du -h "$file" | cut -f1))"
+              echo "SUCCESS: Found: $file ($(du -h "$file" | cut -f1))"
               found_count=$((found_count + 1))
               
               # 检查文件名格式
               if echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
-                echo "   ✅ Correct filename prefix"
+                echo "   SUCCESS: Correct filename prefix"
               else
-                echo "   ⚠️  Incorrect filename prefix"
+                echo "   WARNING:  Incorrect filename prefix"
               fi
               
               # 检查是否包含版本号
               if echo "$file" | grep -q "_${VERSION}\."; then
-                echo "   ✅ Contains correct version: $VERSION"
+                echo "   SUCCESS: Contains correct version: $VERSION"
               else
-                echo "   ⚠️  Version mismatch or missing in filename"
+                echo "   WARNING:  Version mismatch or missing in filename"
               fi
             fi
           done
           
           echo ""
-          echo "📊 Verification summary:"
+          echo "STATS: Verification summary:"
           echo "   Version detected: $VERSION"
           echo "   Total files found: $found_count"
           echo "   Total files expected: ~12 (may vary based on build targets)"
           
           # 检查关键文件类型是否存在
           echo ""
-          echo "🔍 Checking for key file types:"
+          echo "DEBUG: Checking for key file types:"
           
           windows_count=$(ls -1 | grep "_windows_" | wc -l)
           macos_count=$(ls -1 | grep "_mac_" | wc -l)
@@ -647,11 +647,11 @@ jobs:
           echo "   Linux files: $linux_count"
           
           if [ $windows_count -gt 0 ] && [ $macos_count -gt 0 ] && [ $linux_count -gt 0 ]; then
-            echo "✅ All platforms represented - verification passed"
+            echo "SUCCESS: All platforms represented - verification passed"
           elif [ $found_count -gt 0 ]; then
-            echo "⚠️  Some platforms missing, but files exist - proceeding with upload"
+            echo "WARNING:  Some platforms missing, but files exist - proceeding with upload"
           else
-            echo "❌ No files found - this will cause COS upload to fail"
+            echo "ERROR: No files found - this will cause COS upload to fail"
             exit 1
           fi
 
@@ -660,12 +660,12 @@ jobs:
           echo "🚨 EMERGENCY: Final filename verification and fix before COS upload..."
           cd ./cos-upload
           
-          echo "📋 Current files in cos-upload:"
+          echo "INFO: Current files in cos-upload:"
           ls -la
           
           # 强制修复所有截断的文件名
           echo ""
-          echo "🔧 EMERGENCY FIX: Scanning for ANY truncated filenames..."
+          echo "FIX: EMERGENCY FIX: Scanning for ANY truncated filenames..."
           
           # 使用更强力的方法检查和修复
           emergency_fixes=0
@@ -675,14 +675,14 @@ jobs:
               
               # 检查文件是否以正确的前缀开始
               if echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
-                echo "   ✅ $file - Correct prefix"
+                echo "   SUCCESS: $file - Correct prefix"
               elif echo "$file" | grep -q "^DUTOJCompetitionSideClient"; then
                 new_name="S$file"
                 echo "   � EMERGENCY FIX: $file -> $new_name"
                 mv "$file" "$new_name"
                 emergency_fixes=$((emergency_fixes + 1))
               else
-                echo "   ⚠️  $file - Unexpected filename pattern"
+                echo "   WARNING:  $file - Unexpected filename pattern"
               fi
             fi
           done
@@ -694,9 +694,9 @@ jobs:
           for file in *; do
             if [ -f "$file" ]; then
               if echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
-                echo "✅ VERIFIED: $file"
+                echo "SUCCESS: VERIFIED: $file"
               else
-                echo "❌ STILL WRONG: $file"
+                echo "ERROR: STILL WRONG: $file"
                 all_correct=false
               fi
             fi
@@ -709,39 +709,39 @@ jobs:
           
           if [ "$all_correct" = "false" ]; then
             echo ""
-            echo "❌ CRITICAL: Some files still have incorrect names!"
+            echo "ERROR: CRITICAL: Some files still have incorrect names!"
             echo "This WILL cause COS upload to fail!"
             echo ""
-            echo "📋 Current file list:"
+            echo "INFO: Current file list:"
             ls -la
             
             # 显示具体哪些文件有问题
             echo ""
-            echo "🔍 Problem analysis:"
+            echo "DEBUG: Problem analysis:"
             for file in *; do
               if [ -f "$file" ]; then
                 if ! echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
-                  echo "❌ PROBLEM: $file"
+                  echo "ERROR: PROBLEM: $file"
                 else
-                  echo "✅ OK: $file"
+                  echo "SUCCESS: OK: $file"
                 fi
               fi
             done
             
             echo ""
-            echo "⚠️  Proceeding anyway, but expect ENOENT errors..."
+            echo "WARNING:  Proceeding anyway, but expect ENOENT errors..."
           else
-            echo "✅ All files have correct naming - should upload successfully"
+            echo "SUCCESS: All files have correct naming - should upload successfully"
           fi
           
           echo ""
-          echo "🎯 Final upload manifest:"
+          echo "TARGET: Final upload manifest:"
           echo "   Total files: $(ls -1 | wc -l)"
           echo "   Total size: $(du -sh . | cut -f1)"
           
           for file in *; do
             if [ -f "$file" ]; then
-              echo "  📄 $file ($(du -h "$file" | cut -f1))"
+              echo "  FILE: $file ($(du -h "$file" | cut -f1))"
             fi
           done
 
@@ -750,25 +750,25 @@ jobs:
           echo "🔬 DIAGNOSTIC: Pre-COS-action file verification..."
           cd ./cos-upload
           
-          echo "📋 Exact file list that COS action will see:"
+          echo "INFO: Exact file list that COS action will see:"
           ls -1
           echo ""
           
-          echo "🔍 Testing each file accessibility:"
+          echo "DEBUG: Testing each file accessibility:"
           for file in *; do
             if [ -f "$file" ]; then
               if [ -r "$file" ]; then
-                echo "✅ READABLE: $file ($(stat -c%s "$file") bytes)"
+                echo "SUCCESS: READABLE: $file ($(stat -c%s "$file") bytes)"
               else
-                echo "❌ NOT READABLE: $file"
+                echo "ERROR: NOT READABLE: $file"
               fi
             else
-              echo "❌ NOT A FILE: $file"
+              echo "ERROR: NOT A FILE: $file"
             fi
           done
           
           echo ""
-          echo "📊 Directory structure for COS action:"
+          echo "STATS: Directory structure for COS action:"
           echo "Current directory: $(pwd)"
           echo "Directory permissions: $(ls -ld . | cut -d' ' -f1)"
           echo "Files count: $(ls -1 | wc -l)"
@@ -780,79 +780,26 @@ jobs:
           echo "File manifest created:"
           cat file_manifest.txt
 
-      - name: Rename files for cos-action compatibility
+      - name: Keep original filenames (no renaming)
         run: |
-          echo "🔧 CRITICAL WORKAROUND: Direct file renaming for TencentCloud/cos-action filename bug..."
+          echo "保持原始文件名：不进行任何重命名操作"
           cd ./cos-upload
           
-          echo "📋 Original files:"
+          echo "原始文件列表："
           ls -la
           
-          # 为每个正确命名的文件创建截断版本
-          # 基于错误信息，COS action 现在寻找去掉 "SD" 的文件名
-          # 错误：UTOJCompetitionSideClient_windows_installer_1.2.17.exe.copy
-          
-          workarounds_created=0
+          echo ""
+          echo "文件验证："
           for file in *; do
-            if [ -f "$file" ] && [ ! -L "$file" ] && echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
-              # 创建截断版本的文件名（去掉开头的SD）
-              truncated_name=$(echo "$file" | sed 's/^SD//')
-              
-              if [ ! -e "$truncated_name" ]; then
-                echo "� Creating workaround files for: $file"
-                
-                # 创建备份
-                mkdir -p "./original_backups"
-                cp "$file" "./original_backups/$file"
-                echo "📋 Backup created: ./original_backups/$file"
-                
-                # 直接重命名文件以匹配 COS action 期望
-                echo "🔧 CRITICAL RENAME: $file -> $truncated_name"
-                mv "$file" "$truncated_name"
-                
-                workarounds_created=$((workarounds_created + 1))
-              else
-                echo "⚠️  Workaround for $truncated_name already exists, skipping"
-              fi
+            if [ -f "$file" ] && echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
+              echo "正确的文件名: $file ($(du -h "$file" | cut -f1))"
+            elif [ -f "$file" ]; then
+              echo "其他文件: $file"
             fi
           done
           
           echo ""
-          echo "📊 File renaming summary:"
-          echo "   Files renamed: $workarounds_created"
-          echo "   Original files backed up to: ./original_backups"
-          echo ""
-          
-          echo "📋 Final directory contents (with renamed files):"
-          ls -la
-          
-          echo ""
-          echo "🔍 Testing file accessibility:"
-          total_files=0
-          accessible_files=0
-          for file in *; do
-            if [ -f "$file" ]; then
-              total_files=$((total_files + 1))
-              if [ -r "$file" ]; then
-                size=$(stat -c%s "$file" 2>/dev/null || echo "unknown")
-                echo "✅ Accessible: $file ($size bytes)"
-                accessible_files=$((accessible_files + 1))
-              else
-                echo "❌ Not accessible: $file"
-              fi
-            fi
-          done
-          
-          echo ""
-          echo "📊 Accessibility summary:"
-          echo "   Total files: $total_files"
-          echo "   Accessible files: $accessible_files"
-          
-          if [ $accessible_files -eq $total_files ]; then
-            echo "✅ All files are accessible"
-          else
-            echo "⚠️  Some files may not be accessible to COS action"
-          fi
+          echo "准备上传具有正确SDUT前缀的文件到COS"
 
       - name: Configure Tencent Cloud COS
         uses: TencentCloud/cos-action@v1
@@ -867,33 +814,33 @@ jobs:
 
       - name: Verify COS upload success
         run: |
-          echo "🔍 Analyzing COS upload results..."
-          echo "📁 Upload target: /releases/${{ steps.release.outputs.tag_name }}"
-          echo "📂 Source directory: ./cos-upload"
+          echo "DEBUG: Analyzing COS upload results..."
+          echo "FOLDER: Upload target: /releases/${{ steps.release.outputs.tag_name }}"
+          echo "DIR: Source directory: ./cos-upload"
           
           # 检查源目录状态
           if [ -d "./cos-upload" ]; then
-            echo "✅ cos-upload directory exists"
+            echo "SUCCESS: cos-upload directory exists"
             cd ./cos-upload
             
             echo ""
-            echo "📋 Files that should have been uploaded:"
+            echo "INFO: Files that should have been uploaded:"
             original_files=0
             symlink_files=0
             for file in *; do
               if [ -f "$file" ]; then
                 if [ -L "$file" ]; then
-                  echo "  🔗 $file (symlink to $(readlink "$file")) ($(du -h "$file" | cut -f1))"
+                  echo "  TESTING: $file (symlink to $(readlink "$file")) ($(du -h "$file" | cut -f1))"
                   symlink_files=$((symlink_files + 1))
                 else
-                  echo "  ✅ $file (original) ($(du -h "$file" | cut -f1))"
+                  echo "  SUCCESS: $file (original) ($(du -h "$file" | cut -f1))"
                   original_files=$((original_files + 1))
                 fi
               fi
             done
             
             echo ""
-            echo "📊 Upload summary:"
+            echo "STATS: Upload summary:"
             echo "   Original files: $original_files"
             echo "   Symlink files: $symlink_files"
             echo "   Total files processed: $(ls -1 | wc -l)"
@@ -902,15 +849,15 @@ jobs:
             # 检查是否有文件清单
             if [ -f "file_manifest.txt" ]; then
               echo ""
-              echo "📄 File manifest from pre-upload:"
+              echo "FILE: File manifest from pre-upload:"
               cat file_manifest.txt
             fi
           else
-            echo "❌ cos-upload directory not found"
+            echo "ERROR: cos-upload directory not found"
           fi
           
           echo ""
-          echo "🎉 COS upload process completed!"
+          echo "DONE: COS upload process completed!"
           echo "   If no errors appeared above, all files should be uploaded successfully."
 
       - name: Create release index
@@ -925,7 +872,7 @@ jobs:
             const cdnUrl = '${{ secrets.CDN_URL }}';
             const versionPath = `releases/${tagName}`;
             
-            console.log('📋 Creating release index...');
+            console.log('INFO: Creating release index...');
             
             // 读取上传目录的文件信息
             const uploadDir = './cos-upload';
@@ -940,20 +887,20 @@ jobs:
                 
                 // Skip symlinks and .copy files (workarounds for COS action bug)
                 if (stats.isSymbolicLink()) {
-                  console.log(`⏭️  Skipping symlink: ${fileName}`);
+                  console.log(`SKIP:  Skipping symlink: ${fileName}`);
                   continue;
                 }
                 
                 // Skip backup directory
                 if (fileName === 'original_backups') {
-                  console.log(`⏭️  Skipping backup directory: ${fileName}`);
+                  console.log(`Skipping backup directory: ${fileName}`);
                   continue;
                 }
                 
-                // 现在文件已被重命名为以 UTOJCompetitionSideClient_ 开头
-                // 这是为了匹配 TencentCloud/cos-action 的期望
-                if (!fileName.startsWith('UTOJCompetitionSideClient_')) {
-                  console.log(`⏭️  Skipping non-renamed file: ${fileName}`);
+                // 保持原始的 SDUTOJCompetitionSideClient_ 文件名
+                // 不进行任何截断或重命名
+                if (!fileName.startsWith('SDUTOJCompetitionSideClient_')) {
+                  console.log(`Skipping non-SDUT file: ${fileName}`);
                   continue;
                 }
                 
@@ -967,7 +914,7 @@ jobs:
                   size: stats.size
                 });
                 
-                console.log(`📄 ${fileName} -> ${cdnFileUrl}`);
+                console.log(`FILE: ${fileName} -> ${cdnFileUrl}`);
               }
             }
             
@@ -984,8 +931,8 @@ jobs:
             const indexFile = path.join(uploadDir, 'index.json');
             fs.writeFileSync(indexFile, JSON.stringify(indexData, null, 2));
             
-            console.log(`✅ Created index with ${files.length} files`);
-            console.log(`📁 Version directory: ${cdnUrl.replace(/\/$/, '')}/${versionPath}/`);
+            console.log(`SUCCESS: Created index with ${files.length} files`);
+            console.log(`FOLDER: Version directory: ${cdnUrl.replace(/\/$/, '')}/${versionPath}/`);
 
       - name: Upload index to COS
         uses: TencentCloud/cos-action@v1
@@ -1000,8 +947,8 @@ jobs:
 
       - name: Display upload summary
         run: |
-          echo "🎉 COS upload completed successfully!"
-          echo "📁 Version: ${{ steps.release.outputs.tag_name }}"
+          echo "DONE: COS upload completed successfully!"
+          echo "FOLDER: Version: ${{ steps.release.outputs.tag_name }}"
           echo "🌐 CDN Base URL: ${{ secrets.CDN_URL }}"
-          echo "📂 Release Directory: ${{ secrets.CDN_URL }}/releases/${{ steps.release.outputs.tag_name }}/"
-          echo "📋 Index File: ${{ secrets.CDN_URL }}/releases/${{ steps.release.outputs.tag_name }}/index.json"
+          echo "DIR: Release Directory: ${{ secrets.CDN_URL }}/releases/${{ steps.release.outputs.tag_name }}/"
+          echo "INFO: Index File: ${{ secrets.CDN_URL }}/releases/${{ steps.release.outputs.tag_name }}/index.json"
