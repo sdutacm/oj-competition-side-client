@@ -17,52 +17,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup N          script: |
-            const tag = context.ref.replace('refs/tags/', '');
-            console.log(`🔍 Looking for relea          echo "📂 Downloaded files:"e with tag: ${tag}`);
-            
-            // 先测试 token 权限
-            try {
-              const user = await github.rest.users.getAuthenticated();
-              console.log(`✅ Token authenticated as: ${user.data.login}`);
-            } catch (error) {
-              console.error(`❌ Token authentication failed: ${error.message}`);
-              core.setFailed(`Token authentication failed: ${error.message}`);
-              return;
-            }
-            
-            // 测试仓库访问权限
-            try {
-              const repo = await github.rest.repos.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo
-              });
-              console.log(`✅ Repository access confirmed: ${repo.data.full_name}`);
-            } catch (error) {
-              console.error(`❌ Repository access failed: ${error.message}`);
-              core.setFailed(`Repository access failed: ${error.message}`);
-              return;
-            }
-            
-            // 列出所有 releases 进行调试
-            try {
-              const allReleases = await github.rest.repos.listReleases({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                per_page: 10
-              });
-              console.log(`📋 Found ${allReleases.data.length} total releases:`);
-              allReleases.data.forEach((release, index) => {
-                console.log(`   ${index + 1}. ${release.tag_name} - ${release.name} (${release.draft ? 'Draft' : 'Published'})`);
-              });
-            } catch (error) {
-              console.log(`⚠️  Could not list releases: ${error.message}`);
-            }
-            
-            // 现在尝试获取特定的 release
-            let release = null;
-            const maxRetries = 3; // 减少重试次数
-            const retryDelay = 10000; // 减少等待时间到 10 秒       uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
