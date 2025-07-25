@@ -780,49 +780,50 @@ jobs:
           echo "File manifest created:"
           cat file_manifest.txt
 
-      - name: Workaround for COS action filename truncation
+      - name: Create symlinks for COS action bug workaround
         run: |
-          echo "应用COS action文件名截断的工作区方案..."
+          echo "创建符号链接以绕过COS action文件名截断bug..."
           cd ./cos-upload
           
-          echo "当前文件列表："
+          echo "保持原始文件不变："
           ls -la
           
           echo ""
-          echo "基于错误信息，COS action寻找去掉'S'的文件名："
-          echo "错误：DUTOJCompetitionSideClient_linux_amd64_1.2.21.deb"
-          echo "预期：SDUTOJCompetitionSideClient_linux_amd64_1.2.21.deb"
+          echo "基于错误信息，COS action寻找："
+          echo "错误：UTOJCompetitionSideClient_linux_x86_64_1.2.22.AppImage" 
+          echo "但我们有：SDUTOJCompetitionSideClient_linux_x64_1.2.22.AppImage"
           
-          # 创建备份目录
-          mkdir -p "./cos_backup"
+          echo ""
+          echo "创建COS action期望的符号链接..."
           
-          renamed_count=0
+          link_count=0
           for file in *; do
             if [ -f "$file" ] && [ ! -L "$file" ] && echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
-              # 创建备份
-              cp "$file" "./cos_backup/$file"
+              # 创建COS action期望的文件名（去掉SD，并处理架构名称）
+              cos_name=$(echo "$file" | sed 's/^SD//' | sed 's/_x64_/_x86_64_/')
               
-              # 创建COS action期望的文件名（去掉开头的S）
-              cos_name=$(echo "$file" | sed 's/^S//')
-              
-              echo "重命名：$file -> $cos_name"
-              mv "$file" "$cos_name"
-              renamed_count=$((renamed_count + 1))
+              if [ ! -e "$cos_name" ]; then
+                echo "创建符号链接：$cos_name -> $file"
+                ln -s "$file" "$cos_name"
+                link_count=$((link_count + 1))
+              else
+                echo "目标链接已存在：$cos_name"
+              fi
             fi
           done
           
           echo ""
-          echo "重命名摘要："
-          echo "   重命名文件数：$renamed_count"
-          echo "   备份位置：./cos_backup"
+          echo "符号链接摘要："
+          echo "   创建链接数：$link_count"
+          echo "   原文件保持不变"
           
           echo ""
-          echo "重命名后的文件列表（COS action兼容）："
+          echo "最终文件列表（包含符号链接）："
           ls -la
           
           echo ""
-          echo "验证关键文件存在："
-          for pattern in "DUTOJCompetitionSideClient_windows_" "DUTOJCompetitionSideClient_linux_" "DUTOJCompetitionSideClient_mac_"; do
+          echo "验证COS action期望的文件："
+          for pattern in "UTOJCompetitionSideClient_windows_" "UTOJCompetitionSideClient_linux_" "UTOJCompetitionSideClient_mac_"; do
             count=$(ls -1 | grep "^${pattern}" | wc -l)
             echo "   ${pattern}*: $count 个文件"
           done
@@ -923,27 +924,28 @@ jobs:
                   continue;
                 }
                 
-                // 处理为COS action重命名的文件（去掉了S前缀）
-                // 重命名后的文件以 DUTOJCompetitionSideClient_ 开头
-                if (!fileName.startsWith('DUTOJCompetitionSideClient_')) {
-                  console.log(`Skipping non-COS-renamed file: ${fileName}`);
+                // 处理原始文件（保持SDUT前缀用于索引显示）
+                if (fileName.startsWith('SDUTOJCompetitionSideClient_')) {
+                  // 这是原始文件，用于索引显示
+                  const safeKey = `${versionPath}/${fileName}`.replace(/ /g, '_');
+                  const cdnFileUrl = `${cdnUrl.replace(/\/$/, '')}/${safeKey}`;
+                  
+                  files.push({
+                    name: fileName,        // 显示原始文件名
+                    cos_key: safeKey,
+                    cdn_url: cdnFileUrl,
+                    size: stats.size
+                  });
+                  
+                  console.log(`FILE: ${fileName} -> ${cdnFileUrl}`);
                   continue;
                 }
                 
-                // 恢复原始文件名用于索引显示
-                const originalFileName = 'S' + fileName; // 添加回被截断的S
-                
-                const safeKey = `${versionPath}/${fileName}`.replace(/ /g, '_');
-                const cdnFileUrl = `${cdnUrl.replace(/\/$/, '')}/${safeKey}`;
-                
-                files.push({
-                  name: originalFileName,  // 在索引中显示原始名称
-                  cos_key: safeKey,       // COS中的实际路径
-                  cdn_url: cdnFileUrl,
-                  size: stats.size
-                });
-                
-                console.log(`FILE: ${originalFileName} -> ${cdnFileUrl}`);
+                // 跳过符号链接文件（它们只是为了COS action兼容性）
+                if (fileName.startsWith('UTOJCompetitionSideClient_')) {
+                  console.log(`Skipping COS symlink: ${fileName}`);
+                  continue;
+                }
               }
             }
             
