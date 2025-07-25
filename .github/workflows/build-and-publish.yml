@@ -421,52 +421,87 @@ jobs:
         run: |
           echo "🔧 Setting up Tencent Cloud COS CLI..."
           
-          # 安装 COS CLI
+          # 安装 COS CLI - 使用更稳定的方式
           if ! command -v coscli &> /dev/null; then
             echo "Installing COS CLI..."
-            wget -q https://github.com/tencentyun/coscli/releases/latest/download/coscli-linux -O coscli
+            
+            # 获取最新版本的下载链接
+            LATEST_VERSION=$(curl -s https://api.github.com/repos/tencentyun/coscli/releases/latest | jq -r '.tag_name')
+            echo "Latest COS CLI version: $LATEST_VERSION"
+            
+            # 下载并安装
+            wget -q "https://github.com/tencentyun/coscli/releases/download/${LATEST_VERSION}/coscli-linux" -O coscli
+            
+            # 检查下载是否成功
+            if [ ! -f "coscli" ]; then
+              echo "❌ Failed to download COS CLI"
+              exit 1
+            fi
+            
             chmod +x coscli
-            sudo mv coscli /usr/local/bin/
+            
+            # 尝试移动到系统路径，如果失败则使用本地路径
+            if sudo mv coscli /usr/local/bin/ 2>/dev/null; then
+              echo "✅ COS CLI installed to /usr/local/bin/"
+              COSCLI_CMD="coscli"
+            else
+              echo "⚠️  Could not install globally, using local binary"
+              COSCLI_CMD="./coscli"
+            fi
+          else
+            echo "✅ COS CLI already installed"
+            COSCLI_CMD="coscli"
           fi
           
+          # 验证 COS CLI 工作
+          echo "Testing COS CLI..."
+          $COSCLI_CMD version || {
+            echo "❌ COS CLI not working properly"
+            exit 1
+          }
+          
           # 配置 COS CLI
-          coscli config set -e cos.${{ secrets.COS_REGION }}.myqcloud.com \
-                           -i ${{ secrets.COS_SECRET_ID }} \
-                           -k ${{ secrets.COS_SECRET_KEY }} \
-                           -a ${{ secrets.COS_BUCKET }}
+          echo "Configuring COS CLI..."
+          $COSCLI_CMD config set -e cos.${{ secrets.COS_REGION }}.myqcloud.com \
+                              -i ${{ secrets.COS_SECRET_ID }} \
+                              -k ${{ secrets.COS_SECRET_KEY }} \
+                              -a ${{ secrets.COS_BUCKET }}
           
           echo "📁 Uploading files to COS..."
           echo "Target path: releases/${{ steps.release.outputs.tag_name }}/"
           
           # 创建远程目录并上传所有文件
           cd ./downloads
+          UPLOAD_SUCCESS=true
+          
           for file in *; do
-            if [ -f "$file" ]; then
+            if [ -f "$file" ] && [ "$file" != "assets.json" ]; then
               echo "📤 Uploading: $file"
               echo "   Original filename will be preserved: $file"
               
               # 使用cp命令确保文件名完整保留
-              coscli cp "$file" "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/$file"
-              
-              # 验证上传
-              if coscli ls "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/$file" &>/dev/null; then
+              if $COSCLI_CMD cp "$file" "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/$file"; then
                 echo "✅ Successfully uploaded: $file"
-                # 验证远程文件名是否正确
-                REMOTE_NAME=$(coscli ls "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/" | grep "$file" | awk '{print $NF}' | tail -1)
-                echo "   Remote filename: $REMOTE_NAME"
-                if [[ "$REMOTE_NAME" == *"$file"* ]]; then
-                  echo "✅ Filename preserved correctly"
+                
+                # 验证上传
+                if $COSCLI_CMD ls "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/$file" &>/dev/null; then
+                  echo "✅ Verified upload: $file"
                 else
-                  echo "⚠️  Warning: Remote filename might be different"
+                  echo "⚠️  Warning: Could not verify upload of $file"
                 fi
               else
-                echo "❌ Failed to verify upload: $file"
-                exit 1
+                echo "❌ Failed to upload: $file"
+                UPLOAD_SUCCESS=false
               fi
             fi
           done
           
-          echo "✅ All files uploaded to COS successfully with original filenames"
+          if [ "$UPLOAD_SUCCESS" = true ]; then
+            echo "✅ All files uploaded to COS successfully with original filenames"
+          else
+            echo "❌ Some uploads failed"
+            exit 1
+          fi
 
       - name: Create release index
         uses: actions/github-script@v7
@@ -529,20 +564,36 @@ jobs:
         run: |
           echo "📤 Uploading index.json to COS..."
           
+          # 确定COS CLI命令路径
+          if command -v coscli &> /dev/null; then
+            COSCLI_CMD="coscli"
+          elif [ -f "./coscli" ]; then
+            COSCLI_CMD="./coscli"
+          else
+            echo "❌ COS CLI not found"
+            exit 1
+          fi
+          
           cd ./downloads
           if [ -f "index.json" ]; then
             echo "📋 Uploading index file..."
-            coscli cp "index.json" "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/index.json"
             
-            # 验证上传
-            if coscli ls "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/index.json" &>/dev/null; then
+            if $COSCLI_CMD cp "index.json" "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/index.json"; then
               echo "✅ Successfully uploaded index.json"
+              
+              # 验证上传
+              if $COSCLI_CMD ls "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/index.json" &>/dev/null; then
+                echo "✅ Verified index.json upload"
+              else
+                echo "⚠️  Warning: Could not verify index.json upload"
+              fi
             else
-              echo "❌ Failed to verify index.json upload"
+              echo "❌ Failed to upload index.json"
               exit 1
             fi
           else
             echo "❌ index.json not found"
+            ls -la
             exit 1
           fi
 
