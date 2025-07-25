@@ -443,6 +443,7 @@ jobs:
                   const filePath = path.join(downloadDir, fileName);
                   const stats = fs.statSync(filePath);
                   
+                  // CDN URL 应该匹配实际的上传路径
                   const safeKey = `${versionPath}/${fileName}`.replace(/ /g, '_');
                   const cdnFileUrl = `${cdnUrl.replace(/\/$/, '')}/${safeKey}`;
                   
@@ -525,7 +526,7 @@ jobs:
               for filename in files:
                   filepath = os.path.join(downloads_dir, filename)
                   try:
-                      key = f'releases/{tag_name}/{filename}'
+                      key = f'atrior/oj-competition-side-client/releases/{tag_name}/{filename}'
                       print(f"📤 Uploading: {filename}")
                       print(f"   Local: {filepath}")
                       print(f"   Remote: {key}")
@@ -549,13 +550,13 @@ jobs:
 
               if success:
                   print(f"\n🎉 All {len(files)} files uploaded successfully to COS!")
-                  print(f"📂 Remote path: releases/{tag_name}/")
+                  print(f"📂 Remote path: atrior/oj-competition-side-client/releases/{tag_name}/")
                   
                   # 上传index.json如果存在
                   index_file = os.path.join(downloads_dir, 'index.json')
                   if os.path.exists(index_file):
                       try:
-                          index_key = f'releases/{tag_name}/index.json'
+                          index_key = f'atrior/oj-competition-side-client/releases/{tag_name}/index.json'
                           print(f"📋 Uploading index.json...")
                           client.upload_file(
                               Bucket=bucket,
