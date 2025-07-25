@@ -427,7 +427,7 @@ jobs:
             
             const tagName = '${{ steps.release.outputs.tag_name }}';
             const cdnUrl = '${{ secrets.CDN_URL }}';
-            const versionPath = `release/${tagName}`;  // 修改为 release 而不是 releases
+            const versionPath = `releases/${tagName}`;
             
             console.log('📋 Creating release index...');
             
@@ -499,10 +499,10 @@ jobs:
           echo "📁 Version: ${{ steps.release.outputs.tag_name }}"
           if [ -n "${{ secrets.COS_DOMAIN }}" ]; then
             echo "🌐 Custom Domain: ${{ secrets.COS_DOMAIN }}"
-            echo "📂 Release Directory: ${{ secrets.CDN_URL }}/release/${{ steps.release.outputs.tag_name }}/"
-            echo "📋 Index File: ${{ secrets.CDN_URL }}/release/${{ steps.release.outputs.tag_name }}/index.json"
+            echo "📂 Release Directory: ${{ secrets.COS_DOMAIN }}/atrior/oj-competition-side-client/releases/${{ steps.release.outputs.tag_name }}/"
+            echo "📋 Index File: ${{ secrets.COS_DOMAIN }}/atrior/oj-competition-side-client/releases/${{ steps.release.outputs.tag_name }}/index.json"
           else
             echo "🌐 CDN Base URL: ${{ secrets.CDN_URL }}"
-            echo "📂 Release Directory: ${{ secrets.CDN_URL }}/release/${{ steps.release.outputs.tag_name }}/"
-            echo "📋 Index File: ${{ secrets.CDN_URL }}/release/${{ steps.release.outputs.tag_name }}/index.json"
+            echo "📂 Release Directory: ${{ secrets.CDN_URL }}/atrior/oj-competition-side-client/releases/${{ steps.release.outputs.tag_name }}/"
+            echo "📋 Index File: ${{ secrets.CDN_URL }}/atrior/oj-competition-side-client/releases/${{ steps.release.outputs.tag_name }}/index.json"
           fi
