@@ -483,6 +483,29 @@ jobs:
             echo "✅ No filename issues found"
           fi
 
+      - name: Prepare COS upload directory
+        run: |
+          echo "📁 Creating clean upload directory..."
+          mkdir -p ./cos-upload
+          cd ./downloads
+          
+          echo "📋 Copying files to upload directory..."
+          for file in *; do
+            if [ -f "$file" ]; then
+              echo "📄 Copying: $file"
+              cp "$file" "../cos-upload/$file"
+            fi
+          done
+          
+          cd ../cos-upload
+          echo ""
+          echo "✅ Files ready for COS upload:"
+          ls -la
+          echo ""
+          echo "📊 Upload summary:"
+          echo "   Total files: $(ls -1 | wc -l)"
+          echo "   Total size: $(du -sh . | cut -f1)"
+
       - name: Configure Tencent Cloud COS
         uses: TencentCloud/cos-action@v1
         with:
@@ -490,7 +513,7 @@ jobs:
           secret_key: ${{ secrets.COS_SECRET_KEY }}
           cos_bucket: ${{ secrets.COS_BUCKET }}
           cos_region: ${{ secrets.COS_REGION }}
-          local_path: ./downloads
+          local_path: ./cos-upload
           remote_path: /releases/${{ steps.release.outputs.tag_name }}
           clean: false
 
@@ -508,23 +531,22 @@ jobs:
             
             console.log('📋 Creating release index...');
             
-            // 读取下载的文件信息
-            const downloadDir = './downloads';
+            // 读取上传目录的文件信息
+            const uploadDir = './cos-upload';
             const files = [];
             
-            if (fs.existsSync(downloadDir)) {
-              const fileList = fs.readdirSync(downloadDir);
+            if (fs.existsSync(uploadDir)) {
+              const fileList = fs.readdirSync(uploadDir);
               
               for (const fileName of fileList) {
-                if (fileName !== 'assets.json') {
-                  const filePath = path.join(downloadDir, fileName);
-                  const stats = fs.statSync(filePath);
-                  
-                  const safeKey = `${versionPath}/${fileName}`.replace(/ /g, '_');
-                  const cdnFileUrl = `${cdnUrl.replace(/\/$/, '')}/${safeKey}`;
-                  
-                  files.push({
-                    name: fileName,
+                const filePath = path.join(uploadDir, fileName);
+                const stats = fs.statSync(filePath);
+                
+                const safeKey = `${versionPath}/${fileName}`.replace(/ /g, '_');
+                const cdnFileUrl = `${cdnUrl.replace(/\/$/, '')}/${safeKey}`;
+                
+                files.push({
+                  name: fileName,
                     cos_key: safeKey,
                     cdn_url: cdnFileUrl,
                     size: stats.size
@@ -545,7 +567,7 @@ jobs:
             };
             
             // 保存索引文件
-            const indexFile = path.join(downloadDir, 'index.json');
+            const indexFile = path.join(uploadDir, 'index.json');
             fs.writeFileSync(indexFile, JSON.stringify(indexData, null, 2));
             
             console.log(`✅ Created index with ${files.length} files`);
@@ -558,7 +580,7 @@ jobs:
           secret_key: ${{ secrets.COS_SECRET_KEY }}
           cos_bucket: ${{ secrets.COS_BUCKET }}
           cos_region: ${{ secrets.COS_REGION }}
-          local_path: ./downloads/index.json
+          local_path: ./cos-upload/index.json
           remote_path: /releases/${{ steps.release.outputs.tag_name }}/index.json
           clean: false
 
