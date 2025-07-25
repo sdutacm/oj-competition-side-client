@@ -328,16 +328,53 @@ jobs:
               config = CosConfig(Region=region, SecretId=cos_secret_id, SecretKey=cos_secret_key)
               client = CosS3Client(config)
               
-              # 获取 GitHub release 信息
-              release_url = f"https://api.github.com/repos/{repository}/releases/tags/{tag_name}"
-              headers = {'Authorization': f'token {github_token}'}
+              # 获取 GitHub release 信息，带重试机制
+              release_data = None
+              max_retries = 5
               
-              response = requests.get(release_url, headers=headers)
-              if response.status_code != 200:
-                  print(f"❌ Failed to get release info: {response.status_code}")
+              for attempt in range(max_retries):
+                  print(f"🔄 Attempt {attempt + 1}/{max_retries} to get release info...")
+                  
+                  # 首先尝试通过标签获取 release
+                  release_url = f"https://api.github.com/repos/{repository}/releases/tags/{tag_name}"
+                  headers = {'Authorization': f'token {github_token}'}
+                  
+                  response = requests.get(release_url, headers=headers)
+                  
+                  if response.status_code == 200:
+                      release_data = response.json()
+                      print("✅ Successfully got release info via tag")
+                      break
+                  elif response.status_code == 404:
+                      print(f"⚠️  Release not found via tag, trying all releases...")
+                      
+                      # 如果直接获取失败，尝试从所有 releases 中查找
+                      all_releases_url = f"https://api.github.com/repos/{repository}/releases"
+                      all_response = requests.get(all_releases_url, headers=headers)
+                      
+                      if all_response.status_code == 200:
+                          all_releases = all_response.json()
+                          for release in all_releases:
+                              if release.get('tag_name') == tag_name:
+                                  release_data = release
+                                  print("✅ Found release in all releases list")
+                                  break
+                          
+                          if release_data:
+                              break
+                      
+                      print(f"❌ Attempt {attempt + 1} failed, waiting 10 seconds...")
+                      if attempt < max_retries - 1:
+                          time.sleep(10)
+                  else:
+                      print(f"❌ API error {response.status_code}: {response.text}")
+                      if attempt < max_retries - 1:
+                          time.sleep(10)
+              
+              if not release_data:
+                  print(f"❌ Failed to get release info after {max_retries} attempts")
+                  print(f"   Make sure release {tag_name} exists")
                   sys.exit(1)
-              
-              release_data = response.json()
               assets = release_data.get('assets', [])
               
               print(f"📦 Found {len(assets)} assets to upload")
