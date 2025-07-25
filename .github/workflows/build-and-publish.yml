@@ -264,6 +264,18 @@ jobs:
     needs: [cleanup-release]
     if: always() && needs.cleanup-release.result == 'success'
     steps:
+      - name: Checkout repository first
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Get release info
         id: release
         run: |
@@ -474,14 +486,6 @@ jobs:
             
             console.log(`✅ Created index with ${files.length} files`);
             console.log(`📁 Version directory: ${cdnUrl.replace(/\/$/, '')}/${versionPath}/`);
-
-      - name: Checkout repository for upload script
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js for upload
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
 
       - name: Upload all files to COS using npm script
         run: npm run upload:cos
