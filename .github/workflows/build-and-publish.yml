@@ -780,34 +780,35 @@ jobs:
           echo "File manifest created:"
           cat file_manifest.txt
 
-      - name: Create symlinks for cos-action bug workaround
+      - name: Rename files for cos-action compatibility
         run: |
-          echo "🔧 WORKAROUND: Creating both symlinks and hard copies for TencentCloud/cos-action filename bug..."
+          echo "🔧 CRITICAL WORKAROUND: Direct file renaming for TencentCloud/cos-action filename bug..."
           cd ./cos-upload
           
           echo "📋 Original files:"
           ls -la
           
-          # 为每个正确命名的文件创建截断版本的符号链接和硬拷贝
-          # 这样确保 cos-action 无论使用什么方式都能找到文件
+          # 为每个正确命名的文件创建截断版本
+          # 基于错误信息，COS action 现在寻找去掉 "SD" 的文件名
+          # 错误：UTOJCompetitionSideClient_windows_installer_1.2.17.exe.copy
           
           workarounds_created=0
           for file in *; do
             if [ -f "$file" ] && [ ! -L "$file" ] && echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
-              # 创建截断版本的文件名（去掉开头的S）
-              truncated_name=$(echo "$file" | sed 's/^S//')
+              # 创建截断版本的文件名（去掉开头的SD）
+              truncated_name=$(echo "$file" | sed 's/^SD//')
               
               if [ ! -e "$truncated_name" ]; then
                 echo "� Creating workaround files for: $file"
                 
-                # 创建符号链接
-                echo "   🔗 Symlink: $truncated_name -> $file"
-                ln -s "$file" "$truncated_name"
+                # 创建备份
+                mkdir -p "./original_backups"
+                cp "$file" "./original_backups/$file"
+                echo "📋 Backup created: ./original_backups/$file"
                 
-                # 创建硬拷贝（以防符号链接不工作）
-                truncated_copy="${truncated_name}.copy"
-                echo "   📄 Hard copy: $truncated_copy"
-                cp "$file" "$truncated_copy"
+                # 直接重命名文件以匹配 COS action 期望
+                echo "🔧 CRITICAL RENAME: $file -> $truncated_name"
+                mv "$file" "$truncated_name"
                 
                 workarounds_created=$((workarounds_created + 1))
               else
@@ -817,11 +818,12 @@ jobs:
           done
           
           echo ""
-          echo "📊 Workaround creation summary:"
-          echo "   Files with workarounds: $workarounds_created"
+          echo "📊 File renaming summary:"
+          echo "   Files renamed: $workarounds_created"
+          echo "   Original files backed up to: ./original_backups"
           echo ""
           
-          echo "📋 Final directory contents (including workarounds):"
+          echo "📋 Final directory contents (with renamed files):"
           ls -la
           
           echo ""
@@ -942,14 +944,16 @@ jobs:
                   continue;
                 }
                 
-                if (fileName.endsWith('.copy') || fileName === 'file_manifest.txt') {
-                  console.log(`⏭️  Skipping workaround/debug file: ${fileName}`);
+                // Skip backup directory
+                if (fileName === 'original_backups') {
+                  console.log(`⏭️  Skipping backup directory: ${fileName}`);
                   continue;
                 }
                 
-                // Only include original files that start with the correct prefix
-                if (!fileName.startsWith('SDUTOJCompetitionSideClient_')) {
-                  console.log(`⏭️  Skipping non-original file: ${fileName}`);
+                // 现在文件已被重命名为以 UTOJCompetitionSideClient_ 开头
+                // 这是为了匹配 TencentCloud/cos-action 的期望
+                if (!fileName.startsWith('UTOJCompetitionSideClient_')) {
+                  console.log(`⏭️  Skipping non-renamed file: ${fileName}`);
                   continue;
                 }
                 
