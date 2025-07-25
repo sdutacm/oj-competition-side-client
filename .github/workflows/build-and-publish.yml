@@ -780,6 +780,78 @@ jobs:
           echo "File manifest created:"
           cat file_manifest.txt
 
+      - name: Create symlinks for cos-action bug workaround
+        run: |
+          echo "🔧 WORKAROUND: Creating both symlinks and hard copies for TencentCloud/cos-action filename bug..."
+          cd ./cos-upload
+          
+          echo "📋 Original files:"
+          ls -la
+          
+          # 为每个正确命名的文件创建截断版本的符号链接和硬拷贝
+          # 这样确保 cos-action 无论使用什么方式都能找到文件
+          
+          workarounds_created=0
+          for file in *; do
+            if [ -f "$file" ] && [ ! -L "$file" ] && echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
+              # 创建截断版本的文件名（去掉开头的S）
+              truncated_name=$(echo "$file" | sed 's/^S//')
+              
+              if [ ! -e "$truncated_name" ]; then
+                echo "� Creating workaround files for: $file"
+                
+                # 创建符号链接
+                echo "   🔗 Symlink: $truncated_name -> $file"
+                ln -s "$file" "$truncated_name"
+                
+                # 创建硬拷贝（以防符号链接不工作）
+                truncated_copy="${truncated_name}.copy"
+                echo "   📄 Hard copy: $truncated_copy"
+                cp "$file" "$truncated_copy"
+                
+                workarounds_created=$((workarounds_created + 1))
+              else
+                echo "⚠️  Workaround for $truncated_name already exists, skipping"
+              fi
+            fi
+          done
+          
+          echo ""
+          echo "📊 Workaround creation summary:"
+          echo "   Files with workarounds: $workarounds_created"
+          echo ""
+          
+          echo "📋 Final directory contents (including workarounds):"
+          ls -la
+          
+          echo ""
+          echo "🔍 Testing file accessibility:"
+          total_files=0
+          accessible_files=0
+          for file in *; do
+            if [ -f "$file" ]; then
+              total_files=$((total_files + 1))
+              if [ -r "$file" ]; then
+                size=$(stat -c%s "$file" 2>/dev/null || echo "unknown")
+                echo "✅ Accessible: $file ($size bytes)"
+                accessible_files=$((accessible_files + 1))
+              else
+                echo "❌ Not accessible: $file"
+              fi
+            fi
+          done
+          
+          echo ""
+          echo "📊 Accessibility summary:"
+          echo "   Total files: $total_files"
+          echo "   Accessible files: $accessible_files"
+          
+          if [ $accessible_files -eq $total_files ]; then
+            echo "✅ All files are accessible"
+          else
+            echo "⚠️  Some files may not be accessible to COS action"
+          fi
+
       - name: Configure Tencent Cloud COS
         uses: TencentCloud/cos-action@v1
         with:
@@ -804,14 +876,24 @@ jobs:
             
             echo ""
             echo "📋 Files that should have been uploaded:"
+            original_files=0
+            symlink_files=0
             for file in *; do
               if [ -f "$file" ]; then
-                echo "  ✅ $file ($(du -h "$file" | cut -f1))"
+                if [ -L "$file" ]; then
+                  echo "  🔗 $file (symlink to $(readlink "$file")) ($(du -h "$file" | cut -f1))"
+                  symlink_files=$((symlink_files + 1))
+                else
+                  echo "  ✅ $file (original) ($(du -h "$file" | cut -f1))"
+                  original_files=$((original_files + 1))
+                fi
               fi
             done
             
             echo ""
             echo "📊 Upload summary:"
+            echo "   Original files: $original_files"
+            echo "   Symlink files: $symlink_files"
             echo "   Total files processed: $(ls -1 | wc -l)"
             echo "   Total size processed: $(du -sh . | cut -f1)"
             
@@ -853,6 +935,23 @@ jobs:
               for (const fileName of fileList) {
                 const filePath = path.join(uploadDir, fileName);
                 const stats = fs.statSync(filePath);
+                
+                // Skip symlinks and .copy files (workarounds for COS action bug)
+                if (stats.isSymbolicLink()) {
+                  console.log(`⏭️  Skipping symlink: ${fileName}`);
+                  continue;
+                }
+                
+                if (fileName.endsWith('.copy') || fileName === 'file_manifest.txt') {
+                  console.log(`⏭️  Skipping workaround/debug file: ${fileName}`);
+                  continue;
+                }
+                
+                // Only include original files that start with the correct prefix
+                if (!fileName.startsWith('SDUTOJCompetitionSideClient_')) {
+                  console.log(`⏭️  Skipping non-original file: ${fileName}`);
+                  continue;
+                }
                 
                 const safeKey = `${versionPath}/${fileName}`.replace(/ /g, '_');
                 const cdnFileUrl = `${cdnUrl.replace(/\/$/, '')}/${safeKey}`;
