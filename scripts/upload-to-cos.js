@@ -4,26 +4,28 @@ const fs = require('fs');
 const path = require('path');
 
 async function uploadToCOS() {
-    console.log('🔧 Setting up Tencent Cloud COS upload with JavaScript SDK...');
-    
-    // 安装腾讯云COS JavaScript SDK
-    console.log('📥 Installing Tencent Cloud COS JavaScript SDK...');
+console.log('🔧 Setting up Tencent Cloud COS upload with JavaScript SDK...');
+
+// 尝试导入已安装的 COS SDK，如果没有则动态安装
+console.log('📦 Importing COS SDK...');
+let COS;
+try {
+    COS = require('cos-nodejs-sdk-v5');
+    console.log('✅ COS SDK imported from dependencies');
+} catch (error) {
+    console.log('📥 COS SDK not found in dependencies, installing...');
     const { execSync } = require('child_process');
     
     try {
         execSync('npm install cos-nodejs-sdk-v5', { stdio: 'inherit' });
         console.log('✅ COS JavaScript SDK installed successfully');
-    } catch (error) {
-        console.error('❌ Failed to install COS SDK:', error.message);
+        COS = require('cos-nodejs-sdk-v5');
+        console.log('✅ COS SDK imported successfully');
+    } catch (installError) {
+        console.error('❌ Failed to install COS SDK:', installError.message);
         process.exit(1);
     }
-    
-    // 导入COS SDK
-    console.log('📦 Importing COS SDK...');
-    const COS = require('cos-nodejs-sdk-v5');
-    console.log('✅ COS SDK imported successfully');
-    
-    // 从环境变量获取配置
+}    // 从环境变量获取配置
     console.log('🔍 Reading environment variables...');
     const secretId = process.env.COS_SECRET_ID;
     const secretKey = process.env.COS_SECRET_KEY;
