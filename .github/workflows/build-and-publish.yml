@@ -264,203 +264,152 @@ jobs:
     needs: [cleanup-release]
     if: always() && needs.cleanup-release.result == 'success'
     steps:
-      - name: Setup Python for COS upload
-        uses: actions/setup-python@v4
+      - name: Get release info
+        id: release
+        uses: actions/github-script@v7
         with:
-          python-version: '3.x'
-      
-      - name: Install COS SDK
+          github-token: ${{ secrets.atriordsa }}
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            console.log(`� Looking for release with tag: ${tag}`);
+            
+            try {
+              // 首先尝试通过标签获取 release
+              const release = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: tag
+              });
+              
+              console.log(`✅ Found release: ${release.data.name} (ID: ${release.data.id})`);
+              console.log(`📦 Assets count: ${release.data.assets.length}`);
+              
+              // 输出 release 信息和 assets 列表
+              core.setOutput('release_id', release.data.id);
+              core.setOutput('tag_name', release.data.tag_name);
+              core.setOutput('assets', JSON.stringify(release.data.assets));
+              
+              return release.data;
+            } catch (error) {
+              console.error(`❌ Error getting release: ${error.message}`);
+              core.setFailed(`Failed to get release for tag ${tag}`);
+            }
+
+      - name: Download release assets
+        id: download
         run: |
-          pip install cos-python-sdk-v5 requests
-      
-      - name: Upload release assets to COS
+          echo "📥 Starting download of release assets..."
+          
+          # 创建下载目录
+          mkdir -p ./downloads
+          cd ./downloads
+          
+          # 解析 assets JSON
+          echo '${{ steps.release.outputs.assets }}' > assets.json
+          
+          # 使用 jq 处理每个 asset
+          jq -r '.[] | "\(.name)|\(.browser_download_url)"' assets.json | while IFS='|' read -r name url; do
+            echo "📥 Downloading: $name"
+            echo "   URL: $url"
+            
+            # 下载文件，使用认证
+            if curl -L -H "Authorization: token ${{ secrets.atriordsa }}" \
+                   -H "Accept: application/octet-stream" \
+                   --fail --show-error --silent \
+                   -o "$name" "$url"; then
+              echo "✅ Downloaded: $name ($(du -h "$name" | cut -f1))"
+            else
+              echo "❌ Failed to download: $name"
+            fi
+          done
+          
+          echo "� Downloaded files:"
+          ls -la
+
+      - name: Configure Tencent Cloud COS
+        uses: TencentCloud/cos-action@v1
+        with:
+          secret_id: ${{ secrets.COS_SECRET_ID }}
+          secret_key: ${{ secrets.COS_SECRET_KEY }}
+          cos_bucket: ${{ secrets.COS_BUCKET }}
+          cos_region: ${{ secrets.COS_REGION }}
+          local_path: ./downloads
+          remote_path: /releases/${{ steps.release.outputs.tag_name }}
+          clean: false
+          skip_src_check: true
+
+      - name: Create release index
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.atriordsa }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            const tagName = '${{ steps.release.outputs.tag_name }}';
+            const cdnUrl = '${{ secrets.CDN_URL }}';
+            const versionPath = `releases/${tagName}`;
+            
+            console.log('📋 Creating release index...');
+            
+            // 读取下载的文件信息
+            const downloadDir = './downloads';
+            const files = [];
+            
+            if (fs.existsSync(downloadDir)) {
+              const fileList = fs.readdirSync(downloadDir);
+              
+              for (const fileName of fileList) {
+                if (fileName !== 'assets.json') {
+                  const filePath = path.join(downloadDir, fileName);
+                  const stats = fs.statSync(filePath);
+                  
+                  const safeKey = `${versionPath}/${fileName}`.replace(/ /g, '_');
+                  const cdnFileUrl = `${cdnUrl.replace(/\/$/, '')}/${safeKey}`;
+                  
+                  files.push({
+                    name: fileName,
+                    cos_key: safeKey,
+                    cdn_url: cdnFileUrl,
+                    size: stats.size
+                  });
+                  
+                  console.log(`📄 ${fileName} -> ${cdnFileUrl}`);
+                }
+              }
+            }
+            
+            // 创建索引数据
+            const indexData = {
+              version: tagName,
+              upload_time: Math.floor(Date.now() / 1000),
+              files: files,
+              total_files: files.length,
+              repository: context.repo.owner + '/' + context.repo.repo
+            };
+            
+            // 保存索引文件
+            const indexFile = path.join(downloadDir, 'index.json');
+            fs.writeFileSync(indexFile, JSON.stringify(indexData, null, 2));
+            
+            console.log(`✅ Created index with ${files.length} files`);
+            console.log(`📁 Version directory: ${cdnUrl.replace(/\/$/, '')}/${versionPath}/`);
+
+      - name: Upload index to COS
+        uses: TencentCloud/cos-action@v1
+        with:
+          secret_id: ${{ secrets.COS_SECRET_ID }}
+          secret_key: ${{ secrets.COS_SECRET_KEY }}
+          cos_bucket: ${{ secrets.COS_BUCKET }}
+          cos_region: ${{ secrets.COS_REGION }}
+          local_path: ./downloads/index.json
+          remote_path: /releases/${{ steps.release.outputs.tag_name }}/index.json
+          clean: false
+
+      - name: Display upload summary
         run: |
-          cat > upload_to_cos.py << 'EOF'
-          import os
-          import sys
-          import requests
-          import json
-          from qcloud_cos import CosConfig
-          from qcloud_cos import CosS3Client
-          from urllib.parse import urlparse
-          import time
-          
-          def main():
-              # 获取环境变量
-              github_token = os.getenv('GITHUB_TOKEN')
-              cos_secret_id = os.getenv('COS_SECRET_ID')
-              cos_secret_key = os.getenv('COS_SECRET_KEY')
-              bucket = os.getenv('COS_BUCKET')
-              region = os.getenv('COS_REGION')
-              cdn_url = os.getenv('CDN_URL')
-              tag_name = os.getenv('TAG_NAME')
-              repository = os.getenv('REPOSITORY')
-              
-              print(f"🚀 Starting COS upload for release: {tag_name}")
-              print(f"🔧 Configuration check:")
-              print(f"   Repository: {repository}")
-              print(f"   Tag: {tag_name}")
-              print(f"   Bucket: {bucket}")
-              print(f"   Region: {region}")
-              print(f"   CDN URL: {cdn_url}")
-              print(f"   COS Secret ID: {'✓' if cos_secret_id else '✗'}")
-              print(f"   COS Secret Key: {'✓' if cos_secret_key else '✗'}")
-              print(f"   GitHub Token: {'✓' if github_token else '✗'}")
-              
-              # 验证必需的环境变量
-              required_vars = {
-                  'GITHUB_TOKEN': github_token,
-                  'COS_SECRET_ID': cos_secret_id,
-                  'COS_SECRET_KEY': cos_secret_key,
-                  'COS_BUCKET': bucket,
-                  'COS_REGION': region,
-                  'CDN_URL': cdn_url,
-                  'TAG_NAME': tag_name,
-                  'REPOSITORY': repository
-              }
-              
-              missing_vars = [name for name, value in required_vars.items() if not value]
-              if missing_vars:
-                  print(f"❌ Missing required environment variables: {', '.join(missing_vars)}")
-                  sys.exit(1)
-              
-              # 初始化 COS 客户端
-              config = CosConfig(Region=region, SecretId=cos_secret_id, SecretKey=cos_secret_key)
-              client = CosS3Client(config)
-              
-              # 获取 GitHub release 信息，带重试机制
-              release_data = None
-              max_retries = 5
-              
-              for attempt in range(max_retries):
-                  print(f"🔄 Attempt {attempt + 1}/{max_retries} to get release info...")
-                  
-                  # 首先尝试通过标签获取 release
-                  release_url = f"https://api.github.com/repos/{repository}/releases/tags/{tag_name}"
-                  headers = {'Authorization': f'token {github_token}'}
-                  
-                  response = requests.get(release_url, headers=headers)
-                  
-                  if response.status_code == 200:
-                      release_data = response.json()
-                      print("✅ Successfully got release info via tag")
-                      break
-                  elif response.status_code == 404:
-                      print(f"⚠️  Release not found via tag, trying all releases...")
-                      
-                      # 如果直接获取失败，尝试从所有 releases 中查找
-                      all_releases_url = f"https://api.github.com/repos/{repository}/releases"
-                      all_response = requests.get(all_releases_url, headers=headers)
-                      
-                      if all_response.status_code == 200:
-                          all_releases = all_response.json()
-                          for release in all_releases:
-                              if release.get('tag_name') == tag_name:
-                                  release_data = release
-                                  print("✅ Found release in all releases list")
-                                  break
-                          
-                          if release_data:
-                              break
-                      
-                      print(f"❌ Attempt {attempt + 1} failed, waiting 10 seconds...")
-                      if attempt < max_retries - 1:
-                          time.sleep(10)
-                  else:
-                      print(f"❌ API error {response.status_code}: {response.text}")
-                      if attempt < max_retries - 1:
-                          time.sleep(10)
-              
-              if not release_data:
-                  print(f"❌ Failed to get release info after {max_retries} attempts")
-                  print(f"   Make sure release {tag_name} exists")
-                  sys.exit(1)
-              assets = release_data.get('assets', [])
-              
-              print(f"📦 Found {len(assets)} assets to upload")
-              
-              # 创建版本目录
-              version_path = f"releases/{tag_name.replace('v', '')}"
-              
-              uploaded_files = []
-              
-              # 上传每个资源文件
-              for asset in assets:
-                  asset_name = asset['name']
-                  download_url = asset['browser_download_url']
-                  
-                  print(f"📥 Downloading: {asset_name}")
-                  
-                  # 下载文件
-                  asset_response = requests.get(download_url, headers=headers)
-                  if asset_response.status_code != 200:
-                      print(f"❌ Failed to download {asset_name}")
-                      continue
-                  
-                  # 上传到 COS
-                  cos_key = f"{version_path}/{asset_name}"
-                  
-                  try:
-                      print(f"☁️  Uploading to COS: {cos_key}")
-                      
-                      client.put_object(
-                          Bucket=bucket,
-                          Body=asset_response.content,
-                          Key=cos_key,
-                          ContentType='application/octet-stream'
-                      )
-                      
-                      # 构建 CDN URL
-                      cdn_file_url = f"{cdn_url.rstrip('/')}/{cos_key}"
-                      uploaded_files.append({
-                          'name': asset_name,
-                          'cos_key': cos_key,
-                          'cdn_url': cdn_file_url,
-                          'size': len(asset_response.content)
-                      })
-                      
-                      print(f"✅ Successfully uploaded: {asset_name}")
-                      print(f"   CDN URL: {cdn_file_url}")
-                      
-                  except Exception as e:
-                      print(f"❌ Failed to upload {asset_name}: {str(e)}")
-              
-              # 创建索引文件
-              index_data = {
-                  'version': tag_name,
-                  'upload_time': int(time.time()),
-                  'files': uploaded_files
-              }
-              
-              index_key = f"{version_path}/index.json"
-              
-              try:
-                  client.put_object(
-                      Bucket=bucket,
-                      Body=json.dumps(index_data, indent=2).encode('utf-8'),
-                      Key=index_key,
-                      ContentType='application/json'
-                  )
-                  
-                  print(f"📋 Created index file: {cdn_url.rstrip('/')}/{index_key}")
-                  
-              except Exception as e:
-                  print(f"❌ Failed to create index file: {str(e)}")
-              
-              print(f"🎉 COS upload completed! Uploaded {len(uploaded_files)} files")
-              print(f"📁 Version directory: {cdn_url.rstrip('/')}/{version_path}/")
-          
-          if __name__ == "__main__":
-              main()
-          EOF
-          
-          python upload_to_cos.py
-        env:
-          GITHUB_TOKEN: ${{ secrets.atriordsa }}
-          COS_SECRET_ID: ${{ secrets.COS_SECRET_ID }}
-          COS_SECRET_KEY: ${{ secrets.COS_SECRET_KEY }}
-          COS_BUCKET: ${{ secrets.COS_BUCKET }}
-          COS_REGION: ${{ secrets.COS_REGION }}
-          CDN_URL: ${{ secrets.CDN_URL }}
-          TAG_NAME: ${{ github.ref_name }}
-          REPOSITORY: ${{ github.repository }}
+          echo "🎉 COS upload completed successfully!"
+          echo "📁 Version: ${{ steps.release.outputs.tag_name }}"
+          echo "🌐 CDN Base URL: ${{ secrets.CDN_URL }}"
+          echo "📂 Release Directory: ${{ secrets.CDN_URL }}/releases/${{ steps.release.outputs.tag_name }}/"
+          echo "📋 Index File: ${{ secrets.CDN_URL }}/releases/${{ steps.release.outputs.tag_name }}/index.json"
