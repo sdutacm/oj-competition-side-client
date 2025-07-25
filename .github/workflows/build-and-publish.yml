@@ -310,6 +310,14 @@ jobs:
           echo "✅ Found release: $TAG_NAME (ID: $RELEASE_ID)"
           echo "📦 Assets count: $(echo "$ASSETS" | jq length)"
           
+          # 检查是否是 untagged release
+          if echo "$ASSETS" | jq -r '.[0].browser_download_url' | grep -q "untagged"; then
+            echo "⚠️  WARNING: Found untagged release URLs!"
+            echo "   This may indicate a draft release or tagging issue."
+            echo "   Expected tag: ${{ github.ref_name }}"
+            echo "   Found in URL: $(echo "$ASSETS" | jq -r '.[0].browser_download_url' | sed 's|.*/download/||' | sed 's|/.*||')"
+          fi
+          
           # 输出到 GitHub Actions outputs
           echo "release_id=$RELEASE_ID" >> $GITHUB_OUTPUT
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
@@ -362,7 +370,6 @@ jobs:
           local_path: ./downloads
           remote_path: /releases/${{ steps.release.outputs.tag_name }}
           clean: false
-          skip_src_check: true
 
       - name: Create release index
         uses: actions/github-script@v7
