@@ -504,21 +504,35 @@ jobs:
           # 创建内嵌的Python上传脚本
           echo "📁 Starting upload to COS using embedded Python script..."
           
+          # 首先创建一个简单的测试脚本验证Python环境
+          echo "🧪 Testing Python environment first..."
+          python3 -c "
+          import sys
+          print('🐍 Python executable:', sys.executable, flush=True)
+          print('🔧 Python version:', sys.version, flush=True)
+          import os
+          print('📁 Current directory:', os.getcwd())
+          print('📄 Files in current directory:', flush=True)
+          for f in os.listdir('.'):
+              print(f'  - {f}', flush=True)
+          print('✅ Python environment test completed', flush=True)
+          "
+          
           # 创建Python脚本文件而不是使用heredoc
           cat > upload_cos.py << 'PYTHON_SCRIPT_END'
           #!/usr/bin/env python3
           import os
           import sys
           import time
-          print("🔧 Python script started...")
+          print("🔧 Python script started...", flush=True, flush=True)
           
           try:
-              print("📦 Importing COS libraries...")
+              print("📦 Importing COS libraries...", flush=True, flush=True)
               from qcloud_cos import CosConfig
               from qcloud_cos import CosS3Client
-              print("✅ COS libraries imported successfully")
+              print("✅ COS libraries imported successfully", flush=True, flush=True)
           except Exception as e:
-              print(f"❌ Failed to import COS libraries: {e}")
+              print(f"❌ Failed to import COS libraries: {e}", flush=True, flush=True)
               sys.exit(1)
 
           def format_file_size(size_bytes):
@@ -532,9 +546,9 @@ jobs:
               return f"{size_bytes:.1f}{size_names[i]}"
 
           def main():
-              print("🚀 Main function started...")
+              print("🚀 Main function started...", flush=True, flush=True)
               
-              print("🔍 Reading environment variables...")
+              print("🔍 Reading environment variables...", flush=True, flush=True)
               secret_id = os.environ.get('COS_SECRET_ID')
               secret_key = os.environ.get('COS_SECRET_KEY')  
               region = os.environ.get('COS_REGION')
@@ -542,11 +556,11 @@ jobs:
               tag_name = os.environ.get('TAG_NAME')
 
               if not all([secret_id, secret_key, region, bucket, tag_name]):
-                  print("❌ Missing required environment variables")
+                  print("❌ Missing required environment variables", flush=True, flush=True)
                   sys.exit(1)
 
-              print(f"🔧 Configuring COS client for region: {region}, bucket: {bucket}")
-              print("⏱️  Creating COS configuration...")
+              print(f"🔧 Configuring COS client for region: {region}, bucket: {bucket}", flush=True, flush=True)
+              print("⏱️  Creating COS configuration...", flush=True, flush=True)
 
               try:
                   config = CosConfig(
@@ -555,23 +569,23 @@ jobs:
                       SecretKey=secret_key,
                       Timeout=300
                   )
-                  print("✅ COS configuration created successfully")
+                  print("✅ COS configuration created successfully", flush=True, flush=True)
                   
-                  print("🌐 Creating COS client...")
+                  print("🌐 Creating COS client...", flush=True, flush=True)
                   client = CosS3Client(config)
-                  print("✅ COS client created successfully")
+                  print("✅ COS client created successfully", flush=True, flush=True)
                   
               except Exception as e:
-                  print(f"❌ Failed to create COS client: {e}")
+                  print(f"❌ Failed to create COS client: {e}", flush=True, flush=True)
                   sys.exit(1)
 
-              print("📁 Checking downloads directory...")
+              print("📁 Checking downloads directory...", flush=True, flush=True)
               downloads_dir = './downloads'
               if not os.path.exists(downloads_dir):
-                  print("❌ Downloads directory not found")
+                  print("❌ Downloads directory not found", flush=True)
                   sys.exit(1)
 
-              print(f"📁 Scanning directory: {downloads_dir}")
+              print(f"📁 Scanning directory: {downloads_dir}", flush=True)
               files = [f for f in os.listdir(downloads_dir) if os.path.isfile(os.path.join(downloads_dir, f)) and f != 'assets.json']
               print(f"📦 Found {len(files)} files to upload")
 
@@ -596,8 +610,8 @@ jobs:
                   try:
                       key = f'atrior/oj-competition-side-client/releases/{tag_name}/{filename}'
                       print(f"📤 [{i}/{len(files)}] Uploading: {filename} ({format_file_size(file_size)})")
-                      print(f"   Local: {filepath}")
-                      print(f"   Remote: {key}")
+                      print(f"   Local: {filepath}", flush=True)
+                      print(f"   Remote: {key}", flush=True)
                       
                       start_time = time.time()
                       client.upload_file(
@@ -610,7 +624,7 @@ jobs:
                       uploaded_size += file_size
                       speed = file_size / upload_time if upload_time > 0 else 0
                       
-                      print(f"✅ Successfully uploaded: {filename}")
+                      print(f"✅ Successfully uploaded: {filename}", flush=True)
                       print(f"   Time: {upload_time:.1f}s, Speed: {format_file_size(speed)}/s")
                       print(f"   Progress: {uploaded_size}/{total_size} ({100*uploaded_size/total_size:.1f}%)")
                       uploaded_files.append(filename)
@@ -619,15 +633,15 @@ jobs:
                       print(f"❌ Failed to upload {filename}: {str(e)}")
                       success = False
 
-              print(f"\n📊 Upload Summary:")
+              print(f"\n📊 Upload Summary:", flush=True)
               print(f"✅ Successfully uploaded: {len(uploaded_files)} files")
               if uploaded_files:
                   for f in uploaded_files:
-                      print(f"  - {f}")
+                      print(f"  - {f}", flush=True)
 
               if success:
                   print(f"\n🎉 All {len(files)} files uploaded successfully to COS!")
-                  print(f"📂 Remote path: atrior/oj-competition-side-client/releases/{tag_name}/")
+                  print(f"📂 Remote path: atrior/oj-competition-side-client/releases/{tag_name}/", flush=True)
                   
                   index_file = os.path.join(downloads_dir, 'index.json')
                   if os.path.exists(index_file):
@@ -643,11 +657,11 @@ jobs:
                               Key=index_key
                           )
                           upload_time = time.time() - start_time
-                          print(f"✅ Successfully uploaded index.json in {upload_time:.1f}s")
+                          print(f"✅ Successfully uploaded index.json in {upload_time:.1f}s", flush=True)
                       except Exception as e:
                           print(f"❌ Failed to upload index.json: {str(e)}")
               else:
-                  print("\n❌ Some uploads failed")
+                  print("\n❌ Some uploads failed", flush=True)
                   sys.exit(1)
 
           if __name__ == "__main__":
