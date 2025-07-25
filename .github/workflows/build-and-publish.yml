@@ -425,16 +425,36 @@ jobs:
           if ! command -v coscli &> /dev/null; then
             echo "Installing COS CLI..."
             
-            # 获取最新版本的下载链接
-            LATEST_VERSION=$(curl -s https://api.github.com/repos/tencentyun/coscli/releases/latest | jq -r '.tag_name')
-            echo "Latest COS CLI version: $LATEST_VERSION"
+            # 尝试多个版本和下载方式
+            VERSIONS=("v1.0.6" "v1.0.5" "v1.0.4")
+            DOWNLOAD_SUCCESS=false
             
-            # 下载并安装
-            wget -q "https://github.com/tencentyun/coscli/releases/download/${LATEST_VERSION}/coscli-linux" -O coscli
+            for VERSION in "${VERSIONS[@]}"; do
+              echo "Trying version $VERSION..."
+              
+              # 尝试不同的下载方式
+              if wget -q --timeout=30 "https://github.com/tencentyun/coscli/releases/download/${VERSION}/coscli-linux" -O coscli; then
+                echo "✅ Downloaded version $VERSION"
+                DOWNLOAD_SUCCESS=true
+                break
+              elif curl -L --fail --silent --connect-timeout 30 --max-time 60 "https://github.com/tencentyun/coscli/releases/download/${VERSION}/coscli-linux" -o coscli; then
+                echo "✅ Downloaded version $VERSION via curl"
+                DOWNLOAD_SUCCESS=true
+                break
+              else
+                echo "❌ Failed to download version $VERSION"
+                rm -f coscli
+              fi
+            done
             
-            # 检查下载是否成功
-            if [ ! -f "coscli" ]; then
-              echo "❌ Failed to download COS CLI"
+            if [ "$DOWNLOAD_SUCCESS" = false ]; then
+              echo "❌ All COS CLI downloads failed"
+              exit 1
+            fi
+            
+            # 检查下载的文件
+            if [ ! -f "coscli" ] || [ ! -s "coscli" ]; then
+              echo "❌ Downloaded file is empty or missing"
               exit 1
             fi
             
@@ -446,7 +466,8 @@ jobs:
               COSCLI_CMD="coscli"
             else
               echo "⚠️  Could not install globally, using local binary"
-              COSCLI_CMD="./coscli"
+              mv coscli ./coscli_local
+              COSCLI_CMD="./coscli_local"
             fi
           else
             echo "✅ COS CLI already installed"
@@ -455,10 +476,10 @@ jobs:
           
           # 验证 COS CLI 工作
           echo "Testing COS CLI..."
-          $COSCLI_CMD version || {
+          if ! $COSCLI_CMD version; then
             echo "❌ COS CLI not working properly"
             exit 1
-          }
+          fi
           
           # 配置 COS CLI
           echo "Configuring COS CLI..."
