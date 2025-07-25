@@ -158,11 +158,11 @@ jobs:
           fi
           echo "SUCCESS: GitHub API authentication successful"
           
-          # 等待确保所有上传完成，增加等待时间
-          echo "等待构建和发布完成..."
-          sleep 60
+          # 等待确保所有上传完成
+          echo "⏰ Waiting 30 seconds for uploads to complete..."
+          sleep 30
           
-          echo "获取release信息：标签 ${{ github.ref_name }}"
+          echo "📡 Getting release for tag: ${{ github.ref_name }}"
           
           # 首先尝试通过标签获取 release，如果失败则从所有 releases 中查找
           RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
@@ -780,26 +780,52 @@ jobs:
           echo "File manifest created:"
           cat file_manifest.txt
 
-      - name: Keep original filenames (no renaming)
+      - name: Workaround for COS action filename truncation
         run: |
-          echo "保持原始文件名：不进行任何重命名操作"
+          echo "应用COS action文件名截断的工作区方案..."
           cd ./cos-upload
           
-          echo "原始文件列表："
+          echo "当前文件列表："
           ls -la
           
           echo ""
-          echo "文件验证："
+          echo "基于错误信息，COS action寻找去掉'S'的文件名："
+          echo "错误：DUTOJCompetitionSideClient_linux_amd64_1.2.21.deb"
+          echo "预期：SDUTOJCompetitionSideClient_linux_amd64_1.2.21.deb"
+          
+          # 创建备份目录
+          mkdir -p "./cos_backup"
+          
+          renamed_count=0
           for file in *; do
-            if [ -f "$file" ] && echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
-              echo "正确的文件名: $file ($(du -h "$file" | cut -f1))"
-            elif [ -f "$file" ]; then
-              echo "其他文件: $file"
+            if [ -f "$file" ] && [ ! -L "$file" ] && echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
+              # 创建备份
+              cp "$file" "./cos_backup/$file"
+              
+              # 创建COS action期望的文件名（去掉开头的S）
+              cos_name=$(echo "$file" | sed 's/^S//')
+              
+              echo "重命名：$file -> $cos_name"
+              mv "$file" "$cos_name"
+              renamed_count=$((renamed_count + 1))
             fi
           done
           
           echo ""
-          echo "准备上传具有正确SDUT前缀的文件到COS"
+          echo "重命名摘要："
+          echo "   重命名文件数：$renamed_count"
+          echo "   备份位置：./cos_backup"
+          
+          echo ""
+          echo "重命名后的文件列表（COS action兼容）："
+          ls -la
+          
+          echo ""
+          echo "验证关键文件存在："
+          for pattern in "DUTOJCompetitionSideClient_windows_" "DUTOJCompetitionSideClient_linux_" "DUTOJCompetitionSideClient_mac_"; do
+            count=$(ls -1 | grep "^${pattern}" | wc -l)
+            echo "   ${pattern}*: $count 个文件"
+          done
 
       - name: Configure Tencent Cloud COS
         uses: TencentCloud/cos-action@v1
@@ -892,29 +918,32 @@ jobs:
                 }
                 
                 // Skip backup directory
-                if (fileName === 'original_backups') {
+                if (fileName === 'cos_backup') {
                   console.log(`Skipping backup directory: ${fileName}`);
                   continue;
                 }
                 
-                // 保持原始的 SDUTOJCompetitionSideClient_ 文件名
-                // 不进行任何截断或重命名
-                if (!fileName.startsWith('SDUTOJCompetitionSideClient_')) {
-                  console.log(`Skipping non-SDUT file: ${fileName}`);
+                // 处理为COS action重命名的文件（去掉了S前缀）
+                // 重命名后的文件以 DUTOJCompetitionSideClient_ 开头
+                if (!fileName.startsWith('DUTOJCompetitionSideClient_')) {
+                  console.log(`Skipping non-COS-renamed file: ${fileName}`);
                   continue;
                 }
+                
+                // 恢复原始文件名用于索引显示
+                const originalFileName = 'S' + fileName; // 添加回被截断的S
                 
                 const safeKey = `${versionPath}/${fileName}`.replace(/ /g, '_');
                 const cdnFileUrl = `${cdnUrl.replace(/\/$/, '')}/${safeKey}`;
                 
                 files.push({
-                  name: fileName,
-                  cos_key: safeKey,
+                  name: originalFileName,  // 在索引中显示原始名称
+                  cos_key: safeKey,       // COS中的实际路径
                   cdn_url: cdnFileUrl,
                   size: stats.size
                 });
                 
-                console.log(`FILE: ${fileName} -> ${cdnFileUrl}`);
+                console.log(`FILE: ${originalFileName} -> ${cdnFileUrl}`);
               }
             }
             
