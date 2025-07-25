@@ -323,8 +323,16 @@ jobs:
 
       - name: Download release assets
         id: download
+        env:
+          GITHUB_TOKEN: ${{ secrets.atriordsa }}
         run: |
           echo "📥 Starting download of release assets..."
+          
+          # 验证环境变量
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "❌ GITHUB_TOKEN not set"
+            exit 1
+          fi
           
           # 创建下载目录
           mkdir -p ./downloads
@@ -333,36 +341,109 @@ jobs:
           # 解析 assets JSON
           echo '${{ steps.release.outputs.assets }}' > assets.json
           
+          # 检查是否有assets
+          ASSET_COUNT=$(jq 'length' assets.json)
+          echo "📦 Found $ASSET_COUNT assets to download"
+          
+          if [ "$ASSET_COUNT" -eq 0 ]; then
+            echo "❌ No assets found to download"
+            exit 1
+          fi
+          
           # 使用 jq 处理每个 asset
           jq -r '.[] | "\(.name)|\(.browser_download_url)"' assets.json | while IFS='|' read -r name url; do
             echo "📥 Downloading: $name"
             echo "   URL: $url"
             
-            # 下载文件，使用认证
-            if curl -L -H "Authorization: token ${{ secrets.atriordsa }}" \
+            # 检查URL是否包含untagged问题
+            if [[ "$url" == *"untagged"* ]]; then
+              echo "⚠️  Warning: URL contains 'untagged' - this may cause download issues"
+            fi
+            
+            # 下载文件，使用认证和更详细的错误处理
+            if curl -L -H "Authorization: token $GITHUB_TOKEN" \
                    -H "Accept: application/octet-stream" \
                    --fail --show-error --silent \
+                   --connect-timeout 30 \
+                   --max-time 300 \
                    -o "$name" "$url"; then
               echo "✅ Downloaded: $name ($(du -h "$name" | cut -f1))"
+              
+              # 验证文件不为空
+              if [ ! -s "$name" ]; then
+                echo "❌ Downloaded file is empty: $name"
+                exit 1
+              fi
             else
               echo "❌ Failed to download: $name"
+              echo "❌ curl exit code: $?"
+              # 尝试无认证下载（对于公开文件）
+              echo "🔄 Trying without authentication..."
+              if curl -L --fail --show-error --silent \
+                     --connect-timeout 30 \
+                     --max-time 300 \
+                     -o "$name" "$url"; then
+                echo "✅ Downloaded without auth: $name ($(du -h "$name" | cut -f1))"
+              else
+                echo "❌ Failed even without authentication"
+                exit 1
+              fi
             fi
           done
           
-          echo "� Downloaded files:"
+          echo "📄 Downloaded files:"
           ls -la
 
-      - name: Configure Tencent Cloud COS
-        uses: TencentCloud/cos-action@v1
-        with:
-          secret_id: ${{ secrets.COS_SECRET_ID }}
-          secret_key: ${{ secrets.COS_SECRET_KEY }}
-          cos_bucket: ${{ secrets.COS_BUCKET }}
-          cos_region: ${{ secrets.COS_REGION }}
-          local_path: ./downloads
-          remote_path: /releases/${{ steps.release.outputs.tag_name }}
-          clean: false
-          skip_src_check: true
+      - name: Setup and Upload to Tencent Cloud COS
+        run: |
+          echo "🔧 Setting up Tencent Cloud COS CLI..."
+          
+          # 安装 COS CLI
+          if ! command -v coscli &> /dev/null; then
+            echo "Installing COS CLI..."
+            wget -q https://github.com/tencentyun/coscli/releases/latest/download/coscli-linux -O coscli
+            chmod +x coscli
+            sudo mv coscli /usr/local/bin/
+          fi
+          
+          # 配置 COS CLI
+          coscli config set -e cos.${{ secrets.COS_REGION }}.myqcloud.com \
+                           -i ${{ secrets.COS_SECRET_ID }} \
+                           -k ${{ secrets.COS_SECRET_KEY }} \
+                           -a ${{ secrets.COS_BUCKET }}
+          
+          echo "📁 Uploading files to COS..."
+          echo "Target path: releases/${{ steps.release.outputs.tag_name }}/"
+          
+          # 创建远程目录并上传所有文件
+          cd ./downloads
+          for file in *; do
+            if [ -f "$file" ]; then
+              echo "📤 Uploading: $file"
+              echo "   Original filename will be preserved: $file"
+              
+              # 使用cp命令确保文件名完整保留
+              coscli cp "$file" "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/$file"
+              
+              # 验证上传
+              if coscli ls "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/$file" &>/dev/null; then
+                echo "✅ Successfully uploaded: $file"
+                # 验证远程文件名是否正确
+                REMOTE_NAME=$(coscli ls "cos://${{ secrets.COS_BUCKET }}/releases/${{ steps.release.outputs.tag_name }}/" | grep "$file" | awk '{print $NF}' | tail -1)
+                echo "   Remote filename: $REMOTE_NAME"
+                if [[ "$REMOTE_NAME" == *"$file"* ]]; then
+                  echo "✅ Filename preserved correctly"
+                else
+                  echo "⚠️  Warning: Remote filename might be different"
+                fi
+              else
+                echo "❌ Failed to verify upload: $file"
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "✅ All files uploaded to COS successfully with original filenames"
 
       - name: Create release index
         uses: actions/github-script@v7
