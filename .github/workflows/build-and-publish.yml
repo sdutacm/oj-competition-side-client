@@ -780,64 +780,62 @@ jobs:
           echo "File manifest created:"
           cat file_manifest.txt
 
-      - name: Create symlinks for COS action bug workaround
+      - name: Install COS CLI and upload files
         run: |
-          echo "创建符号链接以绕过COS action文件名截断bug..."
+          echo "使用腾讯云COS CLI直接上传，绕过有问题的cos-action"
           cd ./cos-upload
           
-          echo "保持原始文件不变："
+          echo "当前文件列表（保持原始文件名）："
           ls -la
           
-          echo ""
-          echo "基于错误信息，COS action寻找："
-          echo "错误：UTOJCompetitionSideClient_linux_x86_64_1.2.22.AppImage" 
-          echo "但我们有：SDUTOJCompetitionSideClient_linux_x64_1.2.22.AppImage"
+          # 安装腾讯云CLI
+          echo "安装腾讯云CLI..."
+          wget -q https://github.com/TencentCloud/tencentcloud-cli/releases/latest/download/tccli-linux-x64.tar.gz
+          tar -xzf tccli-linux-x64.tar.gz
+          chmod +x tccli
           
-          echo ""
-          echo "创建COS action期望的符号链接..."
+          # 配置CLI
+          echo "配置腾讯云CLI..."
+          ./tccli configure set secretId ${{ secrets.COS_SECRET_ID }}
+          ./tccli configure set secretKey ${{ secrets.COS_SECRET_KEY }}
+          ./tccli configure set region ${{ secrets.COS_REGION }}
           
-          link_count=0
+          # 直接上传每个文件，保持原始文件名
+          echo "开始上传文件到COS..."
+          upload_count=0
+          failed_count=0
+          
           for file in *; do
-            if [ -f "$file" ] && [ ! -L "$file" ] && echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
-              # 创建COS action期望的文件名（去掉SD，并处理架构名称）
-              cos_name=$(echo "$file" | sed 's/^SD//' | sed 's/_x64_/_x86_64_/')
-              
-              if [ ! -e "$cos_name" ]; then
-                echo "创建符号链接：$cos_name -> $file"
-                ln -s "$file" "$cos_name"
-                link_count=$((link_count + 1))
+            if [ -f "$file" ] && [ "$file" != "tccli" ] && [ "$file" != "tccli-linux-x64.tar.gz" ]; then
+              if echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
+                remote_path="/releases/${{ steps.release.outputs.tag_name }}/$file"
+                echo "上传：$file -> $remote_path"
+                
+                if ./tccli cos PutObject --Bucket ${{ secrets.COS_BUCKET }} --Key "$remote_path" --Body "$file"; then
+                  echo "成功：$file"
+                  upload_count=$((upload_count + 1))
+                else
+                  echo "失败：$file"
+                  failed_count=$((failed_count + 1))
+                fi
               else
-                echo "目标链接已存在：$cos_name"
+                echo "跳过非SDUT文件：$file"
               fi
             fi
           done
           
           echo ""
-          echo "符号链接摘要："
-          echo "   创建链接数：$link_count"
-          echo "   原文件保持不变"
+          echo "上传摘要："
+          echo "   成功上传：$upload_count 个文件"
+          echo "   失败：$failed_count 个文件"
+          echo "   原始文件名完全保持不变"
           
-          echo ""
-          echo "最终文件列表（包含符号链接）："
-          ls -la
-          
-          echo ""
-          echo "验证COS action期望的文件："
-          for pattern in "UTOJCompetitionSideClient_windows_" "UTOJCompetitionSideClient_linux_" "UTOJCompetitionSideClient_mac_"; do
-            count=$(ls -1 | grep "^${pattern}" | wc -l)
-            echo "   ${pattern}*: $count 个文件"
-          done
-
-      - name: Configure Tencent Cloud COS
-        uses: TencentCloud/cos-action@v1
-        with:
-          secret_id: ${{ secrets.COS_SECRET_ID }}
-          secret_key: ${{ secrets.COS_SECRET_KEY }}
-          cos_bucket: ${{ secrets.COS_BUCKET }}
-          cos_region: ${{ secrets.COS_REGION }}
-          local_path: ./cos-upload
-          remote_path: /releases/${{ steps.release.outputs.tag_name }}
-          clean: false
+          if [ $failed_count -gt 0 ]; then
+            echo "警告：有文件上传失败"
+            exit 1
+          else
+            echo "所有文件上传成功！"
+          fi
 
       - name: Verify COS upload success
         run: |
@@ -918,34 +916,29 @@ jobs:
                   continue;
                 }
                 
-                // Skip backup directory
-                if (fileName === 'cos_backup') {
-                  console.log(`Skipping backup directory: ${fileName}`);
+                // Skip temporary files
+                if (fileName === 'tccli' || fileName === 'tccli-linux-x64.tar.gz') {
+                  console.log(`Skipping temp file: ${fileName}`);
                   continue;
                 }
                 
-                // 处理原始文件（保持SDUT前缀用于索引显示）
-                if (fileName.startsWith('SDUTOJCompetitionSideClient_')) {
-                  // 这是原始文件，用于索引显示
-                  const safeKey = `${versionPath}/${fileName}`.replace(/ /g, '_');
-                  const cdnFileUrl = `${cdnUrl.replace(/\/$/, '')}/${safeKey}`;
-                  
-                  files.push({
-                    name: fileName,        // 显示原始文件名
-                    cos_key: safeKey,
-                    cdn_url: cdnFileUrl,
-                    size: stats.size
-                  });
-                  
-                  console.log(`FILE: ${fileName} -> ${cdnFileUrl}`);
+                // 只处理原始的SDUT文件
+                if (!fileName.startsWith('SDUTOJCompetitionSideClient_')) {
+                  console.log(`Skipping non-SDUT file: ${fileName}`);
                   continue;
                 }
                 
-                // 跳过符号链接文件（它们只是为了COS action兼容性）
-                if (fileName.startsWith('UTOJCompetitionSideClient_')) {
-                  console.log(`Skipping COS symlink: ${fileName}`);
-                  continue;
-                }
+                const safeKey = `${versionPath}/${fileName}`.replace(/ /g, '_');
+                const cdnFileUrl = `${cdnUrl.replace(/\/$/, '')}/${safeKey}`;
+                
+                files.push({
+                  name: fileName,        // 原始文件名
+                  cos_key: safeKey,
+                  cdn_url: cdnFileUrl,
+                  size: stats.size
+                });
+                
+                console.log(`FILE: ${fileName} -> ${cdnFileUrl}`);
               }
             }
             
@@ -965,16 +958,28 @@ jobs:
             console.log(`SUCCESS: Created index with ${files.length} files`);
             console.log(`FOLDER: Version directory: ${cdnUrl.replace(/\/$/, '')}/${versionPath}/`);
 
-      - name: Upload index to COS
-        uses: TencentCloud/cos-action@v1
-        with:
-          secret_id: ${{ secrets.COS_SECRET_ID }}
-          secret_key: ${{ secrets.COS_SECRET_KEY }}
-          cos_bucket: ${{ secrets.COS_BUCKET }}
-          cos_region: ${{ secrets.COS_REGION }}
-          local_path: ./cos-upload/index.json
-          remote_path: /releases/${{ steps.release.outputs.tag_name }}/index.json
-          clean: false
+      - name: Upload index to COS using CLI
+        run: |
+          echo "使用CLI上传index.json..."
+          cd ./cos-upload
+          
+          if [ -f "index.json" ]; then
+            echo "找到index.json文件"
+            
+            # 使用之前安装的CLI上传索引文件
+            remote_index_path="/releases/${{ steps.release.outputs.tag_name }}/index.json"
+            echo "上传索引：index.json -> $remote_index_path"
+            
+            if ./tccli cos PutObject --Bucket ${{ secrets.COS_BUCKET }} --Key "$remote_index_path" --Body "index.json"; then
+              echo "索引文件上传成功"
+            else
+              echo "索引文件上传失败"
+              exit 1
+            fi
+          else
+            echo "错误：index.json文件不存在"
+            exit 1
+          fi
 
       - name: Display upload summary
         run: |
