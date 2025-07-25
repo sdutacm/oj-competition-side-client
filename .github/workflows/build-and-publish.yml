@@ -524,15 +524,15 @@ jobs:
           import os
           import sys
           import time
-          print("🔧 Python script started...", flush=True, flush=True)
+          print("🔧 Python script started...", flush=True)
           
           try:
-              print("📦 Importing COS libraries...", flush=True, flush=True)
+              print("📦 Importing COS libraries...", flush=True)
               from qcloud_cos import CosConfig
               from qcloud_cos import CosS3Client
-              print("✅ COS libraries imported successfully", flush=True, flush=True)
+              print("✅ COS libraries imported successfully", flush=True)
           except Exception as e:
-              print(f"❌ Failed to import COS libraries: {e}", flush=True, flush=True)
+              print(f"❌ Failed to import COS libraries: {e}", flush=True)
               sys.exit(1)
 
           def format_file_size(size_bytes):
@@ -546,9 +546,9 @@ jobs:
               return f"{size_bytes:.1f}{size_names[i]}"
 
           def main():
-              print("🚀 Main function started...", flush=True, flush=True)
+              print("🚀 Main function started...", flush=True)
               
-              print("🔍 Reading environment variables...", flush=True, flush=True)
+              print("🔍 Reading environment variables...", flush=True)
               secret_id = os.environ.get('COS_SECRET_ID')
               secret_key = os.environ.get('COS_SECRET_KEY')  
               region = os.environ.get('COS_REGION')
@@ -556,11 +556,11 @@ jobs:
               tag_name = os.environ.get('TAG_NAME')
 
               if not all([secret_id, secret_key, region, bucket, tag_name]):
-                  print("❌ Missing required environment variables", flush=True, flush=True)
+                  print("❌ Missing required environment variables", flush=True)
                   sys.exit(1)
 
-              print(f"🔧 Configuring COS client for region: {region}, bucket: {bucket}", flush=True, flush=True)
-              print("⏱️  Creating COS configuration...", flush=True, flush=True)
+              print(f"🔧 Configuring COS client for region: {region}, bucket: {bucket}", flush=True)
+              print("⏱️  Creating COS configuration...", flush=True)
 
               try:
                   config = CosConfig(
@@ -569,17 +569,17 @@ jobs:
                       SecretKey=secret_key,
                       Timeout=300
                   )
-                  print("✅ COS configuration created successfully", flush=True, flush=True)
+                  print("✅ COS configuration created successfully", flush=True)
                   
-                  print("🌐 Creating COS client...", flush=True, flush=True)
+                  print("🌐 Creating COS client...", flush=True)
                   client = CosS3Client(config)
-                  print("✅ COS client created successfully", flush=True, flush=True)
+                  print("✅ COS client created successfully", flush=True)
                   
               except Exception as e:
-                  print(f"❌ Failed to create COS client: {e}", flush=True, flush=True)
+                  print(f"❌ Failed to create COS client: {e}", flush=True)
                   sys.exit(1)
 
-              print("📁 Checking downloads directory...", flush=True, flush=True)
+              print("📁 Checking downloads directory...", flush=True)
               downloads_dir = './downloads'
               if not os.path.exists(downloads_dir):
                   print("❌ Downloads directory not found", flush=True)
