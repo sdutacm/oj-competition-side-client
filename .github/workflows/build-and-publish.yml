@@ -158,11 +158,11 @@ jobs:
           fi
           echo "SUCCESS: GitHub API authentication successful"
           
-          # 等待确保所有上传完成
-          echo "⏰ Waiting 30 seconds for uploads to complete..."
-          sleep 30
+          # 等待确保所有上传完成，增加等待时间
+          echo "等待构建和发布完成..."
+          sleep 60
           
-          echo "📡 Getting release for tag: ${{ github.ref_name }}"
+          echo "获取release信息：标签 ${{ github.ref_name }}"
           
           # 首先尝试通过标签获取 release，如果失败则从所有 releases 中查找
           RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
