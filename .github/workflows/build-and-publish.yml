@@ -1,4 +1,3 @@
-
 name: Build and Publish Release
 
 on:
@@ -28,26 +27,7 @@ jobs:
 
       - name: Debug environment
         run: |
-          echo "GitHu          echo "📋 Copying files to upload directory..."
-          for file in *; do
-            if [ -f "$file" ]; then
-              # 检查并修复文件名（防止再次截断）
-              upload_name="$file"
-              if echo "$file" | grep -q "^DUTOJCompetitionSideClient"; then
-                upload_name="S$file"
-                echo "🔧 Correcting filename: $file -> $upload_name"
-              fi
-              
-              # 修复拼写错误（protable -> portable）
-              if echo "$upload_name" | grep -q "_protable_"; then
-                upload_name=$(echo "$upload_name" | sed 's/_protable_/_portable_/')
-                echo "🔧 Fixing spelling: $file -> $upload_name"
-              fi
-              
-              echo "📄 Copying: $file -> $upload_name"
-              cp "$file" "../cos-upload/$upload_name"
-            fi
-          donehub.ref }}"
+          echo "GitHub ref: ${{ github.ref }}"
           echo "Tag name: ${{ github.ref_name }}"
           echo "Repository: ${{ github.repository }}"
           echo "Is tag push: ${{ startsWith(github.ref, 'refs/tags/') }}"
@@ -525,49 +505,12 @@ jobs:
           echo "📋 Copying files to upload directory..."
           for file in *; do
             if [ -f "$file" ]; then
-              # 检查并修复文件名（防止再次截断）
-              upload_name="$file"
-              if echo "$file" | grep -q "^DUTOJCompetitionSideClient"; then
-                upload_name="S$file"
-                echo "� Correcting filename: $file -> $upload_name"
-              fi
-              
-              echo "�📄 Copying: $file -> $upload_name"
-              cp "$file" "../cos-upload/$upload_name"
+              echo "📄 Copying: $file"
+              cp "$file" "../cos-upload/$file"
             fi
           done
           
           cd ../cos-upload
-          
-          # 再次检查并修复cos-upload目录中的文件名
-          echo ""
-          echo "🔧 Final filename check in upload directory..."
-          fixed_count=0
-          for file in *; do
-            if [ -f "$file" ]; then
-              # 修复截断的文件名
-              if echo "$file" | grep -q "^DUTOJCompetitionSideClient"; then
-                new_name="S$file"
-                echo "🔧 Final fix: $file -> $new_name"
-                mv "$file" "$new_name"
-                fixed_count=$((fixed_count + 1))
-                file="$new_name"  # 更新变量以便后续处理
-              fi
-              
-              # 修复拼写错误
-              if echo "$file" | grep -q "_protable_"; then
-                new_name=$(echo "$file" | sed 's/_protable_/_portable_/')
-                echo "🔧 Spelling fix: $file -> $new_name"
-                mv "$file" "$new_name"
-                fixed_count=$((fixed_count + 1))
-              fi
-            fi
-          done
-          
-          if [ $fixed_count -gt 0 ]; then
-            echo "✅ Applied $fixed_count final fix(es)"
-          fi
-          
           echo ""
           echo "✅ Files ready for COS upload:"
           ls -la
@@ -575,19 +518,6 @@ jobs:
           echo "📊 Upload summary:"
           echo "   Total files: $(ls -1 | wc -l)"
           echo "   Total size: $(du -sh . | cut -f1)"
-          
-          # 验证所有文件名都正确
-          echo ""
-          echo "🔍 Final filename verification:"
-          for file in *; do
-            if [ -f "$file" ]; then
-              if echo "$file" | grep -q "^SDUTOJCompetitionSideClient"; then
-                echo "✅ $file - Correct filename"
-              else
-                echo "⚠️  $file - Potentially incorrect filename"
-              fi
-            fi
-          done
 
       - name: Configure Tencent Cloud COS
         uses: TencentCloud/cos-action@v1
@@ -630,13 +560,12 @@ jobs:
                 
                 files.push({
                   name: fileName,
-                    cos_key: safeKey,
-                    cdn_url: cdnFileUrl,
-                    size: stats.size
-                  });
-                  
-                  console.log(`📄 ${fileName} -> ${cdnFileUrl}`);
-                }
+                  cos_key: safeKey,
+                  cdn_url: cdnFileUrl,
+                  size: stats.size
+                });
+                
+                console.log(`📄 ${fileName} -> ${cdnFileUrl}`);
               }
             }
             
