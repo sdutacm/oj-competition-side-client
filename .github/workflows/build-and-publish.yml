@@ -563,64 +563,68 @@ jobs:
           ls -la
           
           echo ""
-          echo "🔍 Checking for expected filename patterns..."
-          expected_count=0
+          echo "🔍 Analyzing actual file patterns..."
+          
+          # 动态获取版本号（从任意文件名中提取）
+          VERSION=$(ls -1 | head -1 | grep -o '_[0-9]\+\.[0-9]\+\.[0-9]\+\.' | sed 's/_//g' | sed 's/\.$//g' || echo "unknown")
+          echo "📋 Detected version: $VERSION"
+          
+          if [ "$VERSION" = "unknown" ]; then
+            echo "⚠️  Could not detect version from filenames"
+            VERSION="1.2.14"  # 使用默认版本
+          fi
+          
           found_count=0
+          total_files=$(ls -1 | wc -l)
           
-          # 检查各种预期的文件类型
-          echo "Looking for Windows files..."
-          for pattern in "_windows_installer_" "_windows_portable_"; do
-            for arch in "x64" "arm64"; do
-              if ls -1 | grep -q "SDUTOJCompetitionSideClient${pattern}${arch}_1\.2\.12\.exe"; then
-                file=$(ls -1 | grep "SDUTOJCompetitionSideClient${pattern}${arch}_1\.2\.12\.exe")
-                echo "✅ Found: $file"
-                found_count=$((found_count + 1))
-              else
-                echo "⚠️  Missing: SDUTOJCompetitionSideClient${pattern}${arch}_1.2.12.exe"
-              fi
-              expected_count=$((expected_count + 1))
-            done
-          done
-          
-          echo "Looking for macOS files..."
-          for arch in "x64" "arm64"; do
-            if ls -1 | grep -q "SDUTOJCompetitionSideClient_mac_${arch}_1\.2\.12\.dmg"; then
-              file=$(ls -1 | grep "SDUTOJCompetitionSideClient_mac_${arch}_1\.2\.12\.dmg")
-              echo "✅ Found: $file"
+          echo ""
+          echo "📋 File analysis:"
+          for file in *; do
+            if [ -f "$file" ]; then
+              echo "✅ Found: $file ($(du -h "$file" | cut -f1))"
               found_count=$((found_count + 1))
-            else
-              echo "⚠️  Missing: SDUTOJCompetitionSideClient_mac_${arch}_1.2.12.dmg"
-            fi
-            expected_count=$((expected_count + 1))
-          done
-          
-          echo "Looking for Linux files..."
-          for arch in "x64" "arm64"; do
-            for ext in "AppImage" "deb"; do
-              if ls -1 | grep -q "SDUTOJCompetitionSideClient_linux_${arch}_1\.2\.12\.${ext}"; then
-                file=$(ls -1 | grep "SDUTOJCompetitionSideClient_linux_${arch}_1\.2\.12\.${ext}")
-                echo "✅ Found: $file"
-                found_count=$((found_count + 1))
+              
+              # 检查文件名格式
+              if echo "$file" | grep -q "^SDUTOJCompetitionSideClient_"; then
+                echo "   ✅ Correct filename prefix"
               else
-                echo "⚠️  Missing: SDUTOJCompetitionSideClient_linux_${arch}_1.2.12.${ext}"
+                echo "   ⚠️  Incorrect filename prefix"
               fi
-              expected_count=$((expected_count + 1))
-            done
+              
+              # 检查是否包含版本号
+              if echo "$file" | grep -q "_${VERSION}\."; then
+                echo "   ✅ Contains correct version: $VERSION"
+              else
+                echo "   ⚠️  Version mismatch or missing in filename"
+              fi
+            fi
           done
           
           echo ""
           echo "📊 Verification summary:"
-          echo "   Expected files: $expected_count"
-          echo "   Found files: $found_count"
-          echo "   Total files in directory: $(ls -1 | wc -l)"
+          echo "   Version detected: $VERSION"
+          echo "   Total files found: $found_count"
+          echo "   Total files expected: ~12 (may vary based on build targets)"
           
-          if [ $found_count -eq 0 ]; then
-            echo "❌ No expected files found! This may cause COS upload to fail."
-            echo "📋 All files in directory:"
-            ls -la
-            exit 1
+          # 检查关键文件类型是否存在
+          echo ""
+          echo "🔍 Checking for key file types:"
+          
+          windows_count=$(ls -1 | grep "_windows_" | wc -l)
+          macos_count=$(ls -1 | grep "_mac_" | wc -l)
+          linux_count=$(ls -1 | grep "_linux_" | wc -l)
+          
+          echo "   Windows files: $windows_count"
+          echo "   macOS files: $macos_count"
+          echo "   Linux files: $linux_count"
+          
+          if [ $windows_count -gt 0 ] && [ $macos_count -gt 0 ] && [ $linux_count -gt 0 ]; then
+            echo "✅ All platforms represented - verification passed"
+          elif [ $found_count -gt 0 ]; then
+            echo "⚠️  Some platforms missing, but files exist - proceeding with upload"
           else
-            echo "✅ Verification completed - $found_count files ready for upload"
+            echo "❌ No files found - this will cause COS upload to fail"
+            exit 1
           fi
 
       - name: Emergency filename fix for COS action
@@ -647,21 +651,39 @@ jobs:
             echo "✅ No truncated filenames found"
           fi
           
-          # 最终检查所有文件是否存在
+          # 检查和修复常见的文件名问题
           echo ""
-          echo "🔍 Final existence check:"
-          all_exist=true
+          echo "🔧 Checking for other filename issues..."
+          
+          # 检查是否有没有架构标识的Windows文件
+          windows_no_arch=$(ls -1 | grep "_windows_.*_[0-9]\+\.[0-9]\+\.[0-9]\+\.exe$" | grep -v "_x64_\|_arm64_\|_amd64_\|_x86_64_" || true)
+          if [ -n "$windows_no_arch" ]; then
+            echo "⚠️  Found Windows files without architecture identifier:"
+            echo "$windows_no_arch"
+            echo "   These files may be incorrectly named but will be uploaded as-is"
+          fi
+          
+          # 最终检查所有文件是否存在并且不为空
+          echo ""
+          echo "🔍 Final existence and size check:"
+          all_valid=true
           for file in *; do
             if [ -f "$file" ]; then
-              echo "✅ $file exists ($(du -h "$file" | cut -f1))"
+              size=$(du -h "$file" | cut -f1)
+              if [ -s "$file" ]; then
+                echo "✅ $file exists and has content ($size)"
+              else
+                echo "❌ $file exists but is empty"
+                all_valid=false
+              fi
             else
               echo "❌ $file does not exist or is not a file"
-              all_exist=false
+              all_valid=false
             fi
           done
           
-          if [ "$all_exist" = "false" ]; then
-            echo "❌ Some files are missing, COS upload may fail"
+          if [ "$all_valid" = "false" ]; then
+            echo "❌ Some files are invalid, COS upload may fail"
             exit 1
           fi
           
@@ -669,6 +691,15 @@ jobs:
           echo "🎯 All files verified and ready for COS upload:"
           echo "   Total files: $(ls -1 | wc -l)"
           echo "   Total size: $(du -sh . | cut -f1)"
+          
+          # 显示将要上传的文件清单
+          echo ""
+          echo "📋 Upload manifest:"
+          for file in *; do
+            if [ -f "$file" ]; then
+              echo "  📄 $file ($(du -h "$file" | cut -f1))"
+            fi
+          done
 
       - name: Configure Tencent Cloud COS
         uses: TencentCloud/cos-action@v1
