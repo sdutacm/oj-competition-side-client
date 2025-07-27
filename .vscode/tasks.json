@@ -76,7 +76,7 @@
 		{
 			"label": "修复 macOS 应用程序",
 			"type": "shell",
-			"command": "./scripts/fix-macos.sh",
+			"command": "./bin/fix-macos.sh",
 			"group": "build",
 			"isBackground": false,
 			"problemMatcher": []

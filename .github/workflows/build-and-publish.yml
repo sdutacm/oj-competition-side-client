@@ -26,7 +26,9 @@ jobs:
         run: npm ci
 
       - name: Debug environment
-        run: ./scripts/debug-env.sh
+        run: |
+          chmod +x ./bin/debug-env.sh
+          ./bin/debug-env.sh
 
       - name: Publish Linux (AppImage and deb)
         run: npm run publish:linux
@@ -51,7 +53,9 @@ jobs:
         run: npm ci
 
       - name: Debug environment
-        run: ./scripts/debug-env.sh
+        run: |
+          chmod +x ./bin/debug-env.sh
+          ./bin/debug-env.sh
 
       - name: Publish Windows
         run: npm run publish:win
@@ -76,7 +80,9 @@ jobs:
         run: npm ci
 
       - name: Debug environment
-        run: ./scripts/debug-env.sh
+        run: |
+          chmod +x ./bin/debug-env.sh
+          ./bin/debug-env.sh
 
       - name: Publish macOS
         run: npm run publish:mac
@@ -92,15 +98,22 @@ jobs:
       contents: write
       actions: read
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
       - name: Debug GitHub token and permissions
-        run: ./bin/debug-github.sh
+        run: |
+          chmod +x ./bin/debug-github.sh
+          ./bin/debug-github.sh
         env:
           GITHUB_TOKEN: ${{ secrets.atriordsa }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_ACTOR: ${{ github.actor }}
       
       - name: Clean unwanted files from release
-        run: ./bin/cleanup-release.sh
+        run: |
+          chmod +x ./bin/cleanup-release.sh
+          ./bin/cleanup-release.sh
         env:
           GITHUB_TOKEN: ${{ secrets.atriordsa }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -126,7 +139,9 @@ jobs:
 
       - name: Get release info
         id: release
-        run: ./bin/get-release-info.sh
+        run: |
+          chmod +x ./bin/get-release-info.sh
+          ./bin/get-release-info.sh
         env:
           GITHUB_TOKEN: ${{ secrets.atriordsa }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -134,7 +149,9 @@ jobs:
 
       - name: Download release assets
         id: download
-        run: ./bin/download-assets.sh
+        run: |
+          chmod +x ./bin/download-assets.sh
+          ./bin/download-assets.sh
         env:
           GITHUB_TOKEN: ${{ secrets.atriordsa }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -159,7 +176,9 @@ jobs:
           TAG_NAME: ${{ steps.release.outputs.tag_name }}
 
       - name: Display upload summary
-        run: ./bin/display-upload-summary.sh
+        run: |
+          chmod +x ./bin/display-upload-summary.sh
+          ./bin/display-upload-summary.sh
         env:
           TAG_NAME: ${{ steps.release.outputs.tag_name }}
           COS_DOMAIN: ${{ secrets.COS_DOMAIN }}

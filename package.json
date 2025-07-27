@@ -12,7 +12,7 @@
     "build": "electron-builder",
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
-    "fix:mac": "chmod +x scripts/fix-macos.sh && ./scripts/fix-macos.sh",
+    "fix:mac": "chmod +x bin/fix-macos.sh && ./bin/fix-macos.sh",
     "publish:win": "electron-builder --win --publish=always",
     "publish:mac": "electron-builder --mac --publish=always",
     "publish:linux": "electron-builder --linux --publish=always",
