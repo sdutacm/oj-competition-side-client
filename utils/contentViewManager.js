@@ -114,6 +114,12 @@ class ContentViewManager {
     const webContents = contentView?.webContents;
     if (webContents) {
       webContents.removeAllListeners('before-input-event');
+      
+      // 性能优化：缓存DOM检查结果
+      let lastInputCheckTime = 0;
+      let lastInputCheckResult = false;
+      const INPUT_CHECK_CACHE_TIME = 100; // 缓存100ms
+      
       webContents.on('before-input-event', (event, input) => {
         // 拦截开发者工具快捷键
         if (
@@ -128,47 +134,53 @@ class ContentViewManager {
           event.preventDefault();
           return;
         }
-        // Mac 下导航/刷新/主页/info 快捷键优化：不再强依赖 isFocused，提升兼容性
+        // Mac 下导航/刷新/主页/info 快捷键优化：减少DOM检查频率
         if (process.platform === 'darwin') {
           let win = null;
           try {
             win = webContents.hostWebContents ? webContents.hostWebContents : require('electron').remote ? require('electron').remote.getCurrentWindow() : null;
           } catch {}
           const isWinAlive = !win || (win && !win.isDestroyed());
+          
+          // 性能优化：使用缓存的DOM检查函数
+          const checkIsInputFocused = () => {
+            const now = Date.now();
+            if (now - lastInputCheckTime < INPUT_CHECK_CACHE_TIME) {
+              return Promise.resolve(lastInputCheckResult);
+            }
+            
+            return webContents.executeJavaScript(`(() => {
+              const el = document.activeElement;
+              if (!el) return false;
+              const tag = el.tagName.toLowerCase();
+              if (tag === 'input' || tag === 'textarea') return true;
+              if (el.isContentEditable) return true;
+              return false;
+            })()`, true).then(result => {
+              lastInputCheckTime = now;
+              lastInputCheckResult = result;
+              return result;
+            }).catch(() => false);
+          };
+          
           // 后退 Cmd+Left/Cmd+ArrowLeft
           if (
             input.meta && !input.shift && !input.alt && !input.control &&
             (input.key === 'Left' || input.key === 'ArrowLeft')
           ) {
-            // 判断是否聚焦在输入框/表单
-            webContents.executeJavaScript(`(() => {
-              const el = document.activeElement;
-              if (!el) return false;
-              const tag = el.tagName.toLowerCase();
-              if (tag === 'input' || tag === 'textarea') return true;
-              if (el.isContentEditable) return true;
-              return false;
-            })()`, true).then(isInput => {
+            checkIsInputFocused().then(isInput => {
               if (!isInput && !webContents.isDestroyed() && isWinAlive && webContents.canGoBack()) {
                 webContents.goBack();
                 event.preventDefault();
               }
-              // 如果聚焦输入框则不处理，交给系统
             });
           }
-          // 前进 Cmd+Right/Cmd+ArrowRight
+          // 前进 Cmd+Right/Cmd+ArrowRight  
           else if (
             input.meta && !input.shift && !input.alt && !input.control &&
             (input.key === 'Right' || input.key === 'ArrowRight')
           ) {
-            webContents.executeJavaScript(`(() => {
-              const el = document.activeElement;
-              if (!el) return false;
-              const tag = el.tagName.toLowerCase();
-              if (tag === 'input' || tag === 'textarea') return true;
-              if (el.isContentEditable) return true;
-              return false;
-            })()`, true).then(isInput => {
+            checkIsInputFocused().then(isInput => {
               if (!isInput && !webContents.isDestroyed() && isWinAlive && webContents.canGoForward()) {
                 webContents.goForward();
                 event.preventDefault();

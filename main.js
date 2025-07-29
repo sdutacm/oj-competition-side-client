@@ -598,6 +598,23 @@ app.whenReady().then(() => {
   app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,VaapiVideoEncoder');
   app.commandLine.appendSwitch('disable-background-timer-throttling');
   app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  
+  // 新增：关键性能优化
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+  app.commandLine.appendSwitch('enable-oop-rasterization');
+  app.commandLine.appendSwitch('disable-software-rasterizer');
+  app.commandLine.appendSwitch('enable-hardware-overlays');
+  app.commandLine.appendSwitch('enable-fast-unload'); 
+  app.commandLine.appendSwitch('disable-background-networking');
+  app.commandLine.appendSwitch('disable-domain-reliability');
+  app.commandLine.appendSwitch('disable-web-security'); // 临时性能测试
+  app.commandLine.appendSwitch('renderer-process-limit', '4');
+  app.commandLine.appendSwitch('max-active-webgl-contexts', '16');
+  
+  // 内存管理优化
+  app.commandLine.appendSwitch('memory-pressure-off');
+  app.commandLine.appendSwitch('max_old_space_size', '8192');
+  app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192 --optimize-for-size');
   app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
   
   // 初始化启动管理器

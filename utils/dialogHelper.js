@@ -1050,6 +1050,9 @@ function showInfoDialog(parentWindow) {
           if (e.key === 'Escape') {
             closeWindow();
           }
+        });
+            closeWindow();
+          }
           // Cmd+W (Mac) 或 Ctrl+W (Windows/Linux) 关闭窗口
           if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
             e.preventDefault();
