@@ -5,12 +5,13 @@ const path = require('path');
 module.exports = async function(context) {
   console.log('artifactBuildCompleted hook called');
   console.log('Artifact file:', context.file);
+  console.log('Context keys:', Object.keys(context));
   console.log('Context arch:', context.arch);
   
   // 只记录 target 的基本信息，避免循环引用
   if (context.target) {
-    console.log('Target name:', context.target.name);
-    console.log('Target arch:', context.target.arch);
+    console.log('Context target name:', context.target.name);
+    console.log('Context target arch:', context.target.arch);
   }
   
   const fileName = path.basename(context.file);
