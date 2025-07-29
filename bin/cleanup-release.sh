@@ -1,147 +1,54 @@
 #!/bin/bash
 
-set -e  # 启用错误时退出
+set -e
 
 echo "Starting simple release cleanup for tag: $GITHUB_REF_NAME"
 
-# 验证环境变量
-if [ -z "$GITHUB_TOKEN" ]; then
-  echo "GITHUB_TOKEN not set"
-  exit 1
-fi
-
-# 测试 API 连接
-USER_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user)
-if ! echo "$USER_RESPONSE" | jq -e '.login' > /dev/null 2>&1; then
-  echo "Cannot authenticate with GitHub API"
-  echo "Response: $USER_RESPONSE"
-  exit 1
-fi
-echo "GitHub API authentication successful"
-
-echo "Getting release for tag: $GITHUB_REF_NAME"
-
-# 使用重试机制查找 Release，因为可能需要时间创建
-MAX_ATTEMPTS=12
-ATTEMPT=1
-
-while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
-  echo "Attempt $ATTEMPT/$MAX_ATTEMPTS to find release..."
-  
-  RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-    https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME)
-  
-  if echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-    echo "Found release!"
-    break
-  fi
-  
-  if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
-    echo "Could not find release for tag $GITHUB_REF_NAME after $MAX_ATTEMPTS attempts"
-    echo "Response: $RELEASE_RESPONSE"
-    echo "electron-builder should have created the release, but it's not found yet."
-    echo "This might be a timing issue. Exiting without creating a new release."
+echo "Checking if release exists..."
+if ! gh release view "$GITHUB_REF_NAME" &> /dev/null; then
+    echo "Release $GITHUB_REF_NAME not found"
     exit 1
-  fi
-  
-  echo "Release not found yet, waiting 30 seconds..."
-  sleep 30
-  ATTEMPT=$((ATTEMPT + 1))
+fi
+
+echo "Found release $GITHUB_REF_NAME, listing assets..."
+gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name'
+
+echo "Deleting unwanted files..."
+
+# 删除 .yml 文件
+echo "Deleting .yml files..."
+for file in $(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[] | select(.name | endswith(".yml")) | .name'); do
+    echo "Deleting: $file"
+    gh release delete-asset "$GITHUB_REF_NAME" "$file" --yes || echo "Failed to delete $file"
 done
 
-RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
-echo "Found release ID: $RELEASE_ID"
+# 删除 .blockmap 文件
+echo "Deleting .blockmap files..."
+for file in $(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[] | select(.name | endswith(".blockmap")) | .name'); do
+    echo "Deleting: $file"
+    gh release delete-asset "$GITHUB_REF_NAME" "$file" --yes || echo "Failed to delete $file"
+done
 
-# 获取 assets
-echo "Getting release assets..."
-ASSETS_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-  https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets)
-
-if ! echo "$ASSETS_RESPONSE" | jq -e '. | length' > /dev/null 2>&1; then
-  echo "Failed to get assets"
-  echo "Response: $ASSETS_RESPONSE"
-  exit 1
-fi
-
-echo "Current release assets:"
-echo "$ASSETS_RESPONSE" | jq -r '.[] | "- \(.name) (ID: \(.id))"'
-
-# 查找并删除不需要的文件
-echo "Looking for unwanted assets..."
-
-# 删除 .yml, .yaml, .blockmap 文件
-echo "Finding .yml, .yaml, .blockmap files..."
-YML_ASSETS=$(echo "$ASSETS_RESPONSE" | jq -r 'if type == "array" then .[] | select(.name | test("\\.(yml|yaml|blockmap)$")) | .id else empty end' 2>/dev/null || echo "")
-
-# 删除不带架构标识的 Windows 文件  
-echo "Finding Windows files without architecture identifiers..."
-WINDOWS_NO_ARCH_ASSETS=$(echo "$ASSETS_RESPONSE" | jq -r 'if type == "array" then .[] | select(.name | test("windows.*\\.(exe)$") and (.name | test("_(x64|arm64)_") | not)) | .id else empty end' 2>/dev/null || echo "")
-
-# 合并所有要删除的 assets，过滤空行
-ALL_UNWANTED_ASSETS=""
-if [ -n "$YML_ASSETS" ]; then
-  ALL_UNWANTED_ASSETS="$YML_ASSETS"
-fi
-if [ -n "$WINDOWS_NO_ARCH_ASSETS" ]; then
-  if [ -n "$ALL_UNWANTED_ASSETS" ]; then
-    ALL_UNWANTED_ASSETS="$ALL_UNWANTED_ASSETS\n$WINDOWS_NO_ARCH_ASSETS"
-  else
-    ALL_UNWANTED_ASSETS="$WINDOWS_NO_ARCH_ASSETS"
-  fi
-fi
-
-if [ -n "$ALL_UNWANTED_ASSETS" ]; then
-  echo "Found unwanted assets to delete:"
-  
-  # 显示要删除的文件列表
-  echo "$ASSETS_RESPONSE" | jq -r 'if type == "array" then .[] | select((.name | test("\\.(yml|yaml|blockmap)$")) or (.name | test("windows.*\\.(exe)$") and (.name | test("_(x64|arm64)_") | not))) | "- \(.name) (ID: \(.id))" else empty end' 2>/dev/null || echo "Error displaying file list"
-  
-  echo -e "$ALL_UNWANTED_ASSETS" | while read -r asset_id; do
-    if [ -n "$asset_id" ] && [ "$asset_id" != "null" ] && [ "$asset_id" != "" ]; then
-      ASSET_NAME=$(echo "$ASSETS_RESPONSE" | jq -r "if type == \"array\" then .[] | select(.id == $asset_id) | .name else \"unknown\" end" 2>/dev/null)
-      echo "Deleting: $ASSET_NAME (ID: $asset_id)"
-      
-      DELETE_RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null \
-        -X DELETE \
-        -H "Authorization: token $GITHUB_TOKEN" \
-        https://api.github.com/repos/$GITHUB_REPOSITORY/releases/assets/$asset_id)
-      
-      if [ "$DELETE_RESPONSE" = "204" ]; then
-        echo "Successfully deleted: $ASSET_NAME"
-      else
-        echo "Failed to delete: $ASSET_NAME (HTTP: $DELETE_RESPONSE)"
-      fi
+# 删除没有架构标识的 Windows 文件
+echo "Deleting Windows files without architecture identifiers..."
+gh release view "$GITHUB_REF_NAME" --json assets --jq -r '.assets[] | select(.name | test("windows.*\\.exe$") and (.name | test("_(x64|arm64)_") | not)) | .name' | while read -r file; do
+    if [ -n "$file" ]; then
+        echo "Deleting: $file"
+        gh release delete-asset "$GITHUB_REF_NAME" "$file" --yes || echo "Failed to delete $file"
     fi
-  done
-else
-  echo "No unwanted files found!"
-fi
+done
 
-echo "Cleanup completed successfully!"
+echo "Cleanup completed!"
 
-# 检查并取消 Draft 状态
-echo "Checking if release is in draft state..."
-IS_DRAFT=$(echo "$RELEASE_RESPONSE" | jq -r '.draft')
+# 检查是否为 Draft 并发布
+echo "Checking release status..."
+IS_DRAFT=$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq '.isDraft')
 if [ "$IS_DRAFT" = "true" ]; then
-  echo "Release is in draft state, converting to published release..."
-  
-  UPDATE_RESPONSE=$(curl -s -X PATCH \
-    -H "Authorization: token $GITHUB_TOKEN" \
-    -H "Content-Type: application/json" \
-    https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID \
-    -d '{
-      "draft": false,
-      "prerelease": false
-    }')
-  
-  if echo "$UPDATE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-    echo "Successfully published release!"
-  else
-    echo "Failed to publish release"
-    echo "Response: $UPDATE_RESPONSE"
-  fi
+    echo "Release is draft, publishing..."
+    gh release edit "$GITHUB_REF_NAME" --draft=false
+    echo "Release published!"
 else
-  echo "Release is already published"
+    echo "Release is already published"
 fi
 
 echo "All operations completed!"
