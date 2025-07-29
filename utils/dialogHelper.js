@@ -557,13 +557,12 @@ function showInfoDialog(parentWindow) {
     iconPath = path.join(__dirname, '../public/favicon.ico');
   }
 
-  // 创建一个新的信息窗口 - 所有平台都设置为模态窗口
+  // 创建一个新的信息窗口 - 取消模态窗口设置
   const isMac = process.platform === 'darwin';
   const infoWindow = new BrowserWindow({
     width: 500,
     height: 580, // 增加高度以适应链接部分
-    parent: parentWindow, // 所有平台都设置父窗口
-    modal: true, // 所有平台都设置为模态窗口
+    // 移除 parent 和 modal 设置，改为普通窗口
     resizable: false,
     show: false,
     icon: iconPath,
@@ -572,9 +571,14 @@ function showInfoDialog(parentWindow) {
     closable: true, // 确保窗口可以关闭
     minimizable: false, // 禁用最小化按钮
     maximizable: false, // 禁用最大化按钮
-    alwaysOnTop: false, // 不要始终置顶，模态窗口会自动处理层级
+    alwaysOnTop: false, // 不要始终置顶
     center: true, // 居中显示
     fullscreenable: false, // 禁用全屏
+    // Mac 特定的居中设置
+    ...(isMac && {
+      x: undefined, // 让系统自动计算 x 位置
+      y: undefined, // 让系统自动计算 y 位置
+    }),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -584,6 +588,24 @@ function showInfoDialog(parentWindow) {
 
   // 设置全局引用
   currentInfoWindow = infoWindow;
+
+  // 手动确保窗口居中（特别针对 Mac 系统）
+  if (isMac) {
+    // 获取屏幕尺寸
+    const { screen } = require('electron');
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    
+    // 计算居中位置
+    const windowWidth = 500;
+    const windowHeight = 580;
+    const x = Math.round((screenWidth - windowWidth) / 2);
+    const y = Math.round((screenHeight - windowHeight) / 2);
+    
+    // 设置窗口位置
+    infoWindow.setPosition(x, y);
+    console.log(`Mac 系统信息窗口手动居中: 屏幕尺寸 ${screenWidth}x${screenHeight}, 窗口位置 (${x}, ${y})`);
+  }
 
   // 监听窗口关闭事件，清理全局引用
   infoWindow.on('closed', () => {
@@ -663,10 +685,6 @@ function showInfoDialog(parentWindow) {
     const isLinux = platform === 'linux';
     const isDarwin = platform === 'darwin';
     const isWindows = platform === 'win32';
-
-    // 根据系统确定关闭按钮的样式类名和符号
-    const closeButtonClass = isDarwin ? 'mac' : 'windows-linux';
-    const closeButtonSymbol = isDarwin ? '×' : '×'; // 都使用 × 符号，但样式不同
 
     let mimeType = 'image/png'; // 强制 png
 
@@ -810,50 +828,6 @@ function showInfoDialog(parentWindow) {
         .header {
           text-align: center;
           padding: 25px 30px 15px;
-          position: relative;
-        }
-        
-        .close-button {
-          position: absolute;
-          top: 15px;
-          width: 24px;
-          height: 24px;
-          border: none;
-          background: var(--text-tertiary);
-          border-radius: 50%;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 14px;
-          color: white;
-          transition: all 0.2s ease;
-          z-index: 1000;
-        }
-        
-        .close-button.mac {
-          left: 15px; /* Mac 系统：左上角 */
-          background: #ff5f57; /* Mac 红色关闭按钮 */
-        }
-        
-        .close-button.windows-linux {
-          right: 15px; /* Windows/Linux 系统：右上角 */
-        }
-        
-        .close-button:hover {
-          transform: scale(1.1);
-        }
-        
-        .close-button.mac:hover {
-          background: #ff3b30; /* Mac 悬停时的深红色 */
-        }
-        
-        .close-button.windows-linux:hover {
-          background: #ff5f57; /* Windows/Linux 悬停时的红色 */
-        }
-        
-        .close-button:active {
-          transform: scale(0.95);
         }
         
         .logo {
@@ -1006,7 +980,6 @@ function showInfoDialog(parentWindow) {
     <body>
       <div class="container">
         <div class="header">
-          <button class="close-button ${closeButtonClass}" onclick="closeWindow()" title="关闭窗口">${closeButtonSymbol}</button>
           ${logoImg}
           <div class="app-name">SDUT OJ 竞赛客户端</div>
           <div class="app-version">版本 1.0.0</div>
@@ -1018,7 +991,7 @@ function showInfoDialog(parentWindow) {
             <ul class="feature-list">
               <li class="feature-item">
                 <div class="feature-icon"></div>
-                <div class="feature-text">Electron 36.5.0</div>
+                <div class="feature-text">Electron 27.3.11</div>
               </li>
               <li class="feature-item">
                 <div class="feature-icon"></div>
@@ -1026,11 +999,11 @@ function showInfoDialog(parentWindow) {
               </li>
               <li class="feature-item">
                 <div class="feature-icon"></div>
-                <div class="feature-text">Chromium 130.0.6723.131</div>
+                <div class="feature-text">Chromium 118.0.5993.159</div>
               </li>
               <li class="feature-item">
                 <div class="feature-icon"></div>
-                <div class="feature-text">V8 13.0.245.12</div>
+                <div class="feature-text">V8 11.8.172.17</div>
               </li>
             </ul>
           </div>
@@ -1106,6 +1079,36 @@ function showInfoDialog(parentWindow) {
     });
 
     infoWindow.once('ready-to-show', () => {
+      // Mac 系统在显示前再次确保居中
+      if (isMac) {
+        const { screen } = require('electron');
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+        const x = Math.round((screenWidth - 500) / 2);
+        const y = Math.round((screenHeight - 580) / 2);
+        infoWindow.setPosition(x, y);
+        console.log(`Mac 系统信息窗口显示前再次居中: (${x}, ${y})`);
+        
+        // 显示后进行最终的居中检查
+        setTimeout(() => {
+          try {
+            const [currentX, currentY] = infoWindow.getPosition();
+            const idealX = Math.round((screenWidth - 500) / 2);
+            const idealY = Math.round((screenHeight - 580) / 2);
+            
+            // 如果位置偏差超过5像素，重新调整
+            if (Math.abs(currentX - idealX) > 5 || Math.abs(currentY - idealY) > 5) {
+              infoWindow.setPosition(idealX, idealY);
+              console.log(`Mac 系统信息窗口最终位置调整: 从 (${currentX}, ${currentY}) 到 (${idealX}, ${idealY})`);
+            } else {
+              console.log(`Mac 系统信息窗口位置正确: (${currentX}, ${currentY})`);
+            }
+          } catch (error) {
+            console.log('Mac系统信息窗口位置检查失败:', error);
+          }
+        }, 100);
+      }
+      
       infoWindow.show();
     });
   }).catch(error => {
@@ -1127,6 +1130,36 @@ function showInfoDialog(parentWindow) {
     });
 
     infoWindow.once('ready-to-show', () => {
+      // Mac 系统在显示前再次确保居中
+      if (isMac) {
+        const { screen } = require('electron');
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;  
+        const x = Math.round((screenWidth - 500) / 2);
+        const y = Math.round((screenHeight - 580) / 2);
+        infoWindow.setPosition(x, y);
+        console.log(`Mac 系统信息窗口(无图片版本)显示前再次居中: (${x}, ${y})`);
+        
+        // 显示后进行最终的居中检查
+        setTimeout(() => {
+          try {
+            const [currentX, currentY] = infoWindow.getPosition();
+            const idealX = Math.round((screenWidth - 500) / 2);
+            const idealY = Math.round((screenHeight - 580) / 2);
+            
+            // 如果位置偏差超过5像素，重新调整
+            if (Math.abs(currentX - idealX) > 5 || Math.abs(currentY - idealY) > 5) {
+              infoWindow.setPosition(idealX, idealY);
+              console.log(`Mac 系统信息窗口(无图片版本)最终位置调整: 从 (${currentX}, ${currentY}) 到 (${idealX}, ${idealY})`);
+            } else {
+              console.log(`Mac 系统信息窗口(无图片版本)位置正确: (${currentX}, ${currentY})`);
+            }
+          } catch (error) {
+            console.log('Mac系统信息窗口(无图片版本)位置检查失败:', error);
+          }
+        }, 100);
+      }
+      
       infoWindow.show();
     });
   });
