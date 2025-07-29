@@ -127,19 +127,22 @@ class StartupManager {
       frame: false, // 完全无框窗口
       transparent: true,
       alwaysOnTop: false, // 不要始终置顶，避免各平台桌面环境特殊处理
-      center: true,
+      center: true, // 启用居中
       resizable: false,
       minimizable: false,
       maximizable: false,
       fullscreenable: false,
-      show: false,
+      show: false, // 重要：先不显示，等定位完成后再显示
       skipTaskbar: false, // 所有平台都确保在任务栏显示，提供一致体验
       icon: iconPath, // 设置应用图标（如果找到的话）
       backgroundColor: 'rgba(0,0,0,0)', // 完全透明背景
       // Mac 下完全移除标题栏相关设置，确保无框
       ...(isMac && {
         titleBarStyle: 'hidden',
-        trafficLightPosition: { x: -1000, y: -1000 } // 将交通灯按钮移到视野外
+        trafficLightPosition: { x: -1000, y: -1000 }, // 将交通灯按钮移到视野外
+        // Mac 特定的居中设置
+        x: undefined, // 让系统自动计算 x 位置
+        y: undefined, // 让系统自动计算 y 位置
       }),
       webPreferences: {
         nodeIntegration: false,
@@ -174,6 +177,24 @@ class StartupManager {
 
     const startupWindow = new BrowserWindow(windowOptions);
 
+    // 手动确保窗口居中（特别针对 Mac 系统）
+    if (isMac) {
+      // 获取屏幕尺寸
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+      
+      // 计算居中位置
+      const windowWidth = windowOptions.width;
+      const windowHeight = windowOptions.height;
+      const x = Math.round((screenWidth - windowWidth) / 2);
+      const y = Math.round((screenHeight - windowHeight) / 2);
+      
+      // 设置窗口位置
+      startupWindow.setPosition(x, y);
+      console.log(`Mac 启动窗口手动居中: 屏幕尺寸 ${screenWidth}x${screenHeight}, 窗口位置 (${x}, ${y})`);
+    }
+
     // 创建启动页内容
     const startupHTML = this.getStartupHTML();
     const startupDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(startupHTML)}`;
@@ -187,6 +208,17 @@ class StartupManager {
 
     startupWindow.webContents.on('dom-ready', () => {
       console.log('Startup window DOM ready, showing window...');
+      
+      // Mac 系统在显示前再次确保居中
+      if (isMac) {
+        const { screen } = require('electron');
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+        const x = Math.round((screenWidth - windowOptions.width) / 2);
+        const y = Math.round((screenHeight - windowOptions.height) / 2);
+        startupWindow.setPosition(x, y);
+        console.log(`Mac 启动窗口显示前再次居中: (${x}, ${y})`);
+      }
       
       startupWindow.show();
 
@@ -213,8 +245,27 @@ class StartupManager {
           }
         }, 50);
       } else if (process.platform === 'darwin') {
-        // macOS：虽然通常不需要特殊处理，但保持一致性
-        console.log('macOS 启动窗口显示成功');
+        // macOS：在显示后进行最终的居中检查和优化
+        setTimeout(() => {
+          try {
+            const [currentX, currentY] = startupWindow.getPosition();
+            const { screen } = require('electron');
+            const primaryDisplay = screen.getPrimaryDisplay();
+            const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+            const idealX = Math.round((screenWidth - windowOptions.width) / 2);
+            const idealY = Math.round((screenHeight - windowOptions.height) / 2);
+            
+            // 如果位置偏差超过5像素，重新调整
+            if (Math.abs(currentX - idealX) > 5 || Math.abs(currentY - idealY) > 5) {
+              startupWindow.setPosition(idealX, idealY);
+              console.log(`macOS 启动窗口最终位置调整: 从 (${currentX}, ${currentY}) 到 (${idealX}, ${idealY})`);
+            } else {
+              console.log(`macOS 启动窗口位置正确: (${currentX}, ${currentY})`);
+            }
+          } catch (error) {
+            console.log('macOS启动窗口位置检查失败:', error);
+          }
+        }, 100);
       }
 
       // 5秒后关闭启动窗口
