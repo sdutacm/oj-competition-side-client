@@ -12,12 +12,30 @@ fi
 
 echo "Getting release for tag: $GITHUB_REF_NAME"
 
-# 获取 release 信息
-RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-  https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME)
+# 等待并重试获取 release 信息
+RELEASE_RESPONSE=""
+RETRY_COUNT=0
+MAX_RETRIES=12  # 最多等待 6 分钟
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES to find release..."
+  
+  RELEASE_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+    https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME)
+  
+  if echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+    echo "Release found!"
+    break
+  fi
+  
+  echo "Release not found yet, waiting 30 seconds..."
+  sleep 30
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+done
 
 if ! echo "$RELEASE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-  echo "Could not find release for tag $GITHUB_REF_NAME"
+  echo "Could not find release for tag $GITHUB_REF_NAME after $MAX_RETRIES attempts"
+  echo "Response: $RELEASE_RESPONSE"
   exit 1
 fi
 

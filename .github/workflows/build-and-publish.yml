@@ -82,6 +82,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Wait for release creation
+        run: sleep 60
+      
       - name: Clean unwanted files from release
         run: |
           chmod +x ./bin/cleanup-release.sh
