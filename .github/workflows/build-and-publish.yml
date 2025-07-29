@@ -65,7 +65,10 @@ jobs:
 
   publish-macos:
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        arch: [x64, arm64]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -84,11 +87,27 @@ jobs:
           chmod +x ./bin/debug-env.sh
           ./bin/debug-env.sh
 
-      - name: Publish macOS
-        run: npm run publish:mac
+      - name: Debug macOS build environment
+        run: |
+          echo "=== macOS Build Environment (${{ matrix.arch }}) ==="
+          uname -a
+          sw_vers
+          xcodebuild -version || echo "Xcode not available"
+          echo "Available disk space:"
+          df -h
+          echo "Memory usage:"
+          vm_stat
+          echo "Building for architecture: ${{ matrix.arch }}"
+
+      - name: Publish macOS ${{ matrix.arch }}
+        run: |
+          echo "Starting macOS ${{ matrix.arch }} build with verbose output..."
+          npm run publish:mac:${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.atriordsa }}
           DEBUG: electron-builder
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
 
   cleanup-release:
     runs-on: ubuntu-latest
