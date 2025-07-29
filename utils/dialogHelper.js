@@ -529,11 +529,20 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
   return dialogWindow;
 }
 
+// 全局变量跟踪当前打开的系统信息窗口
+let currentInfoWindow = null;
+
 /**
  * 显示系统信息窗口
  * @param {BrowserWindow} parentWindow - 父窗口
  */
 function showInfoDialog(parentWindow) {
+  // 如果已经有系统信息窗口打开，则聚焦到该窗口而不是创建新窗口
+  if (currentInfoWindow && !currentInfoWindow.isDestroyed()) {
+    currentInfoWindow.focus();
+    return currentInfoWindow;
+  }
+
   // 根据操作系统选择图标文件
   const os = require('os');
   const platform = os.platform();
@@ -548,25 +557,37 @@ function showInfoDialog(parentWindow) {
     iconPath = path.join(__dirname, '../public/favicon.ico');
   }
 
-  // 创建一个新的信息窗口
+  // 创建一个新的信息窗口 - 所有平台都设置为模态窗口
   const isMac = process.platform === 'darwin';
   const infoWindow = new BrowserWindow({
     width: 500,
     height: 580, // 增加高度以适应链接部分
-    ...(isMac ? {} : { parent: parentWindow, modal: true }),
+    parent: parentWindow, // 所有平台都设置父窗口
+    modal: true, // 所有平台都设置为模态窗口
     resizable: false,
     show: false,
     icon: iconPath,
     frame: true, // 强制有原生边框和按钮
-    titleBarStyle: isMac ? 'default' : undefined,
+    titleBarStyle: 'default', // 所有平台都使用默认标题栏
     closable: true, // 确保窗口可以关闭
     minimizable: false, // 禁用最小化按钮
     maximizable: false, // 禁用最大化按钮
+    alwaysOnTop: false, // 不要始终置顶，模态窗口会自动处理层级
+    center: true, // 居中显示
+    fullscreenable: false, // 禁用全屏
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       devTools: false, // 禁用开发者工具
     }
+  });
+
+  // 设置全局引用
+  currentInfoWindow = infoWindow;
+
+  // 监听窗口关闭事件，清理全局引用
+  infoWindow.on('closed', () => {
+    currentInfoWindow = null;
   });
 
   // Linux平台：设置窗口类名，确保与主窗口保持一致
@@ -609,11 +630,12 @@ function showInfoDialog(parentWindow) {
         event.preventDefault();
         return;
       }
-      // Mac 下处理 info 快捷键，且只在 infoWindow 聚焦时生效
+      // Mac 下处理 info 快捷键，但禁止在信息窗口中再次打开信息窗口
       if (process.platform === 'darwin' && webContents.isFocused && webContents.isFocused()) {
-        // 系统信息 Cmd+I
+        // 系统信息 Cmd+I - 禁止递归打开
         if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'I') {
-          require('./dialogHelper').showInfoDialog(infoWindow);
+          event.preventDefault(); // 阻止在信息窗口中再次打开信息窗口
+          return;
         }
       }
     });
@@ -640,6 +662,11 @@ function showInfoDialog(parentWindow) {
     const platform = os.platform();
     const isLinux = platform === 'linux';
     const isDarwin = platform === 'darwin';
+    const isWindows = platform === 'win32';
+
+    // 根据系统确定关闭按钮的样式类名和符号
+    const closeButtonClass = isDarwin ? 'mac' : 'windows-linux';
+    const closeButtonSymbol = isDarwin ? '×' : '×'; // 都使用 × 符号，但样式不同
 
     let mimeType = 'image/png'; // 强制 png
 
@@ -783,6 +810,50 @@ function showInfoDialog(parentWindow) {
         .header {
           text-align: center;
           padding: 25px 30px 15px;
+          position: relative;
+        }
+        
+        .close-button {
+          position: absolute;
+          top: 15px;
+          width: 24px;
+          height: 24px;
+          border: none;
+          background: var(--text-tertiary);
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          color: white;
+          transition: all 0.2s ease;
+          z-index: 1000;
+        }
+        
+        .close-button.mac {
+          left: 15px; /* Mac 系统：左上角 */
+          background: #ff5f57; /* Mac 红色关闭按钮 */
+        }
+        
+        .close-button.windows-linux {
+          right: 15px; /* Windows/Linux 系统：右上角 */
+        }
+        
+        .close-button:hover {
+          transform: scale(1.1);
+        }
+        
+        .close-button.mac:hover {
+          background: #ff3b30; /* Mac 悬停时的深红色 */
+        }
+        
+        .close-button.windows-linux:hover {
+          background: #ff5f57; /* Windows/Linux 悬停时的红色 */
+        }
+        
+        .close-button:active {
+          transform: scale(0.95);
         }
         
         .logo {
@@ -935,6 +1006,7 @@ function showInfoDialog(parentWindow) {
     <body>
       <div class="container">
         <div class="header">
+          <button class="close-button ${closeButtonClass}" onclick="closeWindow()" title="关闭窗口">${closeButtonSymbol}</button>
           ${logoImg}
           <div class="app-name">SDUT OJ 竞赛客户端</div>
           <div class="app-version">版本 1.0.0</div>
@@ -994,7 +1066,23 @@ function showInfoDialog(parentWindow) {
           console.log('OPEN_EXTERNAL_LINK:' + url);
         }
         
-        // ESC键绑定已删除，仅使用按钮关闭信息窗口
+        // 关闭窗口函数
+        function closeWindow() {
+          console.log('CLOSE_WINDOW');
+        }
+        
+        // 添加键盘快捷键支持
+        document.addEventListener('keydown', function(e) {
+          // ESC 键关闭窗口
+          if (e.key === 'Escape') {
+            closeWindow();
+          }
+          // Cmd+W (Mac) 或 Ctrl+W (Windows/Linux) 关闭窗口
+          if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
+            e.preventDefault();
+            closeWindow();
+          }
+        });
       </script>
     </body>
     </html>`;
