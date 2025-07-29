@@ -119,3 +119,30 @@ else
 fi
 
 echo "Cleanup completed successfully!"
+
+# 检查并取消 Draft 状态
+echo "Checking if release is in draft state..."
+IS_DRAFT=$(echo "$RELEASE_RESPONSE" | jq -r '.draft')
+if [ "$IS_DRAFT" = "true" ]; then
+  echo "Release is in draft state, converting to published release..."
+  
+  UPDATE_RESPONSE=$(curl -s -X PATCH \
+    -H "Authorization: token $GITHUB_TOKEN" \
+    -H "Content-Type: application/json" \
+    https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID \
+    -d '{
+      "draft": false,
+      "prerelease": false
+    }')
+  
+  if echo "$UPDATE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+    echo "Successfully published release!"
+  else
+    echo "Failed to publish release"
+    echo "Response: $UPDATE_RESPONSE"
+  fi
+else
+  echo "Release is already published"
+fi
+
+echo "All operations completed!"

@@ -35,6 +35,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.atriordsa }}
           DEBUG: electron-builder
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
 
   publish-windows:
     runs-on: windows-latest
@@ -62,6 +63,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.atriordsa }}
           DEBUG: electron-builder
+          EP_DRAFT: false
+          EP_PRE_RELEASE: false
 
   publish-macos:
     runs-on: macos-latest
@@ -89,6 +92,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.atriordsa }}
           DEBUG: electron-builder
+          EP_DRAFT: false
+          EP_PRE_RELEASE: false
 
   cleanup-release:
     runs-on: ubuntu-latest
