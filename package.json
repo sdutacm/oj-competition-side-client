@@ -55,7 +55,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "ATRIOR-LCL",
+        "owner": "sdutacm",
         "repo": "oj-competition-side-client"
       }
     ],
