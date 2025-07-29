@@ -39,31 +39,9 @@ while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
   if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
     echo "Could not find release for tag $GITHUB_REF_NAME after $MAX_ATTEMPTS attempts"
     echo "Response: $RELEASE_RESPONSE"
-    
-    # 创建一个新的 Release
-    echo "Creating new release for tag $GITHUB_REF_NAME"
-    CREATE_RESPONSE=$(curl -s -X POST \
-      -H "Authorization: token $GITHUB_TOKEN" \
-      -H "Content-Type: application/json" \
-      https://api.github.com/repos/$GITHUB_REPOSITORY/releases \
-      -d "{
-        \"tag_name\": \"$GITHUB_REF_NAME\",
-        \"target_commitish\": \"master\",
-        \"name\": \"${GITHUB_REF_NAME#v}\",
-        \"body\": \"## 版本 ${GITHUB_REF_NAME#v}\\n\\n### 改进\\n- 优化构建和发布流程\\n- 修复已知问题\\n\\n此版本由自动化脚本创建。\",
-        \"draft\": false,
-        \"prerelease\": false
-      }")
-    
-    if echo "$CREATE_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
-      echo "Successfully created new release"
-      RELEASE_RESPONSE="$CREATE_RESPONSE"
-      break
-    else
-      echo "Failed to create new release"
-      echo "Response: $CREATE_RESPONSE"
-      exit 1
-    fi
+    echo "electron-builder should have created the release, but it's not found yet."
+    echo "This might be a timing issue. Exiting without creating a new release."
+    exit 1
   fi
   
   echo "Release not found yet, waiting 30 seconds..."
