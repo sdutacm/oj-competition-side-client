@@ -56,7 +56,9 @@
       {
         "provider": "github",
         "owner": "sdutacm",
-        "repo": "oj-competition-side-client"
+        "repo": "oj-competition-side-client",
+        "draft": false,
+        "prerelease": false
       }
     ],
     "artifactBuildStarted": "./scripts/buildStarted.js",
