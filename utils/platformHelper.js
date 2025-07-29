@@ -90,20 +90,42 @@ class PlatformHelper {
   static getPlatformConfig() {
     const isWin = this.isWindows();
     const isMac = this.isMacOS();
+    const isLinux = this.isLinux();
 
     return {
       // Windows 需要更严格的安全设置
-      webSecurity: isWin,
-      // macOS 默认禁用节点集成
+      webSecurity: true,
+      // 禁用节点集成以提高安全性
       nodeIntegration: false,
       // 上下文隔离在所有平台都启用
       contextIsolation: true,
-      // Windows 需要禁用不安全内容
-      allowRunningInsecureContent: !isWin,
+      // 允许不安全内容以提高兼容性
+      allowRunningInsecureContent: false,
       // 沙盒模式
       sandbox: false,
-      // 是否启用实验性功能
-      experimentalFeatures: !isWin
+      // 启用实验性功能以获得更好性能
+      experimentalFeatures: true,
+      // 性能优化配置
+      backgroundThrottling: false,
+      webgl: true,
+      acceleratedCompositing: true,
+      spellcheck: false,
+      enableWebSQL: false,
+      v8CacheOptions: 'code',
+      // 平台特定优化
+      ...(isWin && {
+        // Windows 特定优化
+        thickFrame: true,
+        enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
+      }),
+      ...(isMac && {
+        // macOS 特定优化
+        enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
+      }),
+      ...(isLinux && {
+        // Linux 特定优化
+        enableBlinkFeatures: 'OverlayScrollbars',
+      })
     };
   }
 
