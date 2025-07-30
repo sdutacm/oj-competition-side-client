@@ -14,17 +14,12 @@
     "build:mac": "electron-builder --mac",
     "build:mac:x64": "electron-builder --mac --x64",
     "build:mac:arm64": "electron-builder --mac --arm64",
-    "fix:mac": "chmod +x bin/fix-macos.sh && ./bin/fix-macos.sh",
     "publish:win": "electron-builder --win --publish=always",
     "publish:mac": "electron-builder --mac --publish=always",
     "publish:mac:x64": "electron-builder --mac --x64 --publish=always",
     "publish:mac:arm64": "electron-builder --mac --arm64 --publish=always",
     "publish:linux": "electron-builder --linux --publish=always",
-    "upload:cos": "node scripts/upload-to-cos.js",
-    "test:cos": "node scripts/test-cos-connection.js",
-    "test:upload": "TAG_NAME=v1.3.6 node scripts/upload-to-cos.js",
-    "test:local": "node scripts/test-local-upload.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "upload:cos": "node scripts/upload-to-cos.js"
   },
   "devDependencies": {
     "electron": "^27.0.0",
