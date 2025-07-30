@@ -222,18 +222,11 @@ function openNewWindow(url) {
         // 渲染优化
         partition: null,
         additionalArguments: process.platform === 'win32' ? [
-          // Windows 特定优化：解决滚动卡顿和失帧问题
+          // Windows 安全的性能优化
           '--enable-gpu-rasterization',
-          '--enable-oop-rasterization', 
           '--enable-hardware-overlays',
           '--enable-smooth-scrolling',
-          '--enable-threaded-compositing',
-          '--enable-accelerated-2d-canvas',
-          '--disable-background-timer-throttling',
-          '--disable-renderer-backgrounding',
-          '--disable-backgrounding-occluded-windows',
-          '--max-tiles-for-interest-area=512',
-          '--num-raster-threads=4'
+          '--disable-background-timer-throttling'
         ] : [
           // 其他系统保持原有配置
           '--enable-gpu-rasterization',
@@ -416,18 +409,11 @@ function createMainWindow() {
         v8CacheOptions: 'code',
         enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
         additionalArguments: process.platform === 'win32' ? [
-          // Windows 特定优化：解决滚动卡顿和失帧问题
+          // Windows 安全的性能优化
           '--enable-gpu-rasterization',
-          '--enable-oop-rasterization',
           '--enable-hardware-overlays',
           '--enable-smooth-scrolling',
-          '--enable-threaded-compositing',
-          '--enable-accelerated-2d-canvas',
-          '--disable-background-timer-throttling',
-          '--disable-renderer-backgrounding',
-          '--disable-backgrounding-occluded-windows',
-          '--max-tiles-for-interest-area=512',
-          '--num-raster-threads=4'
+          '--disable-background-timer-throttling'
         ] : [
           // 其他系统保持原有配置
           '--enable-gpu-rasterization',
@@ -632,61 +618,35 @@ app.whenReady().then(() => {
   console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
   console.log('App ready - 测试翻译:', i18n.t('app.name'));
   
-  // Windows 特定性能优化
+  // Windows 特定性能优化（安全版本）
   if (process.platform === 'win32') {
     console.log('应用Windows专用优化配置...');
-    // Windows 滚动和渲染优化
+    // Windows 安全的渲染优化
     app.commandLine.appendSwitch('enable-smooth-scrolling');
-    app.commandLine.appendSwitch('enable-threaded-compositing');
-    app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
+    app.commandLine.appendSwitch('enable-gpu-rasterization');
+    app.commandLine.appendSwitch('enable-hardware-overlays');
     app.commandLine.appendSwitch('disable-background-timer-throttling');
-    app.commandLine.appendSwitch('disable-renderer-backgrounding');
-    app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
-    app.commandLine.appendSwitch('max-tiles-for-interest-area', '512');
-    app.commandLine.appendSwitch('num-raster-threads', '4');
-    console.log('Windows渲染优化配置已应用');
+    console.log('Windows安全渲染优化配置已应用');
   }
   
-  // 通用性能优化设置
+  // 通用性能优化设置（安全版本）
   app.commandLine.appendSwitch('disable-features', 'TranslateUI');
-  app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,VaapiVideoEncoder');
   
-  // 新增：关键性能优化
+  // 安全的性能优化
   app.commandLine.appendSwitch('enable-gpu-rasterization');
-  app.commandLine.appendSwitch('enable-oop-rasterization');
-  app.commandLine.appendSwitch('disable-software-rasterizer');
   app.commandLine.appendSwitch('enable-hardware-overlays');
-  app.commandLine.appendSwitch('enable-fast-unload'); 
-  app.commandLine.appendSwitch('disable-background-networking');
-  app.commandLine.appendSwitch('disable-domain-reliability');
-  app.commandLine.appendSwitch('disable-web-security'); // 临时性能测试
-  app.commandLine.appendSwitch('renderer-process-limit', '4');
-  app.commandLine.appendSwitch('max-active-webgl-contexts', '16');
-  
-  // 内存管理优化
-  app.commandLine.appendSwitch('memory-pressure-off');
-  app.commandLine.appendSwitch('max_old_space_size', '8192');
-  app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192 --optimize-for-size');
-  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
   
   // 初始化启动管理器
   startupManager = new StartupManager();
   
-  // Windows 兼容性设置
+  // Windows 兼容性设置（安全版本）
   if (PlatformHelper.isWindows()) {
-    // 优化Windows GPU性能配置
+    // 安全的Windows GPU性能配置
     app.commandLine.appendSwitch('enable-gpu-rasterization');
-    app.commandLine.appendSwitch('enable-zero-copy');
-    app.commandLine.appendSwitch('disable-gpu-sandbox');
-    app.commandLine.appendSwitch('ignore-gpu-blacklist');
     app.commandLine.appendSwitch('enable-hardware-acceleration');
     app.commandLine.appendSwitch('enable-smooth-scrolling');
-    // 移除可能导致性能问题的开关
-    // app.commandLine.appendSwitch('disable-gpu'); // 删除这行，启用GPU
-    app.commandLine.appendSwitch('no-sandbox');
-    // 内存和缓存优化
-    app.commandLine.appendSwitch('max_old_space_size', '4096');
-    app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
+    // 内存优化（保守设置）
+    app.commandLine.appendSwitch('max_old_space_size', '2048');
   }
 
   // macOS 特定设置
@@ -736,12 +696,9 @@ app.whenReady().then(() => {
 
   // Linux 特定设置
   if (PlatformHelper.isLinux()) {
-    // Linux 性能优化
+    // Linux 安全性能优化
     app.commandLine.appendSwitch('enable-gpu-rasterization');
-    app.commandLine.appendSwitch('enable-zero-copy');
     app.commandLine.appendSwitch('enable-smooth-scrolling');
-    app.commandLine.appendSwitch('disable-gpu-sandbox');
-    app.commandLine.appendSwitch('ignore-gpu-blacklist');
     
     // 设置应用程序名称（使用英文名称避免中文乱码）
     const englishAppName = 'SDUT OJ Competition Side Client';
