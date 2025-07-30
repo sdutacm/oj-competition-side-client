@@ -221,7 +221,21 @@ function openNewWindow(url) {
         v8CacheOptions: 'code', // V8代码缓存优化
         // 渲染优化
         partition: null,
-        additionalArguments: [
+        additionalArguments: process.platform === 'win32' ? [
+          // Windows 特定优化：解决滚动卡顿和失帧问题
+          '--enable-gpu-rasterization',
+          '--enable-oop-rasterization', 
+          '--enable-hardware-overlays',
+          '--enable-smooth-scrolling',
+          '--enable-threaded-compositing',
+          '--enable-accelerated-2d-canvas',
+          '--disable-background-timer-throttling',
+          '--disable-renderer-backgrounding',
+          '--disable-backgrounding-occluded-windows',
+          '--max-tiles-for-interest-area=512',
+          '--num-raster-threads=4'
+        ] : [
+          // 其他系统保持原有配置
           '--enable-gpu-rasterization',
           '--enable-oop-rasterization',
           '--enable-hardware-overlays',
@@ -401,7 +415,21 @@ function createMainWindow() {
         enableWebSQL: false,
         v8CacheOptions: 'code',
         enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
-        additionalArguments: [
+        additionalArguments: process.platform === 'win32' ? [
+          // Windows 特定优化：解决滚动卡顿和失帧问题
+          '--enable-gpu-rasterization',
+          '--enable-oop-rasterization',
+          '--enable-hardware-overlays',
+          '--enable-smooth-scrolling',
+          '--enable-threaded-compositing',
+          '--enable-accelerated-2d-canvas',
+          '--disable-background-timer-throttling',
+          '--disable-renderer-backgrounding',
+          '--disable-backgrounding-occluded-windows',
+          '--max-tiles-for-interest-area=512',
+          '--num-raster-threads=4'
+        ] : [
+          // 其他系统保持原有配置
           '--enable-gpu-rasterization',
           '--enable-oop-rasterization',
           '--enable-hardware-overlays'
@@ -423,10 +451,21 @@ function createMainWindow() {
         title: 'SDUT OJ Competition Side Client', // 使用英文标题避免乱码
       });
     } else if (process.platform === 'win32') {
-      // Windows 特定设置
+      // Windows 特定设置 - 专门优化滚动性能
       Object.assign(windowOptions, {
         title: 'SDUT OJ Competition Side Client',
         skipTaskbar: false, // 确保在任务栏显示
+        // Windows 滚动优化选项
+        transparent: false, // 禁用透明度以提高性能
+        skipTaskbar: false,
+        resizable: true,
+        minimizable: true,
+        maximizable: true,
+        closable: true,
+        alwaysOnTop: false,
+        fullscreenable: true,
+        // 避免不必要的重绘
+        paintWhenInitiallyHidden: false,
       });
     }
 
@@ -593,11 +632,24 @@ app.whenReady().then(() => {
   console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
   console.log('App ready - 测试翻译:', i18n.t('app.name'));
   
-  // 全局性能优化设置
+  // Windows 特定性能优化
+  if (process.platform === 'win32') {
+    console.log('应用Windows专用优化配置...');
+    // Windows 滚动和渲染优化
+    app.commandLine.appendSwitch('enable-smooth-scrolling');
+    app.commandLine.appendSwitch('enable-threaded-compositing');
+    app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
+    app.commandLine.appendSwitch('disable-background-timer-throttling');
+    app.commandLine.appendSwitch('disable-renderer-backgrounding');
+    app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+    app.commandLine.appendSwitch('max-tiles-for-interest-area', '512');
+    app.commandLine.appendSwitch('num-raster-threads', '4');
+    console.log('Windows渲染优化配置已应用');
+  }
+  
+  // 通用性能优化设置
   app.commandLine.appendSwitch('disable-features', 'TranslateUI');
   app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,VaapiVideoEncoder');
-  app.commandLine.appendSwitch('disable-background-timer-throttling');
-  app.commandLine.appendSwitch('disable-renderer-backgrounding');
   
   // 新增：关键性能优化
   app.commandLine.appendSwitch('enable-gpu-rasterization');
