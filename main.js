@@ -770,7 +770,7 @@ app.whenReady().then(() => {
     app.commandLine.appendSwitch('enable-smooth-scrolling');
     app.commandLine.appendSwitch('enable-gpu-rasterization');
     app.commandLine.appendSwitch('enable-zero-copy');
-    app.commandLine.appendSwitch('disable-background-timer-throttling');
+    app.commandLine.appendSwitch('ignore-gpu-blocklist');
     console.log('Windows滚动优化命令行参数已应用');
   }
   
