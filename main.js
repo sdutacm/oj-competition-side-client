@@ -214,15 +214,15 @@ function openNewWindow(url) {
           v8CacheOptions: 'code',
           // 激进的图片渲染性能优化
           enableBlinkFeatures: 'OverlayScrollbars,LazyFrameLoading,ImageLoadingOptimization,PassiveDocumentEventListeners,PassiveDocumentWheelEventListeners',
-          disableBlinkFeatures: 'AudioVideoTracks', // 禁用不需要的功能
+          disableBlinkFeatures: 'AudioVideoTracks,SmoothScrolling', // 禁用平滑滚动以防止回退效果
           // 内存和缓存优化
           webSecurityEnabled: true,
           allowDisplayingInsecureContent: false,
           allowRunningInsecureContent: false,
           // 启用更好的图片解码和缓存
           enableImageBitmapOffscreenCanvas: true,
-          // 滚动性能优化
-          scrollBounce: false,
+          // Windows专用：滚动性能优化
+          scrollBounce: false, // 禁用滚动回弹
           // 禁用不必要的功能以提高性能
           plugins: false,
           java: false,
@@ -237,36 +237,30 @@ function openNewWindow(url) {
           enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
         }),
         
-        // Windows专用：激进的滚动和图片性能参数
+        // Windows专用：流畅滚动优化配置（保持防回退）
         additionalArguments: process.platform === 'win32' ? [
-          '--enable-smooth-scrolling',
-          '--enable-gpu-rasterization',
+          // 保持防回退的基础配置
+          '--disable-gpu',
+          '--disable-gpu-compositing',
           '--disable-software-rasterizer',
-          '--disable-background-timer-throttling',
-          // 激进的图片优化
-          '--enable-lazy-image-loading',
+          '--disable-smooth-scrolling',
+          '--disable-scroll-bounce',
+          '--disable-features=VizDisplayCompositor,SmoothScrolling',
+          // 流畅度优化参数
+          '--enable-precise-memory-info',
           '--enable-viewport-meta',
-          '--enable-gpu-memory-buffer-compositor-resources',
-          '--enable-zero-copy',
-          '--disable-background-media-suspend',
-          // 内存优化
-          '--max-old-space-size=6144',
+          '--enable-lazy-image-loading',
+          // 减少后台处理提高响应性
+          '--disable-background-timer-throttling',
+          '--disable-renderer-backgrounding',
+          '--disable-backgrounding-occluded-windows',
+          // 内存和性能优化
+          '--max-old-space-size=7168', // 7GB内存
           '--memory-pressure-off',
-          '--disable-dev-shm-usage',
-          // 图片解码优化
-          '--enable-accelerated-mjpeg-decode',
-          '--enable-accelerated-video-decode',
-          // 激进的滚动性能优化
-          '--enable-prefer-compositing-to-lcd-text',
-          '--enable-accelerated-2d-canvas',
-          '--ignore-gpu-blacklist',
-          '--enable-native-gpu-memory-buffers',
-          '--disable-hang-monitor',
-          '--disable-features=VizDisplayCompositor',
-          '--enable-features=VaapiVideoDecoder',
-          // 禁用可能影响性能的功能（保留外部链接功能）
-          '--disable-extensions',
-          '--disable-plugins'
+          '--no-sandbox',
+          // 额外的流畅度优化
+          '--enable-zero-copy',
+          '--enable-native-gpu-memory-buffers'
         ] : [
           '--enable-gpu-rasterization',
           '--enable-oop-rasterization',
@@ -302,123 +296,132 @@ function openNewWindow(url) {
   
   // 为新窗口设置性能优化
   if (win.webContents) {
-      // Windows 激进的图片滚动性能优化
+      // Windows 流畅滚动优化（保持防回退功能）
       if (process.platform === 'win32') {
-        // 激进的图片滚动优化CSS
+        // 在防回退基础上添加流畅度优化
         win.webContents.on('dom-ready', () => {
           win.webContents.insertCSS(`
-            /* Windows新窗口 - 激进图片滚动性能优化 */
+            /* Windows新窗口 - 流畅防回退模式 */
             html {
-              scroll-behavior: smooth;
-              /* 滚动优化 */
+              /* 保持防回退配置 */
+              scroll-behavior: auto !important;
+              overscroll-behavior: none !important;
+              overscroll-behavior-x: none !important;
+              overscroll-behavior-y: none !important;
+              /* 滚动容器优化 */
               overflow-x: hidden;
               overflow-y: auto;
+              /* 添加流畅度优化 */
+              scroll-padding: 0;
+              scroll-margin: 0;
             }
             
             body {
-              scroll-behavior: smooth;
-              /* 启用容器查询和滚动优化 */
-              contain: layout style paint;
-            }
-            
-            /* 激进图片懒加载和渲染优化 */
-            img {
-              image-rendering: -webkit-optimize-contrast;
-              image-rendering: crisp-edges;
-              will-change: transform, opacity;
-              backface-visibility: hidden;
+              /* 保持防回退配置 */
+              scroll-behavior: auto !important;
+              overscroll-behavior: none !important;
+              overscroll-behavior-x: none !important;
+              overscroll-behavior-y: none !important;
+              -webkit-overflow-scrolling: auto !important;
+              /* 添加性能优化 */
+              contain: layout;
               transform: translateZ(0);
-              /* 启用GPU硬件加速 */
-              -webkit-transform: translateZ(0);
-              -webkit-backface-visibility: hidden;
-              -webkit-perspective: 1000;
-              /* 图片加载优化 */
-              loading: lazy;
-              decoding: async;
-              /* 内容可见性优化 */
-              content-visibility: auto;
-              contain-intrinsic-size: 1px 1px;
             }
             
-            /* 大图片特殊优化 - 更激进 */
-            img[src*=".jpg"], img[src*=".jpeg"], img[src*=".png"], img[src*=".webp"], img[src*=".gif"] {
-              image-rendering: -webkit-optimize-contrast;
-              /* 避免大图片阻塞渲染 */
-              content-visibility: auto;
-              contain-intrinsic-size: 300px 200px;
-              /* 图片尺寸优化 */
-              object-fit: cover;
-              /* 强制硬件加速 */
-              transform: translate3d(0,0,0);
-              /* 内存优化 */
-              image-orientation: from-image;
+            /* 全局防回退设置（保持不变） */
+            * {
+              overscroll-behavior: none !important;
+              overscroll-behavior-x: none !important;
+              overscroll-behavior-y: none !important;
+              scroll-behavior: auto !important;
+              scroll-snap-type: none !important;
+              scroll-snap-align: none !important;
+              -webkit-overflow-scrolling: auto !important;
             }
             
-            /* 激进的容器层级合成优化 */
-            div, section, article, main, aside, header, footer, nav {
-              transform: translateZ(0);
-              -webkit-transform: translateZ(0);
-              /* 启用包含 */
+            /* 滚动容器的性能优化 */
+            .scroll, .scroll-container, [class*="scroll"], [class*="list"], 
+            .table-container, .content, .main, div[style*="overflow"] {
               contain: layout style;
-            }
-            
-            /* 滚动容器优化 */
-            [class*="scroll"], [class*="list"], [class*="container"] {
               will-change: scroll-position;
               transform: translateZ(0);
-              /* 启用滚动优化 */
-              contain: strict;
-              content-visibility: auto;
+              /* 减少重绘区域 */
+              isolation: isolate;
             }
             
-            /* 禁用可能影响性能的功能 */
-            * {
-              /* 禁用文本选择以提高滚动性能 */
-              -webkit-user-select: none;
-              -moz-user-select: none;
-              -ms-user-select: none;
-              user-select: none;
-              /* 禁用拖拽 */
-              -webkit-user-drag: none;
-              -khtml-user-drag: none;
-              -moz-user-drag: none;
-              -o-user-drag: none;
-              user-drag: none;
+            /* 图片优化 - 避免布局跳动同时提高渲染性能 */
+            img {
+              image-rendering: -webkit-optimize-contrast;
+              loading: lazy;
+              decoding: async;
+              /* 防止尺寸变化 */
+              max-width: 100%;
+              height: auto;
+              /* 性能优化 */
+              transform: translateZ(0);
+              will-change: transform;
             }
             
-            /* 允许输入框文本选择 */
-            input, textarea, [contenteditable] {
-              -webkit-user-select: text;
-              -moz-user-select: text;
-              -ms-user-select: text;
-              user-select: text;
+            /* 保持动画禁用但允许必要的过渡 */
+            *, *::before, *::after {
+              animation: none !important;
+              animation-duration: 0s !important;
+              /* 允许很短的过渡用于流畅感 */
+              transition: opacity 0.1s ease !important;
             }
             
-            /* Chrome默认滚动条样式 */
+            /* 优化的滚动条 - 更细且流畅 */
             ::-webkit-scrollbar {
               width: 12px;
-              height: 12px;
-            }
-            
-            ::-webkit-scrollbar-track {
               background: transparent;
             }
             
+            ::-webkit-scrollbar-track {
+              background: rgba(0,0,0,0.03);
+              border-radius: 6px;
+            }
+            
             ::-webkit-scrollbar-thumb {
-              background: ${nativeTheme.shouldUseDarkColors ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'};
+              background: rgba(0,0,0,0.2);
               border-radius: 6px;
               border: 2px solid transparent;
               background-clip: content-box;
+              transition: background 0.2s ease;
             }
             
             ::-webkit-scrollbar-thumb:hover {
-              background: ${nativeTheme.shouldUseDarkColors ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'};
+              background: rgba(0,0,0,0.4);
               background-clip: content-box;
             }
             
             ::-webkit-scrollbar-thumb:active {
-              background: ${nativeTheme.shouldUseDarkColors ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'};
+              background: rgba(0,0,0,0.6);
               background-clip: content-box;
+            }
+            
+            /* 表格和列表的特殊优化 */
+            table, .table, div[class*="table"] {
+              contain: layout style;
+              transform: translateZ(0);
+              /* 表格行的优化 */
+            }
+            
+            tr, .table-row, [class*="row"] {
+              contain: layout;
+              will-change: transform;
+            }
+            
+            /* 禁用所有可能的弹性滚动（保持不变） */
+            html, body, * {
+              -webkit-scroll-behavior: auto !important;
+              -moz-scroll-behavior: auto !important;
+              -ms-scroll-behavior: auto !important;
+            }
+            
+            /* 文本渲染优化 */
+            * {
+              text-rendering: optimizeSpeed;
+              -webkit-font-smoothing: subpixel-antialiased;
             }
           `);
         });
@@ -636,35 +639,28 @@ function createMainWindow() {
         v8CacheOptions: 'code',
         enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
         additionalArguments: process.platform === 'win32' ? [
-          // Windows 专用：激进的图片滚动性能优化
-          '--enable-smooth-scrolling',
-          '--enable-gpu-rasterization',
+          // Windows主窗口：流畅滚动优化配置（保持防回退）
+          '--disable-gpu',
+          '--disable-gpu-compositing',
           '--disable-software-rasterizer',
-          '--disable-background-timer-throttling',
-          // 激进的图片优化
-          '--enable-lazy-image-loading',
+          '--disable-smooth-scrolling',
+          '--disable-scroll-bounce',
+          '--disable-features=VizDisplayCompositor,SmoothScrolling',
+          // 流畅度优化参数
+          '--enable-precise-memory-info',
           '--enable-viewport-meta',
-          '--enable-gpu-memory-buffer-compositor-resources',
-          '--enable-zero-copy',
-          '--disable-background-media-suspend',
-          // 内存优化
-          '--max-old-space-size=6144',
+          '--enable-lazy-image-loading',
+          // 减少后台处理提高响应性
+          '--disable-background-timer-throttling',
+          '--disable-renderer-backgrounding',
+          '--disable-backgrounding-occluded-windows',
+          // 内存和性能优化
+          '--max-old-space-size=7168', // 7GB内存
           '--memory-pressure-off',
-          '--disable-dev-shm-usage',
-          // 图片解码优化
-          '--enable-accelerated-mjpeg-decode',
-          '--enable-accelerated-video-decode',
-          // 激进的滚动性能优化
-          '--enable-prefer-compositing-to-lcd-text',
-          '--enable-accelerated-2d-canvas',
-          '--ignore-gpu-blacklist',
-          '--enable-native-gpu-memory-buffers',
-          '--disable-hang-monitor',
-          '--disable-features=VizDisplayCompositor',
-          '--enable-features=VaapiVideoDecoder',
-          // 禁用可能影响性能的功能（保留外部链接功能）
-          '--disable-extensions',
-          '--disable-plugins'
+          '--no-sandbox',
+          // 额外的流畅度优化
+          '--enable-zero-copy',
+          '--enable-native-gpu-memory-buffers'
         ] : [
           // 其他系统保持原有配置
           '--enable-gpu-rasterization',
@@ -710,130 +706,139 @@ function createMainWindow() {
 
     // 设置窗口的性能优化
     if (mainWindow.webContents) {
-      // Windows 激进的图片滚动性能优化（主窗口）
+      // Windows 流畅滚动优化（主窗口，保持防回退功能）
       if (process.platform === 'win32') {
-        console.log('应用Windows激进图片滚动优化...');
+        console.log('应用Windows流畅滚动优化（保持防回退）...');
         
-        // 激进的图片滚动优化CSS
+        // 在防回退基础上添加流畅度优化
         mainWindow.webContents.on('dom-ready', () => {
           mainWindow.webContents.insertCSS(`
-            /* Windows主窗口 - 激进图片滚动性能优化 */
+            /* Windows主窗口 - 流畅防回退模式 */
             html {
-              scroll-behavior: smooth;
-              /* 滚动优化 */
+              /* 保持防回退配置 */
+              scroll-behavior: auto !important;
+              overscroll-behavior: none !important;
+              overscroll-behavior-x: none !important;
+              overscroll-behavior-y: none !important;
+              /* 滚动容器优化 */
               overflow-x: hidden;
               overflow-y: auto;
+              /* 添加流畅度优化 */
+              scroll-padding: 0;
+              scroll-margin: 0;
             }
             
             body {
-              scroll-behavior: smooth;
-              /* 启用容器查询和滚动优化 */
-              contain: layout style paint;
-            }
-            
-            /* 激进图片懒加载和渲染优化 */
-            img {
-              image-rendering: -webkit-optimize-contrast;
-              image-rendering: crisp-edges;
-              will-change: transform, opacity;
-              backface-visibility: hidden;
+              /* 保持防回退配置 */
+              scroll-behavior: auto !important;
+              overscroll-behavior: none !important;
+              overscroll-behavior-x: none !important;
+              overscroll-behavior-y: none !important;
+              -webkit-overflow-scrolling: auto !important;
+              /* 添加性能优化 */
+              contain: layout;
               transform: translateZ(0);
-              /* 启用GPU硬件加速 */
-              -webkit-transform: translateZ(0);
-              -webkit-backface-visibility: hidden;
-              -webkit-perspective: 1000;
-              /* 图片加载优化 */
-              loading: lazy;
-              decoding: async;
-              /* 内容可见性优化 */
-              content-visibility: auto;
-              contain-intrinsic-size: 1px 1px;
             }
             
-            /* 大图片特殊优化 - 更激进 */
-            img[src*=".jpg"], img[src*=".jpeg"], img[src*=".png"], img[src*=".webp"], img[src*=".gif"] {
-              image-rendering: -webkit-optimize-contrast;
-              /* 避免大图片阻塞渲染 */
-              content-visibility: auto;
-              contain-intrinsic-size: 300px 200px;
-              /* 图片尺寸优化 */
-              object-fit: cover;
-              /* 强制硬件加速 */
-              transform: translate3d(0,0,0);
-              /* 内存优化 */
-              image-orientation: from-image;
+            /* 全局防回退设置（保持不变） */
+            * {
+              overscroll-behavior: none !important;
+              overscroll-behavior-x: none !important;
+              overscroll-behavior-y: none !important;
+              scroll-behavior: auto !important;
+              scroll-snap-type: none !important;
+              scroll-snap-align: none !important;
+              -webkit-overflow-scrolling: auto !important;
             }
             
-            /* 激进的容器层级合成优化 */
-            div, section, article, main, aside, header, footer, nav {
-              transform: translateZ(0);
-              -webkit-transform: translateZ(0);
-              /* 启用包含 */
+            /* 滚动容器的性能优化 */
+            .scroll, .scroll-container, [class*="scroll"], [class*="list"], 
+            .table-container, .content, .main, div[style*="overflow"] {
               contain: layout style;
-            }
-            
-            /* 滚动容器优化 */
-            [class*="scroll"], [class*="list"], [class*="container"] {
               will-change: scroll-position;
               transform: translateZ(0);
-              /* 启用滚动优化 */
-              contain: strict;
-              content-visibility: auto;
+              /* 减少重绘区域 */
+              isolation: isolate;
             }
             
-            /* 禁用可能影响性能的功能 */
-            * {
-              /* 禁用文本选择以提高滚动性能 */
-              -webkit-user-select: none;
-              -moz-user-select: none;
-              -ms-user-select: none;
-              user-select: none;
-              /* 禁用拖拽 */
-              -webkit-user-drag: none;
-              -khtml-user-drag: none;
-              -moz-user-drag: none;
-              -o-user-drag: none;
-              user-drag: none;
+            /* 图片优化 - 避免布局跳动同时提高渲染性能 */
+            img {
+              image-rendering: -webkit-optimize-contrast;
+              loading: lazy;
+              decoding: async;
+              /* 防止尺寸变化 */
+              max-width: 100%;
+              height: auto;
+              /* 性能优化 */
+              transform: translateZ(0);
+              will-change: transform;
             }
             
-            /* 允许输入框文本选择 */
-            input, textarea, [contenteditable] {
-              -webkit-user-select: text;
-              -moz-user-select: text;
-              -ms-user-select: text;
-              user-select: text;
+            /* 保持动画禁用但允许必要的过渡 */
+            *, *::before, *::after {
+              animation: none !important;
+              animation-duration: 0s !important;
+              /* 允许很短的过渡用于流畅感 */
+              transition: opacity 0.1s ease !important;
             }
             
-            /* Chrome默认滚动条样式 */
+            /* 优化的滚动条 - 更细且流畅 */
             ::-webkit-scrollbar {
               width: 12px;
-              height: 12px;
-            }
-            
-            ::-webkit-scrollbar-track {
               background: transparent;
             }
             
+            ::-webkit-scrollbar-track {
+              background: rgba(0,0,0,0.03);
+              border-radius: 6px;
+            }
+            
             ::-webkit-scrollbar-thumb {
-              background: ${nativeTheme.shouldUseDarkColors ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'};
+              background: rgba(0,0,0,0.2);
               border-radius: 6px;
               border: 2px solid transparent;
               background-clip: content-box;
+              transition: background 0.2s ease;
             }
             
             ::-webkit-scrollbar-thumb:hover {
-              background: ${nativeTheme.shouldUseDarkColors ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'};
+              background: rgba(0,0,0,0.4);
               background-clip: content-box;
             }
             
             ::-webkit-scrollbar-thumb:active {
-              background: ${nativeTheme.shouldUseDarkColors ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'};
+              background: rgba(0,0,0,0.6);
               background-clip: content-box;
+            }
+            
+            /* 表格和列表的特殊优化 */
+            table, .table, div[class*="table"] {
+              contain: layout style;
+              transform: translateZ(0);
+              /* 表格行的优化 */
+            }
+            
+            tr, .table-row, [class*="row"] {
+              contain: layout;
+              will-change: transform;
+            }
+            
+            /* 禁用所有可能的弹性滚动（保持不变） */
+            html, body, * {
+              -webkit-scroll-behavior: auto !important;
+              -moz-scroll-behavior: auto !important;
+              -ms-scroll-behavior: auto !important;
+            }
+            
+            /* 文本渲染优化 */
+            * {
+              text-rendering: optimizeSpeed;
+              -webkit-font-smoothing: subpixel-antialiased;
             }
           `);
         });
         
-        console.log('Windows激进图片滚动优化配置已应用');
+        console.log('Windows温和滚动优化配置已应用');
       }
       
       // 设置缓存模式
@@ -1005,50 +1010,31 @@ app.whenReady().then(() => {
   console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
   console.log('App ready - 测试翻译:', i18n.t('app.name'));
   
-  // Windows专用：激进的图片滚动性能优化
+  // Windows专用：流畅滚动优化配置（保持防回退）
   if (process.platform === 'win32') {
-    console.log('应用Windows专用激进图片滚动优化...');
+    console.log('应用Windows流畅滚动优化（保持防回退）...');
     
-    // 基础渲染优化
-    app.commandLine.appendSwitch('enable-smooth-scrolling');
-    app.commandLine.appendSwitch('enable-gpu-rasterization');
+    // 保持防回退的基础配置
+    app.commandLine.appendSwitch('disable-gpu');
+    app.commandLine.appendSwitch('disable-gpu-compositing');
     app.commandLine.appendSwitch('disable-software-rasterizer');
-    app.commandLine.appendSwitch('disable-background-timer-throttling');
+    app.commandLine.appendSwitch('disable-smooth-scrolling');
+    app.commandLine.appendSwitch('disable-scroll-bounce');
+    app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor,SmoothScrolling');
     
-    // 激进的图片和滚动优化
-    app.commandLine.appendSwitch('enable-lazy-image-loading');
+    // 流畅度优化
+    app.commandLine.appendSwitch('enable-precise-memory-info');
     app.commandLine.appendSwitch('enable-viewport-meta');
-    app.commandLine.appendSwitch('enable-gpu-memory-buffer-compositor-resources');
+    app.commandLine.appendSwitch('enable-lazy-image-loading');
     app.commandLine.appendSwitch('enable-zero-copy');
-    app.commandLine.appendSwitch('disable-background-media-suspend');
-    
-    // 内存和性能优化
-    app.commandLine.appendSwitch('max_old_space_size', '6144'); // 增加到6GB
-    app.commandLine.appendSwitch('memory-pressure-off');
-    app.commandLine.appendSwitch('disable-dev-shm-usage');
-    
-    // 图片解码优化
-    app.commandLine.appendSwitch('enable-accelerated-mjpeg-decode');
-    app.commandLine.appendSwitch('enable-accelerated-video-decode');
-    
-    // 激进的GPU和合成优化
-    app.commandLine.appendSwitch('enable-gpu-compositing');
-    app.commandLine.appendSwitch('force-gpu-rasterization');
-    app.commandLine.appendSwitch('enable-gpu-sandbox');
-    
-    // 滚动性能激进优化
-    app.commandLine.appendSwitch('enable-prefer-compositing-to-lcd-text');
-    app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
-    app.commandLine.appendSwitch('disable-gpu-sandbox'); // 与上面矛盾，但为了性能
-    app.commandLine.appendSwitch('ignore-gpu-blacklist');
     app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
     
-    // 禁用可能影响滚动性能的功能
-    app.commandLine.appendSwitch('disable-hang-monitor');
-    app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor');
-    app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder');
+    // 性能优化
+    app.commandLine.appendSwitch('disable-background-timer-throttling');
+    app.commandLine.appendSwitch('disable-renderer-backgrounding');
+    app.commandLine.appendSwitch('memory-pressure-off');
     
-    console.log('Windows激进图片滚动优化配置完成');
+    console.log('Windows流畅滚动优化配置完成');
   }
 
   // Linux平台图标设置
