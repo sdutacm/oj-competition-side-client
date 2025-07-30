@@ -204,7 +204,7 @@ function openNewWindow(url) {
         nodeIntegrationInSubFrames: false,
         enableRemoteModule: false,
         
-        // Windows专用：激进图片滚动优化配置
+        // Windows专用：极简新窗口配置
         ...(process.platform === 'win32' ? {
           backgroundThrottling: false,
           webgl: true,
@@ -212,10 +212,10 @@ function openNewWindow(url) {
           spellcheck: false,
           enableWebSQL: false,
           v8CacheOptions: 'code',
-          // 激进的图片渲染性能优化
-          enableBlinkFeatures: 'OverlayScrollbars,LazyFrameLoading,ImageLoadingOptimization,PassiveDocumentEventListeners,PassiveDocumentWheelEventListeners',
-          disableBlinkFeatures: 'AudioVideoTracks,SmoothScrolling', // 禁用平滑滚动以防止回退效果
-          // 内存和缓存优化
+          // 极简策略：让Chrome自己处理渲染优化
+          enableBlinkFeatures: 'OverlayScrollbars',
+          disableBlinkFeatures: 'ScrollBounce,OverscrollHistoryNavigation',
+          // 基本优化
           webSecurityEnabled: true,
           allowDisplayingInsecureContent: false,
           allowRunningInsecureContent: false,
@@ -237,30 +237,25 @@ function openNewWindow(url) {
           enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
         }),
         
-        // Windows专用：流畅滚动优化配置（保持防回退）
+        // Windows专用：极简新窗口命令行参数
         additionalArguments: process.platform === 'win32' ? [
-          // 保持防回退的基础配置
-          '--disable-gpu',
-          '--disable-gpu-compositing',
-          '--disable-software-rasterizer',
-          '--disable-smooth-scrolling',
-          '--disable-scroll-bounce',
-          '--disable-features=VizDisplayCompositor,SmoothScrolling',
-          // 流畅度优化参数
-          '--enable-precise-memory-info',
-          '--enable-viewport-meta',
-          '--enable-lazy-image-loading',
-          // 减少后台处理提高响应性
+          // 核心：只禁用回退，让Chrome自己优化其他
+          '--disable-features=ScrollBounce,OverscrollHistoryNavigation',
+          
+          // Chrome默认优化
+          '--enable-gpu-rasterization',
+          '--enable-oop-rasterization', 
+          '--enable-zero-copy',
+          
+          // 禁用可能干扰性能的功能
           '--disable-background-timer-throttling',
           '--disable-renderer-backgrounding',
           '--disable-backgrounding-occluded-windows',
-          // 内存和性能优化
-          '--max-old-space-size=7168', // 7GB内存
+          
+          // 基本内存优化
           '--memory-pressure-off',
-          '--no-sandbox',
-          // 额外的流畅度优化
-          '--enable-zero-copy',
-          '--enable-native-gpu-memory-buffers'
+          '--max-old-space-size=6144',
+          '--no-sandbox'
         ] : [
           '--enable-gpu-rasterization',
           '--enable-oop-rasterization',
@@ -298,132 +293,25 @@ function openNewWindow(url) {
   if (win.webContents) {
       // Windows 流畅滚动优化（保持防回退功能）
       if (process.platform === 'win32') {
-        // 在防回退基础上添加流畅度优化
+        // 极简CSS策略：只防回退，让Chrome自己处理流畅度
         win.webContents.on('dom-ready', () => {
           win.webContents.insertCSS(`
-            /* Windows新窗口 - 流畅防回退模式 */
-            html {
-              /* 保持防回退配置 */
-              scroll-behavior: auto !important;
+            /* 极简新窗口 - 只防回退，其他交给Chrome */
+            html, body {
+              /* 只禁用回退，不干扰Chrome的默认优化 */
               overscroll-behavior: none !important;
               overscroll-behavior-x: none !important;
               overscroll-behavior-y: none !important;
-              /* 滚动容器优化 */
-              overflow-x: hidden;
-              overflow-y: auto;
-              /* 添加流畅度优化 */
-              scroll-padding: 0;
-              scroll-margin: 0;
             }
             
-            body {
-              /* 保持防回退配置 */
-              scroll-behavior: auto !important;
-              overscroll-behavior: none !important;
-              overscroll-behavior-x: none !important;
-              overscroll-behavior-y: none !important;
-              -webkit-overflow-scrolling: auto !important;
-              /* 添加性能优化 */
-              contain: layout;
-              transform: translateZ(0);
-            }
-            
-            /* 全局防回退设置（保持不变） */
+            /* 全局防回退 */
             * {
               overscroll-behavior: none !important;
               overscroll-behavior-x: none !important;
               overscroll-behavior-y: none !important;
-              scroll-behavior: auto !important;
-              scroll-snap-type: none !important;
-              scroll-snap-align: none !important;
-              -webkit-overflow-scrolling: auto !important;
-            }
-            
-            /* 滚动容器的性能优化 */
-            .scroll, .scroll-container, [class*="scroll"], [class*="list"], 
-            .table-container, .content, .main, div[style*="overflow"] {
-              contain: layout style;
-              will-change: scroll-position;
-              transform: translateZ(0);
-              /* 减少重绘区域 */
-              isolation: isolate;
-            }
-            
-            /* 图片优化 - 避免布局跳动同时提高渲染性能 */
-            img {
-              image-rendering: -webkit-optimize-contrast;
-              loading: lazy;
-              decoding: async;
-              /* 防止尺寸变化 */
-              max-width: 100%;
-              height: auto;
-              /* 性能优化 */
-              transform: translateZ(0);
-              will-change: transform;
-            }
-            
-            /* 保持动画禁用但允许必要的过渡 */
-            *, *::before, *::after {
-              animation: none !important;
-              animation-duration: 0s !important;
-              /* 允许很短的过渡用于流畅感 */
-              transition: opacity 0.1s ease !important;
-            }
-            
-            /* 优化的滚动条 - 更细且流畅 */
-            ::-webkit-scrollbar {
-              width: 12px;
-              background: transparent;
-            }
-            
-            ::-webkit-scrollbar-track {
-              background: rgba(0,0,0,0.03);
-              border-radius: 6px;
-            }
-            
-            ::-webkit-scrollbar-thumb {
-              background: rgba(0,0,0,0.2);
-              border-radius: 6px;
-              border: 2px solid transparent;
-              background-clip: content-box;
-              transition: background 0.2s ease;
-            }
-            
-            ::-webkit-scrollbar-thumb:hover {
-              background: rgba(0,0,0,0.4);
-              background-clip: content-box;
-            }
-            
-            ::-webkit-scrollbar-thumb:active {
-              background: rgba(0,0,0,0.6);
-              background-clip: content-box;
-            }
-            
-            /* 表格和列表的特殊优化 */
-            table, .table, div[class*="table"] {
-              contain: layout style;
-              transform: translateZ(0);
-              /* 表格行的优化 */
-            }
-            
-            tr, .table-row, [class*="row"] {
-              contain: layout;
-              will-change: transform;
-            }
-            
-            /* 禁用所有可能的弹性滚动（保持不变） */
-            html, body, * {
-              -webkit-scroll-behavior: auto !important;
-              -moz-scroll-behavior: auto !important;
-              -ms-scroll-behavior: auto !important;
-            }
-            
-            /* 文本渲染优化 */
-            * {
-              text-rendering: optimizeSpeed;
-              -webkit-font-smoothing: subpixel-antialiased;
             }
           `);
+          console.log('新窗口极简CSS已应用 - 让Chrome自主优化');
         });
       }
     
@@ -639,28 +527,23 @@ function createMainWindow() {
         v8CacheOptions: 'code',
         enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
         additionalArguments: process.platform === 'win32' ? [
-          // Windows主窗口：流畅滚动优化配置（保持防回退）
-          '--disable-gpu',
-          '--disable-gpu-compositing',
-          '--disable-software-rasterizer',
-          '--disable-smooth-scrolling',
-          '--disable-scroll-bounce',
-          '--disable-features=VizDisplayCompositor,SmoothScrolling',
-          // 流畅度优化参数
-          '--enable-precise-memory-info',
-          '--enable-viewport-meta',
-          '--enable-lazy-image-loading',
-          // 减少后台处理提高响应性
+          // 极简主窗口策略：让Chrome引擎自主优化
+          '--disable-features=ScrollBounce,OverscrollHistoryNavigation',
+          
+          // Chrome默认优化
+          '--enable-gpu-rasterization',
+          '--enable-oop-rasterization',
+          '--enable-zero-copy',
+          
+          // 禁用Electron特有的性能干扰
           '--disable-background-timer-throttling',
           '--disable-renderer-backgrounding',
           '--disable-backgrounding-occluded-windows',
-          // 内存和性能优化
-          '--max-old-space-size=7168', // 7GB内存
+          
+          // 基本内存优化
           '--memory-pressure-off',
-          '--no-sandbox',
-          // 额外的流畅度优化
-          '--enable-zero-copy',
-          '--enable-native-gpu-memory-buffers'
+          '--max-old-space-size=8192',
+          '--no-sandbox'
         ] : [
           // 其他系统保持原有配置
           '--enable-gpu-rasterization',
@@ -710,34 +593,42 @@ function createMainWindow() {
       if (process.platform === 'win32') {
         console.log('应用Windows流畅滚动优化（保持防回退）...');
         
-        // 在防回退基础上添加流畅度优化
+        // Chrome级别流畅度优化CSS（主窗口，保持防回退）
         mainWindow.webContents.on('dom-ready', () => {
           mainWindow.webContents.insertCSS(`
-            /* Windows主窗口 - 流畅防回退模式 */
+            /* Windows主窗口 - Chrome级别流畅度模式 */
             html {
-              /* 保持防回退配置 */
-              scroll-behavior: auto !important;
+              /* 关键：禁用回退但启用流畅滚动 */
+              scroll-behavior: smooth !important;
               overscroll-behavior: none !important;
               overscroll-behavior-x: none !important;
               overscroll-behavior-y: none !important;
               /* 滚动容器优化 */
               overflow-x: hidden;
               overflow-y: auto;
-              /* 添加流畅度优化 */
+              /* Chrome级别优化 */
               scroll-padding: 0;
               scroll-margin: 0;
+              contain: layout style paint;
+              content-visibility: auto;
+              /* 硬件加速 */
+              will-change: scroll-position;
+              transform: translateZ(0);
             }
             
             body {
-              /* 保持防回退配置 */
-              scroll-behavior: auto !important;
+              /* 关键：禁用回退但启用流畅滚动 */
+              scroll-behavior: smooth !important;
               overscroll-behavior: none !important;
               overscroll-behavior-x: none !important;
               overscroll-behavior-y: none !important;
-              -webkit-overflow-scrolling: auto !important;
-              /* 添加性能优化 */
-              contain: layout;
+              -webkit-overflow-scrolling: touch !important;
+              /* 硬件加速优化 */
+              contain: layout style paint;
               transform: translateZ(0);
+              backface-visibility: hidden;
+              perspective: 1000px;
+              will-change: scroll-position, transform;
             }
             
             /* 全局防回退设置（保持不变） */
@@ -751,14 +642,18 @@ function createMainWindow() {
               -webkit-overflow-scrolling: auto !important;
             }
             
-            /* 滚动容器的性能优化 */
+            /* 滚动容器的高级性能优化 */
             .scroll, .scroll-container, [class*="scroll"], [class*="list"], 
             .table-container, .content, .main, div[style*="overflow"] {
-              contain: layout style;
-              will-change: scroll-position;
+              contain: layout style paint;
+              will-change: scroll-position, transform;
               transform: translateZ(0);
-              /* 减少重绘区域 */
+              /* 减少重绘区域和提高层合成 */
               isolation: isolate;
+              backface-visibility: hidden;
+              perspective: 1000px;
+              /* 优化表格渲染 */
+              table-layout: fixed;
             }
             
             /* 图片优化 - 避免布局跳动同时提高渲染性能 */
@@ -774,12 +669,65 @@ function createMainWindow() {
               will-change: transform;
             }
             
-            /* 保持动画禁用但允许必要的过渡 */
+            /* 动画流畅度专项优化 - 针对卡顿问题（主窗口） */
             *, *::before, *::after {
+              /* 完全禁用所有动画和过渡以消除卡顿 */
               animation: none !important;
               animation-duration: 0s !important;
-              /* 允许很短的过渡用于流畅感 */
-              transition: opacity 0.1s ease !important;
+              animation-delay: 0s !important;
+              animation-fill-mode: none !important;
+              transition: none !important;
+              transition-duration: 0s !important;
+              transition-delay: 0s !important;
+              /* 强制硬件加速用于需要动画的元素 */
+              transform: translateZ(0);
+              will-change: auto;
+              backface-visibility: hidden;
+            }
+            
+            /* 特定动画元素的优化 */
+            .animated, .fade, .slide, [class*="animate"], [class*="transition"],
+            .loading, .spinner, .progress, .tooltip, .dropdown, .modal {
+              /* 为必需的动画元素启用GPU加速 */
+              transform: translateZ(0) !important;
+              will-change: transform, opacity !important;
+              backface-visibility: hidden !important;
+              perspective: 1000px !important;
+              /* 使用最快的动画曲线 */
+              animation-timing-function: linear !important;
+              transition-timing-function: linear !important;
+              /* 优化动画性能 */
+              contain: layout style paint !important;
+              isolation: isolate !important;
+            }
+            
+            /* 按钮和交互元素优化 */
+            button, input, select, textarea, a, [role="button"], [tabindex] {
+              /* 禁用hover和focus的动画效果 */
+              transition: none !important;
+              animation: none !important;
+              /* 但保持硬件加速 */
+              transform: translateZ(0);
+              will-change: auto;
+              backface-visibility: hidden;
+            }
+            
+            /* 表格和列表的动画优化 */
+            table, tr, td, th, ul, ol, li {
+              /* 禁用所有过渡动画 */
+              transition: none !important;
+              animation: none !important;
+              /* 优化渲染 */
+              contain: layout style;
+              transform: translateZ(0);
+            }
+            
+            /* CSS变换的性能优化 */
+            [style*="transform"], [style*="opacity"], [style*="scale"] {
+              will-change: transform, opacity !important;
+              transform: translateZ(0) !important;
+              backface-visibility: hidden !important;
+              contain: layout style paint !important;
             }
             
             /* 优化的滚动条 - 更细且流畅 */
@@ -1010,31 +958,29 @@ app.whenReady().then(() => {
   console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
   console.log('App ready - 测试翻译:', i18n.t('app.name'));
   
-  // Windows专用：流畅滚动优化配置（保持防回退）
+  // Windows专用：极简高效策略（回归Chrome原生性能）
   if (process.platform === 'win32') {
-    console.log('应用Windows流畅滚动优化（保持防回退）...');
+    console.log('应用Windows极简高效策略（回归Chrome原生性能）...');
     
-    // 保持防回退的基础配置
-    app.commandLine.appendSwitch('disable-gpu');
-    app.commandLine.appendSwitch('disable-gpu-compositing');
-    app.commandLine.appendSwitch('disable-software-rasterizer');
-    app.commandLine.appendSwitch('disable-smooth-scrolling');
-    app.commandLine.appendSwitch('disable-scroll-bounce');
-    app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor,SmoothScrolling');
+    // 极简策略：只保留最关键的优化，让Chromium自己处理
+    // 只禁用回退，其他让Chrome引擎自己优化
+    app.commandLine.appendSwitch('disable-features', 'ScrollBounce,OverscrollHistoryNavigation');
     
-    // 流畅度优化
-    app.commandLine.appendSwitch('enable-precise-memory-info');
-    app.commandLine.appendSwitch('enable-viewport-meta');
-    app.commandLine.appendSwitch('enable-lazy-image-loading');
+    // 启用Chrome的所有默认优化
+    app.commandLine.appendSwitch('enable-gpu-rasterization');
+    app.commandLine.appendSwitch('enable-oop-rasterization');
     app.commandLine.appendSwitch('enable-zero-copy');
-    app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
     
-    // 性能优化
+    // 禁用可能影响性能的Electron特有功能
     app.commandLine.appendSwitch('disable-background-timer-throttling');
     app.commandLine.appendSwitch('disable-renderer-backgrounding');
-    app.commandLine.appendSwitch('memory-pressure-off');
+    app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
     
-    console.log('Windows流畅滚动优化配置完成');
+    // 简单的内存优化
+    app.commandLine.appendSwitch('memory-pressure-off');
+    app.commandLine.appendSwitch('max-old-space-size', '8192');
+    
+    console.log('Windows极简高效策略配置完成 - 让Chrome引擎自主优化');
   }
 
   // Linux平台图标设置

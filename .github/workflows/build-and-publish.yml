@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  RELEASE_VERSION: ${{ github.ref_name }}
+
 jobs:
   publish-linux:
     runs-on: ubuntu-latest
@@ -31,10 +34,18 @@ jobs:
           ./bin/debug-env.sh
 
       - name: Publish Linux (AppImage and deb)
-        run: npm run publish:linux
+        run: |
+          echo "🐧 开始Linux构建..."
+          npm run publish:linux
         env:
           GH_TOKEN: ${{ secrets.atriordsa }}
           DEBUG: electron-builder
+
+      - name: Verify Linux build output
+        run: |
+          echo "🔍 验证Linux构建输出..."
+          ls -la dist/
+          echo "✅ Linux构建完成"
 
   publish-windows:
     runs-on: windows-latest
@@ -58,10 +69,31 @@ jobs:
           ./bin/debug-env.sh
 
       - name: Publish Windows
-        run: npm run publish:win
+        run: |
+          echo "🪟 开始Windows构建（包含Defender白名单自动配置）..."
+          npm run publish:win
         env:
           GH_TOKEN: ${{ secrets.atriordsa }}
           DEBUG: electron-builder
+
+      - name: Verify Windows build output
+        run: |
+          echo "🔍 验证Windows构建输出..."
+          ls -la dist/
+          # 检查是否包含README文件和安装脚本
+          if (Test-Path "dist/README_WINDOWS.txt") {
+            Write-Host "✅ Windows用户说明文件已创建"
+            Get-Content "dist/README_WINDOWS.txt"
+          } else {
+            Write-Host "⚠️  Windows用户说明文件未找到"
+          }
+          # 检查NSIS配置
+          if (Test-Path "build/installer.nsh") {
+            Write-Host "✅ NSIS安装脚本配置存在"
+          } else {
+            Write-Host "⚠️  NSIS安装脚本配置未找到"
+          }
+        shell: powershell
 
   publish-macos:
     runs-on: macos-latest
@@ -99,15 +131,48 @@ jobs:
           vm_stat
           echo "Building for architecture: ${{ matrix.arch }}"
 
+      - name: Setup macOS signing tools
+        run: |
+          echo "🔧 准备macOS签名工具..."
+          # 确保codesign工具可用
+          which codesign || echo "Warning: codesign not found"
+          # 设置脚本权限
+          chmod +x ./bin/fix-macos.sh
+          chmod +x ./bin/user-fix-macos.sh
+          echo "✅ macOS工具准备完成"
+
       - name: Publish macOS ${{ matrix.arch }}
         run: |
           echo "Starting macOS ${{ matrix.arch }} build with verbose output..."
+          echo "🍎 构建将自动处理签名和用户体验优化..."
           npm run publish:mac:${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.atriordsa }}
           DEBUG: electron-builder
           CSC_IDENTITY_AUTO_DISCOVERY: false
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+          # 确保afterPack钩子能正常执行
+          ELECTRON_IS_DEV: 0
+
+      - name: Verify macOS build output
+        run: |
+          echo "🔍 验证macOS构建输出..."
+          ls -la dist/
+          # 检查是否包含README文件
+          if [ -f "dist/README_MACOS.txt" ]; then
+            echo "✅ 用户说明文件已创建"
+            cat dist/README_MACOS.txt
+          else
+            echo "⚠️  用户说明文件未找到"
+          fi
+          # 检查.app文件
+          find dist/ -name "*.app" -type d | head -5 | while read app_path; do
+            if [ -d "$app_path" ]; then
+              echo "📱 找到应用: $app_path"
+              # 检查签名状态
+              codesign -dv "$app_path" 2>&1 || echo "签名检查完成"
+            fi
+          done
 
   cleanup-release:
     runs-on: ubuntu-latest
