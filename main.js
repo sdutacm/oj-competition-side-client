@@ -224,10 +224,13 @@ function openNewWindow(url) {
         // 渲染优化
         partition: null,
         additionalArguments: process.platform === 'win32' ? [
-          // Windows 最小化安全优化：专注于滚动流畅性
+          // Windows 专用滚动优化：使用更直接的Chromium参数
           '--enable-smooth-scrolling',
-          '--enable-blink-features=OverlayScrollbars',
-          '--disable-blink-features=ScrollTimeline'
+          '--enable-gpu-rasterization',
+          '--enable-zero-copy',
+          '--disable-background-timer-throttling',
+          '--disable-renderer-backgrounding',
+          '--disable-backgrounding-occluded-windows'
         ] : [
           // 其他系统保持原有配置
           '--enable-gpu-rasterization',
@@ -264,67 +267,33 @@ function openNewWindow(url) {
   
   // 为新窗口设置性能优化
   if (win.webContents) {
-    // Windows 特定的滚动流畅性优化
+    // Windows 特定的滚动流畅性优化（简化版）
     if (process.platform === 'win32') {
-      // 注入滚动优化
+      // 只注入简单的CSS优化，避免复杂的JavaScript
       win.webContents.on('dom-ready', () => {
         win.webContents.insertCSS(`
-          /* Windows新窗口滚动优化CSS */
-          * {
-            scroll-behavior: smooth !important;
+          /* Windows新窗口滚动优化CSS - 简化版 */
+          html, body {
+            scroll-behavior: smooth;
           }
           
           ::-webkit-scrollbar {
-            width: 12px;
-            height: 12px;
+            width: 8px;
+            height: 8px;
           }
           
           ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 6px;
+            background: transparent;
           }
           
           ::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 6px;
-            transition: background 0.2s ease;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
           }
           
           ::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
+            background: rgba(0,0,0,0.5);
           }
-          
-          body, html {
-            transform: translateZ(0);
-            -webkit-transform: translateZ(0);
-          }
-        `);
-        
-        win.webContents.executeJavaScript(`
-          (function() {
-            let ticking = false;
-            
-            function optimizeScrolling() {
-              document.body.style.transform = 'translateZ(0)';
-              document.documentElement.style.transform = 'translateZ(0)';
-              document.body.style.willChange = 'scroll-position';
-              document.documentElement.style.willChange = 'scroll-position';
-              ticking = false;
-            }
-            
-            window.addEventListener('scroll', function() {
-              if (!ticking) {
-                requestAnimationFrame(optimizeScrolling);
-                ticking = true;
-              }
-            }, { passive: true });
-            
-            if (document.readyState === 'complete') {
-              optimizeScrolling();
-            } else {
-              window.addEventListener('load', optimizeScrolling);
-            }
-          })();
         `);
       });
     }
@@ -343,11 +312,42 @@ function openNewWindow(url) {
     win.setMenuBarVisibility(false);
   }
   
-  // 等待窗口准备完成后再显示，避免白屏
-  win.once('ready-to-show', () => {
-    win.setMenuBarVisibility(false);
-    win.show();
+  // 优化的窗口显示逻辑，解决白屏问题
+  let windowShown = false;
+  
+  // 方法1: 等待DOM准备完成
+  win.webContents.once('dom-ready', () => {
+    if (!windowShown) {
+      setTimeout(() => {
+        if (!windowShown && !win.isDestroyed()) {
+          win.setMenuBarVisibility(false);
+          win.show();
+          windowShown = true;
+          console.log('新窗口通过dom-ready显示');
+        }
+      }, 100); // 给一点时间让DOM渲染
+    }
   });
+  
+  // 方法2: ready-to-show作为备选
+  win.once('ready-to-show', () => {
+    if (!windowShown && !win.isDestroyed()) {
+      win.setMenuBarVisibility(false);
+      win.show();
+      windowShown = true;
+      console.log('新窗口通过ready-to-show显示');
+    }
+  });
+  
+  // 方法3: 超时保险机制
+  setTimeout(() => {
+    if (!windowShown && !win.isDestroyed()) {
+      win.setMenuBarVisibility(false);
+      win.show();
+      windowShown = true;
+      console.log('新窗口通过超时机制显示');
+    }
+  }, 1000);
   // 记录初始 url 作为主页（确保是完整 url）
   const initialUrl = url;  // 使用 const 确保不被修改
   
@@ -474,10 +474,13 @@ function createMainWindow() {
         v8CacheOptions: 'code',
         enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
         additionalArguments: process.platform === 'win32' ? [
-          // Windows 最小化安全优化：专注于滚动流畅性
+          // Windows 专用滚动优化：使用更直接的Chromium参数
           '--enable-smooth-scrolling',
-          '--enable-blink-features=OverlayScrollbars',
-          '--disable-blink-features=ScrollTimeline'
+          '--enable-gpu-rasterization',
+          '--enable-zero-copy',
+          '--disable-background-timer-throttling',
+          '--disable-renderer-backgrounding',
+          '--disable-backgrounding-occluded-windows'
         ] : [
           // 其他系统保持原有配置
           '--enable-gpu-rasterization',
@@ -523,82 +526,41 @@ function createMainWindow() {
 
     // 设置窗口的性能优化
     if (mainWindow.webContents) {
-      // Windows 特定的滚动流畅性优化
+      // Windows 特定的滚动流畅性优化（简化版）
       if (process.platform === 'win32') {
         console.log('应用Windows滚动流畅性优化...');
         
-        // 注入专门的滚动优化CSS和JavaScript
+        // 只注入简单的CSS优化，避免复杂的JavaScript
         mainWindow.webContents.on('dom-ready', () => {
           mainWindow.webContents.insertCSS(`
-            /* Windows滚动优化CSS */
-            * {
-              scroll-behavior: smooth !important;
+            /* Windows滚动优化CSS - 简化版 */
+            html {
+              scroll-behavior: smooth;
+              overflow-x: hidden;
             }
             
-            /* 优化滚动条性能 */
+            body {
+              scroll-behavior: smooth;
+            }
+            
+            /* 优化滚动条样式 */
             ::-webkit-scrollbar {
-              width: 12px;
-              height: 12px;
+              width: 8px;
+              height: 8px;
             }
             
             ::-webkit-scrollbar-track {
-              background: #f1f1f1;
-              border-radius: 6px;
+              background: transparent;
             }
             
             ::-webkit-scrollbar-thumb {
-              background: #c1c1c1;
-              border-radius: 6px;
-              transition: background 0.2s ease;
+              background: rgba(0,0,0,0.3);
+              border-radius: 4px;
             }
             
             ::-webkit-scrollbar-thumb:hover {
-              background: #a8a8a8;
+              background: rgba(0,0,0,0.5);
             }
-            
-            /* 强制启用硬件加速 */
-            body, html {
-              transform: translateZ(0);
-              -webkit-transform: translateZ(0);
-            }
-          `);
-          
-          // 注入滚动优化JavaScript
-          mainWindow.webContents.executeJavaScript(`
-            // Windows滚动流畅性优化脚本
-            (function() {
-              // 优化滚动事件处理
-              let ticking = false;
-              
-              function optimizeScrolling() {
-                // 强制重绘以确保流畅性
-                document.body.style.transform = 'translateZ(0)';
-                document.documentElement.style.transform = 'translateZ(0)';
-                
-                // 设置CSS优化
-                document.body.style.willChange = 'scroll-position';
-                document.documentElement.style.willChange = 'scroll-position';
-                
-                ticking = false;
-              }
-              
-              // 监听滚动事件并优化
-              window.addEventListener('scroll', function() {
-                if (!ticking) {
-                  requestAnimationFrame(optimizeScrolling);
-                  ticking = true;
-                }
-              }, { passive: true });
-              
-              // 页面加载完成后立即优化
-              if (document.readyState === 'complete') {
-                optimizeScrolling();
-              } else {
-                window.addEventListener('load', optimizeScrolling);
-              }
-              
-              console.log('Windows滚动流畅性优化脚本已加载');
-            })();
           `);
         });
         
@@ -766,6 +728,16 @@ app.whenReady().then(() => {
   
   // 移除可能触发Windows安全警告的参数
   // 专注于webPreferences级别的优化
+  
+  // Windows特定的滚动流畅性全局优化
+  if (process.platform === 'win32') {
+    console.log('应用Windows专用滚动优化...');
+    app.commandLine.appendSwitch('enable-smooth-scrolling');
+    app.commandLine.appendSwitch('enable-gpu-rasterization');
+    app.commandLine.appendSwitch('enable-zero-copy');
+    app.commandLine.appendSwitch('disable-background-timer-throttling');
+    console.log('Windows滚动优化命令行参数已应用');
+  }
   
   // 通用基础设置
   app.commandLine.appendSwitch('disable-features', 'TranslateUI');
