@@ -198,39 +198,70 @@ function openNewWindow(url) {
         nodeIntegration: false,
         contextIsolation: true,
         devTools: false,
-        // 性能优化配置
-        enableRemoteModule: false,
-        backgroundThrottling: false, // 禁用背景节流，保持流畅性
-        experimentalFeatures: true, // 启用实验性功能
-        webgl: true, // 启用 WebGL
-        acceleratedCompositing: true, // 启用硬件加速合成
-        // 内存和缓存优化
+        // 完全模拟Chrome浏览器的配置
+        webSecurity: true,
+        sandbox: false,
         nodeIntegrationInWorker: false,
         nodeIntegrationInSubFrames: false,
-        enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache', // 启用覆盖滚动条和缓存
-        disableBlinkFeatures: '', // 不禁用任何功能
-        // 图像处理优化
-        offscreen: false,
-        nativeWindowOpen: true,
-        // 安全设置
-        sandbox: false,
-        webSecurity: true,
-        // 新增关键性能优化
-        spellcheck: false, // 提高文本输入性能
-        enableWebSQL: false, // 禁用WebSQL减少开销
-        v8CacheOptions: 'code', // V8代码缓存优化
-        // Windows 特定的滚动流畅性优化
-        scrollBounce: process.platform === 'win32' ? false : true, // Windows禁用滚动反弹
+        enableRemoteModule: false,
+        
+        // Windows专用：极致性能配置
+        ...(process.platform === 'win32' ? {
+          // 背景处理优化
+          backgroundThrottling: false,
+          // 实验性功能
+          experimentalFeatures: true,
+          // 图形处理
+          webgl: true,
+          acceleratedCompositing: true,
+          // 关键：禁用可能导致卡顿的功能
+          spellcheck: false,
+          enableWebSQL: false,
+          // V8优化
+          v8CacheOptions: 'code',
+          // Blink功能优化
+          enableBlinkFeatures: 'CanvasColorManagement,CSSColorSchemeUARendering',
+          disableBlinkFeatures: 'AutomationControlled,BackgroundSync',
+        } : {
+          // 其他系统的标准配置
+          backgroundThrottling: false,
+          experimentalFeatures: true,
+          webgl: true,
+          acceleratedCompositing: true,
+          spellcheck: false,
+          enableWebSQL: false,
+          v8CacheOptions: 'code',
+          enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
+        }),
+        
         // 渲染优化
         partition: null,
         additionalArguments: process.platform === 'win32' ? [
-          // Windows 专用滚动优化：使用更直接的Chromium参数
-          '--enable-smooth-scrolling',
+          // Windows：完全模拟Chrome的启动参数
+          '--no-sandbox',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
+          '--enable-gpu',
           '--enable-gpu-rasterization',
+          '--enable-oop-rasterization',
           '--enable-zero-copy',
+          '--enable-hardware-overlays',
+          '--enable-smooth-scrolling',
+          '--enable-accelerated-2d-canvas',
+          '--enable-accelerated-mjpeg-decode',
+          '--enable-accelerated-video-decode',
           '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
           '--disable-renderer-backgrounding',
-          '--disable-backgrounding-occluded-windows'
+          '--disable-field-trial-config',
+          '--disable-ipc-flooding-protection',
+          '--disable-extensions',
+          '--disable-default-apps',
+          '--disable-sync',
+          '--metrics-recording-only',
+          '--no-first-run',
+          '--no-default-browser-check',
+          '--disable-background-networking'
         ] : [
           // 其他系统保持原有配置
           '--enable-gpu-rasterization',
@@ -312,40 +343,33 @@ function openNewWindow(url) {
     win.setMenuBarVisibility(false);
   }
   
-  // 优化的窗口显示逻辑，解决白屏问题
+  // Chrome 浏览器仿真：简化新窗口显示逻辑
   let windowShown = false;
   
-  // 方法1: 等待DOM准备完成
+  // 使用 dom-ready 作为主要显示机制，配合Chrome仿真获得最佳性能
   win.webContents.once('dom-ready', () => {
     if (!windowShown) {
-      setTimeout(() => {
-        if (!windowShown && !win.isDestroyed()) {
-          win.setMenuBarVisibility(false);
-          win.show();
-          windowShown = true;
-          console.log('新窗口通过dom-ready显示');
-        }
-      }, 100); // 给一点时间让DOM渲染
-    }
-  });
-  
-  // 方法2: ready-to-show作为备选
-  win.once('ready-to-show', () => {
-    if (!windowShown && !win.isDestroyed()) {
       win.setMenuBarVisibility(false);
       win.show();
       windowShown = true;
-      console.log('新窗口通过ready-to-show显示');
+      console.log('新窗口通过dom-ready显示（Chrome仿真模式）');
+      
+      // Windows平台优化
+      if (process.platform === 'win32') {
+        setTimeout(() => {
+          win.focus();
+        }, 50);
+      }
     }
   });
   
-  // 方法3: 超时保险机制
+  // 备用显示机制
   setTimeout(() => {
     if (!windowShown && !win.isDestroyed()) {
       win.setMenuBarVisibility(false);
       win.show();
       windowShown = true;
-      console.log('新窗口通过超时机制显示');
+      console.log('新窗口通过备用机制显示');
     }
   }, 1000);
   // 记录初始 url 作为主页（确保是完整 url）
@@ -704,17 +728,28 @@ function createMainWindow() {
       }
     });
 
-    // 等待所有内容准备完成后再显示窗口，避免白屏
-    mainWindow.once('ready-to-show', () => {
+    // Chrome 浏览器仿真：使用简化直接的显示逻辑
+    // 避免复杂的多层显示机制导致的时序问题
+    mainWindow.webContents.once('dom-ready', () => {
+      console.log('DOM准备完成，立即显示窗口以确保Chrome仿真性能');
       mainWindow.show();
+      
+      // 对于Windows平台，确保窗口完全可见后进行优化
+      if (process.platform === 'win32') {
+        setTimeout(() => {
+          mainWindow.focus();
+          console.log('Windows窗口已聚焦，Chrome仿真配置生效');
+        }, 100);
+      }
     });
     
-    // 如果 ready-to-show 没有触发，设置一个备用显示机制
+    // 备用显示机制（保险措施）
     setTimeout(() => {
       if (mainWindow && !mainWindow.isVisible()) {
+        console.log('备用显示机制激活');
         mainWindow.show();
       }
-    }, 2000);
+    }, 1500);
   } catch (error) {
     console.error('主窗口创建失败:', error);
     throw error;
