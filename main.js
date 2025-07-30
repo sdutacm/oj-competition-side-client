@@ -219,20 +219,20 @@ function openNewWindow(url) {
         spellcheck: false, // 提高文本输入性能
         enableWebSQL: false, // 禁用WebSQL减少开销
         v8CacheOptions: 'code', // V8代码缓存优化
+        // Windows 特定的滚动流畅性优化
+        scrollBounce: process.platform === 'win32' ? false : true, // Windows禁用滚动反弹
         // 渲染优化
         partition: null,
         additionalArguments: process.platform === 'win32' ? [
-          // Windows 安全的性能优化
-          '--enable-gpu-rasterization',
-          '--enable-hardware-overlays',
+          // Windows 最小化安全优化：专注于滚动流畅性
           '--enable-smooth-scrolling',
-          '--disable-background-timer-throttling'
+          '--enable-blink-features=OverlayScrollbars',
+          '--disable-blink-features=ScrollTimeline'
         ] : [
           // 其他系统保持原有配置
           '--enable-gpu-rasterization',
           '--enable-oop-rasterization',
-          '--enable-hardware-overlays',
-          '--disable-features=VizDisplayCompositor'
+          '--enable-hardware-overlays'
         ]
       },
       show: false, // 初始不显示，等待内容加载完成
@@ -264,6 +264,71 @@ function openNewWindow(url) {
   
   // 为新窗口设置性能优化
   if (win.webContents) {
+    // Windows 特定的滚动流畅性优化
+    if (process.platform === 'win32') {
+      // 注入滚动优化
+      win.webContents.on('dom-ready', () => {
+        win.webContents.insertCSS(`
+          /* Windows新窗口滚动优化CSS */
+          * {
+            scroll-behavior: smooth !important;
+          }
+          
+          ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+          }
+          
+          ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 6px;
+          }
+          
+          ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 6px;
+            transition: background 0.2s ease;
+          }
+          
+          ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+          }
+          
+          body, html {
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+          }
+        `);
+        
+        win.webContents.executeJavaScript(`
+          (function() {
+            let ticking = false;
+            
+            function optimizeScrolling() {
+              document.body.style.transform = 'translateZ(0)';
+              document.documentElement.style.transform = 'translateZ(0)';
+              document.body.style.willChange = 'scroll-position';
+              document.documentElement.style.willChange = 'scroll-position';
+              ticking = false;
+            }
+            
+            window.addEventListener('scroll', function() {
+              if (!ticking) {
+                requestAnimationFrame(optimizeScrolling);
+                ticking = true;
+              }
+            }, { passive: true });
+            
+            if (document.readyState === 'complete') {
+              optimizeScrolling();
+            } else {
+              window.addEventListener('load', optimizeScrolling);
+            }
+          })();
+        `);
+      });
+    }
+    
     // 设置存储路径
     try {
       win.webContents.session.setStoragePath(
@@ -409,11 +474,10 @@ function createMainWindow() {
         v8CacheOptions: 'code',
         enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
         additionalArguments: process.platform === 'win32' ? [
-          // Windows 安全的性能优化
-          '--enable-gpu-rasterization',
-          '--enable-hardware-overlays',
+          // Windows 最小化安全优化：专注于滚动流畅性
           '--enable-smooth-scrolling',
-          '--disable-background-timer-throttling'
+          '--enable-blink-features=OverlayScrollbars',
+          '--disable-blink-features=ScrollTimeline'
         ] : [
           // 其他系统保持原有配置
           '--enable-gpu-rasterization',
@@ -459,6 +523,88 @@ function createMainWindow() {
 
     // 设置窗口的性能优化
     if (mainWindow.webContents) {
+      // Windows 特定的滚动流畅性优化
+      if (process.platform === 'win32') {
+        console.log('应用Windows滚动流畅性优化...');
+        
+        // 注入专门的滚动优化CSS和JavaScript
+        mainWindow.webContents.on('dom-ready', () => {
+          mainWindow.webContents.insertCSS(`
+            /* Windows滚动优化CSS */
+            * {
+              scroll-behavior: smooth !important;
+            }
+            
+            /* 优化滚动条性能 */
+            ::-webkit-scrollbar {
+              width: 12px;
+              height: 12px;
+            }
+            
+            ::-webkit-scrollbar-track {
+              background: #f1f1f1;
+              border-radius: 6px;
+            }
+            
+            ::-webkit-scrollbar-thumb {
+              background: #c1c1c1;
+              border-radius: 6px;
+              transition: background 0.2s ease;
+            }
+            
+            ::-webkit-scrollbar-thumb:hover {
+              background: #a8a8a8;
+            }
+            
+            /* 强制启用硬件加速 */
+            body, html {
+              transform: translateZ(0);
+              -webkit-transform: translateZ(0);
+            }
+          `);
+          
+          // 注入滚动优化JavaScript
+          mainWindow.webContents.executeJavaScript(`
+            // Windows滚动流畅性优化脚本
+            (function() {
+              // 优化滚动事件处理
+              let ticking = false;
+              
+              function optimizeScrolling() {
+                // 强制重绘以确保流畅性
+                document.body.style.transform = 'translateZ(0)';
+                document.documentElement.style.transform = 'translateZ(0)';
+                
+                // 设置CSS优化
+                document.body.style.willChange = 'scroll-position';
+                document.documentElement.style.willChange = 'scroll-position';
+                
+                ticking = false;
+              }
+              
+              // 监听滚动事件并优化
+              window.addEventListener('scroll', function() {
+                if (!ticking) {
+                  requestAnimationFrame(optimizeScrolling);
+                  ticking = true;
+                }
+              }, { passive: true });
+              
+              // 页面加载完成后立即优化
+              if (document.readyState === 'complete') {
+                optimizeScrolling();
+              } else {
+                window.addEventListener('load', optimizeScrolling);
+              }
+              
+              console.log('Windows滚动流畅性优化脚本已加载');
+            })();
+          `);
+        });
+        
+        console.log('Windows滚动优化配置已应用');
+      }
+      
       // 设置缓存模式
       mainWindow.webContents.session.setUserAgent(
         mainWindow.webContents.getUserAgent() + ' SDUTOJCompetitionSideClient/1.0.0'
@@ -618,44 +764,26 @@ app.whenReady().then(() => {
   console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
   console.log('App ready - 测试翻译:', i18n.t('app.name'));
   
-  // Windows 特定性能优化（安全版本）
-  if (process.platform === 'win32') {
-    console.log('应用Windows专用优化配置...');
-    // Windows 安全的渲染优化
-    app.commandLine.appendSwitch('enable-smooth-scrolling');
-    app.commandLine.appendSwitch('enable-gpu-rasterization');
-    app.commandLine.appendSwitch('enable-hardware-overlays');
-    app.commandLine.appendSwitch('disable-background-timer-throttling');
-    console.log('Windows安全渲染优化配置已应用');
-  }
+  // 移除可能触发Windows安全警告的参数
+  // 专注于webPreferences级别的优化
   
-  // 通用性能优化设置（安全版本）
+  // 通用基础设置
   app.commandLine.appendSwitch('disable-features', 'TranslateUI');
-  
-  // 安全的性能优化
-  app.commandLine.appendSwitch('enable-gpu-rasterization');
-  app.commandLine.appendSwitch('enable-hardware-overlays');
   
   // 初始化启动管理器
   startupManager = new StartupManager();
   
-  // Windows 兼容性设置（安全版本）
+  // Windows 兼容性设置（移除可能触发安全警告的参数）
   if (PlatformHelper.isWindows()) {
-    // 安全的Windows GPU性能配置
-    app.commandLine.appendSwitch('enable-gpu-rasterization');
-    app.commandLine.appendSwitch('enable-hardware-acceleration');
-    app.commandLine.appendSwitch('enable-smooth-scrolling');
+    // 只保留最基础的设置
     // 内存优化（保守设置）
     app.commandLine.appendSwitch('max_old_space_size', '2048');
   }
 
   // macOS 特定设置
   if (PlatformHelper.isMacOS()) {
-    // macOS 性能优化
-    app.commandLine.appendSwitch('enable-gpu-rasterization');
-    app.commandLine.appendSwitch('enable-zero-copy');
-    app.commandLine.appendSwitch('enable-smooth-scrolling');
-    app.commandLine.appendSwitch('disable-renderer-backgrounding');
+    // macOS 基础设置
+    // 移除可能有问题的命令行参数
     
     // 设置 Dock 图标（开发模式下可能会失败，这是正常的）
     try {
@@ -696,9 +824,8 @@ app.whenReady().then(() => {
 
   // Linux 特定设置
   if (PlatformHelper.isLinux()) {
-    // Linux 安全性能优化
-    app.commandLine.appendSwitch('enable-gpu-rasterization');
-    app.commandLine.appendSwitch('enable-smooth-scrolling');
+    // Linux 基础设置
+    // 移除可能有问题的命令行参数
     
     // 设置应用程序名称（使用英文名称避免中文乱码）
     const englishAppName = 'SDUT OJ Competition Side Client';
