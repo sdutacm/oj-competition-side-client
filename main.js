@@ -1,4 +1,4 @@
-const { app, BrowserWindow, nativeTheme } = require('electron');
+const { app, BrowserWindow, nativeTheme, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const ToolbarManager = require('./utils/toolbarManager');
@@ -186,44 +186,47 @@ function openNewWindow(url) {
     iconPath = path.join(__dirname, 'public/favicon.ico');
   }
   
-    // 根据系统主题设置背景色
-    const backgroundColor = nativeTheme.shouldUseDarkColors ? '#1f1f1f' : '#fcfcfc';
+    // 根据系统主题设置背景色，完全匹配系统颜色避免白屏
+    const backgroundColor = nativeTheme.shouldUseDarkColors ? '#000000' : '#ffffff';
     
     const win = new BrowserWindow({
       width,
       height,
       icon: iconPath,
-      backgroundColor: backgroundColor, // 设置背景色，避免白屏
+      backgroundColor: backgroundColor, // 纯黑/纯白背景，彻底避免闪烁
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
         devTools: false,
-        // 完全模拟Chrome浏览器的配置
         webSecurity: true,
         sandbox: false,
         nodeIntegrationInWorker: false,
         nodeIntegrationInSubFrames: false,
         enableRemoteModule: false,
         
-        // Windows专用：极致性能配置
+        // Windows专用：激进图片滚动优化配置
         ...(process.platform === 'win32' ? {
-          // 背景处理优化
           backgroundThrottling: false,
-          // 实验性功能
-          experimentalFeatures: true,
-          // 图形处理
           webgl: true,
           acceleratedCompositing: true,
-          // 关键：禁用可能导致卡顿的功能
           spellcheck: false,
           enableWebSQL: false,
-          // V8优化
           v8CacheOptions: 'code',
-          // Blink功能优化
-          enableBlinkFeatures: 'CanvasColorManagement,CSSColorSchemeUARendering',
-          disableBlinkFeatures: 'AutomationControlled,BackgroundSync',
+          // 激进的图片渲染性能优化
+          enableBlinkFeatures: 'OverlayScrollbars,LazyFrameLoading,ImageLoadingOptimization,PassiveDocumentEventListeners,PassiveDocumentWheelEventListeners',
+          disableBlinkFeatures: 'AudioVideoTracks', // 禁用不需要的功能
+          // 内存和缓存优化
+          webSecurityEnabled: true,
+          allowDisplayingInsecureContent: false,
+          allowRunningInsecureContent: false,
+          // 启用更好的图片解码和缓存
+          enableImageBitmapOffscreenCanvas: true,
+          // 滚动性能优化
+          scrollBounce: false,
+          // 禁用不必要的功能以提高性能
+          plugins: false,
+          java: false,
         } : {
-          // 其他系统的标准配置
           backgroundThrottling: false,
           experimentalFeatures: true,
           webgl: true,
@@ -234,36 +237,37 @@ function openNewWindow(url) {
           enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
         }),
         
-        // 渲染优化
-        partition: null,
+        // Windows专用：激进的滚动和图片性能参数
         additionalArguments: process.platform === 'win32' ? [
-          // Windows：完全模拟Chrome的启动参数
-          '--no-sandbox',
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor',
-          '--enable-gpu',
-          '--enable-gpu-rasterization',
-          '--enable-oop-rasterization',
-          '--enable-zero-copy',
-          '--enable-hardware-overlays',
           '--enable-smooth-scrolling',
-          '--enable-accelerated-2d-canvas',
+          '--enable-gpu-rasterization',
+          '--disable-software-rasterizer',
+          '--disable-background-timer-throttling',
+          // 激进的图片优化
+          '--enable-lazy-image-loading',
+          '--enable-viewport-meta',
+          '--enable-gpu-memory-buffer-compositor-resources',
+          '--enable-zero-copy',
+          '--disable-background-media-suspend',
+          // 内存优化
+          '--max-old-space-size=6144',
+          '--memory-pressure-off',
+          '--disable-dev-shm-usage',
+          // 图片解码优化
           '--enable-accelerated-mjpeg-decode',
           '--enable-accelerated-video-decode',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding',
-          '--disable-field-trial-config',
-          '--disable-ipc-flooding-protection',
+          // 激进的滚动性能优化
+          '--enable-prefer-compositing-to-lcd-text',
+          '--enable-accelerated-2d-canvas',
+          '--ignore-gpu-blacklist',
+          '--enable-native-gpu-memory-buffers',
+          '--disable-hang-monitor',
+          '--disable-features=VizDisplayCompositor',
+          '--enable-features=VaapiVideoDecoder',
+          // 禁用可能影响性能的功能（保留外部链接功能）
           '--disable-extensions',
-          '--disable-default-apps',
-          '--disable-sync',
-          '--metrics-recording-only',
-          '--no-first-run',
-          '--no-default-browser-check',
-          '--disable-background-networking'
+          '--disable-plugins'
         ] : [
-          // 其他系统保持原有配置
           '--enable-gpu-rasterization',
           '--enable-oop-rasterization',
           '--enable-hardware-overlays'
@@ -298,36 +302,127 @@ function openNewWindow(url) {
   
   // 为新窗口设置性能优化
   if (win.webContents) {
-    // Windows 特定的滚动流畅性优化（简化版）
-    if (process.platform === 'win32') {
-      // 只注入简单的CSS优化，避免复杂的JavaScript
-      win.webContents.on('dom-ready', () => {
-        win.webContents.insertCSS(`
-          /* Windows新窗口滚动优化CSS - 简化版 */
-          html, body {
-            scroll-behavior: smooth;
-          }
-          
-          ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-          }
-          
-          ::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          
-          ::-webkit-scrollbar-thumb {
-            background: rgba(0,0,0,0.3);
-            border-radius: 4px;
-          }
-          
-          ::-webkit-scrollbar-thumb:hover {
-            background: rgba(0,0,0,0.5);
-          }
-        `);
-      });
-    }
+      // Windows 激进的图片滚动性能优化
+      if (process.platform === 'win32') {
+        // 激进的图片滚动优化CSS
+        win.webContents.on('dom-ready', () => {
+          win.webContents.insertCSS(`
+            /* Windows新窗口 - 激进图片滚动性能优化 */
+            html {
+              scroll-behavior: smooth;
+              /* 滚动优化 */
+              overflow-x: hidden;
+              overflow-y: auto;
+            }
+            
+            body {
+              scroll-behavior: smooth;
+              /* 启用容器查询和滚动优化 */
+              contain: layout style paint;
+            }
+            
+            /* 激进图片懒加载和渲染优化 */
+            img {
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
+              will-change: transform, opacity;
+              backface-visibility: hidden;
+              transform: translateZ(0);
+              /* 启用GPU硬件加速 */
+              -webkit-transform: translateZ(0);
+              -webkit-backface-visibility: hidden;
+              -webkit-perspective: 1000;
+              /* 图片加载优化 */
+              loading: lazy;
+              decoding: async;
+              /* 内容可见性优化 */
+              content-visibility: auto;
+              contain-intrinsic-size: 1px 1px;
+            }
+            
+            /* 大图片特殊优化 - 更激进 */
+            img[src*=".jpg"], img[src*=".jpeg"], img[src*=".png"], img[src*=".webp"], img[src*=".gif"] {
+              image-rendering: -webkit-optimize-contrast;
+              /* 避免大图片阻塞渲染 */
+              content-visibility: auto;
+              contain-intrinsic-size: 300px 200px;
+              /* 图片尺寸优化 */
+              object-fit: cover;
+              /* 强制硬件加速 */
+              transform: translate3d(0,0,0);
+              /* 内存优化 */
+              image-orientation: from-image;
+            }
+            
+            /* 激进的容器层级合成优化 */
+            div, section, article, main, aside, header, footer, nav {
+              transform: translateZ(0);
+              -webkit-transform: translateZ(0);
+              /* 启用包含 */
+              contain: layout style;
+            }
+            
+            /* 滚动容器优化 */
+            [class*="scroll"], [class*="list"], [class*="container"] {
+              will-change: scroll-position;
+              transform: translateZ(0);
+              /* 启用滚动优化 */
+              contain: strict;
+              content-visibility: auto;
+            }
+            
+            /* 禁用可能影响性能的功能 */
+            * {
+              /* 禁用文本选择以提高滚动性能 */
+              -webkit-user-select: none;
+              -moz-user-select: none;
+              -ms-user-select: none;
+              user-select: none;
+              /* 禁用拖拽 */
+              -webkit-user-drag: none;
+              -khtml-user-drag: none;
+              -moz-user-drag: none;
+              -o-user-drag: none;
+              user-drag: none;
+            }
+            
+            /* 允许输入框文本选择 */
+            input, textarea, [contenteditable] {
+              -webkit-user-select: text;
+              -moz-user-select: text;
+              -ms-user-select: text;
+              user-select: text;
+            }
+            
+            /* Chrome默认滚动条样式 */
+            ::-webkit-scrollbar {
+              width: 12px;
+              height: 12px;
+            }
+            
+            ::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            
+            ::-webkit-scrollbar-thumb {
+              background: ${nativeTheme.shouldUseDarkColors ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'};
+              border-radius: 6px;
+              border: 2px solid transparent;
+              background-clip: content-box;
+            }
+            
+            ::-webkit-scrollbar-thumb:hover {
+              background: ${nativeTheme.shouldUseDarkColors ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'};
+              background-clip: content-box;
+            }
+            
+            ::-webkit-scrollbar-thumb:active {
+              background: ${nativeTheme.shouldUseDarkColors ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'};
+              background-clip: content-box;
+            }
+          `);
+        });
+      }
     
     // 设置存储路径
     try {
@@ -343,13 +438,11 @@ function openNewWindow(url) {
     win.setMenuBarVisibility(false);
   }
   
-  // Chrome 浏览器仿真：简化新窗口显示逻辑
+  // Chrome 浏览器仿真：使用dom-ready显示窗口，避免白屏
   let windowShown = false;
   
-  // 使用 dom-ready 作为主要显示机制，配合Chrome仿真获得最佳性能
   win.webContents.once('dom-ready', () => {
     if (!windowShown) {
-      win.setMenuBarVisibility(false);
       win.show();
       windowShown = true;
       console.log('新窗口通过dom-ready显示（Chrome仿真模式）');
@@ -363,15 +456,14 @@ function openNewWindow(url) {
     }
   });
   
-  // 备用显示机制
+  // 备用显示机制，防止dom-ready未触发
   setTimeout(() => {
     if (!windowShown && !win.isDestroyed()) {
-      win.setMenuBarVisibility(false);
       win.show();
       windowShown = true;
       console.log('新窗口通过备用机制显示');
     }
-  }, 1000);
+  }, 2000);
   // 记录初始 url 作为主页（确保是完整 url）
   const initialUrl = url;  // 使用 const 确保不被修改
   
@@ -412,15 +504,61 @@ function openNewWindow(url) {
           win.setTitle(title);
         }
       });
+      
+      // 添加外部链接处理
+      contentView.webContents.on('new-window', (event, url) => {
+        event.preventDefault();
+        // 如果是外部链接，用系统默认浏览器打开
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          shell.openExternal(url);
+        }
+      });
+      
+      // 添加点击事件监听，处理可能被遗漏的外部链接
+      contentView.webContents.on('before-input-event', (event, input) => {
+        // 这里可以添加额外的处理逻辑
+      });
+      
+      // 处理外部链接的另一种方式
+      contentView.webContents.on('will-navigate', (event, url) => {
+        // 如果是外部链接且不在白名单或主域名内，用外部浏览器打开
+        const domain = require('./utils/urlHelper').getHostname(url);
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+            // 检查是否是真正的外部链接（如github、外部文档等）
+            const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'oj.sdutacm.cn'];
+            if (externalDomains.some(d => domain.includes(d))) {
+              event.preventDefault();
+              shell.openExternal(url);
+              return;
+            }
+          }
+        }
+      });
+      
       // 新窗口 setWindowOpenHandler 拦截非法域名并弹窗
       contentView.webContents.setWindowOpenHandler(({ url }) => {
         const domain = require('./utils/urlHelper').getHostname(url);
+        
+        // 检查是否是外部链接，直接用系统浏览器打开
+        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com', 'oj.sdutacm.cn'];
+        if (externalDomains.some(d => domain.includes(d))) {
+          shell.openExternal(url);
+          return { action: 'deny' };
+        }
+        
         if (isWhiteDomain(url, APP_CONFIG)) {
           openNewWindow(url);
           return { action: 'deny' };
         }
         // 非白名单/主域名弹窗拦截
         if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+          // 如果是http/https链接，也尝试用外部浏览器打开
+          if (url.startsWith('http://') || url.startsWith('https://')) {
+            shell.openExternal(url);
+            return { action: 'deny' };
+          }
+          
           if (win && !win.isDestroyed()) {
             showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
           }
@@ -471,8 +609,8 @@ function createMainWindow() {
       iconPath = path.join(__dirname, 'public/favicon.ico');
     }
 
-    // 根据系统主题设置背景色
-    const backgroundColor = nativeTheme.shouldUseDarkColors ? '#1f1f1f' : '#fcfcfc';
+    // 根据系统主题设置背景色，完全匹配系统颜色避免白屏
+    const backgroundColor = nativeTheme.shouldUseDarkColors ? '#000000' : '#ffffff';
 
     // 创建主窗口
     const windowOptions = {
@@ -498,13 +636,35 @@ function createMainWindow() {
         v8CacheOptions: 'code',
         enableBlinkFeatures: 'OverlayScrollbars,BackForwardCache',
         additionalArguments: process.platform === 'win32' ? [
-          // Windows 专用滚动优化：使用更直接的Chromium参数
+          // Windows 专用：激进的图片滚动性能优化
           '--enable-smooth-scrolling',
           '--enable-gpu-rasterization',
-          '--enable-zero-copy',
+          '--disable-software-rasterizer',
           '--disable-background-timer-throttling',
-          '--disable-renderer-backgrounding',
-          '--disable-backgrounding-occluded-windows'
+          // 激进的图片优化
+          '--enable-lazy-image-loading',
+          '--enable-viewport-meta',
+          '--enable-gpu-memory-buffer-compositor-resources',
+          '--enable-zero-copy',
+          '--disable-background-media-suspend',
+          // 内存优化
+          '--max-old-space-size=6144',
+          '--memory-pressure-off',
+          '--disable-dev-shm-usage',
+          // 图片解码优化
+          '--enable-accelerated-mjpeg-decode',
+          '--enable-accelerated-video-decode',
+          // 激进的滚动性能优化
+          '--enable-prefer-compositing-to-lcd-text',
+          '--enable-accelerated-2d-canvas',
+          '--ignore-gpu-blacklist',
+          '--enable-native-gpu-memory-buffers',
+          '--disable-hang-monitor',
+          '--disable-features=VizDisplayCompositor',
+          '--enable-features=VaapiVideoDecoder',
+          // 禁用可能影响性能的功能（保留外部链接功能）
+          '--disable-extensions',
+          '--disable-plugins'
         ] : [
           // 其他系统保持原有配置
           '--enable-gpu-rasterization',
@@ -550,27 +710,104 @@ function createMainWindow() {
 
     // 设置窗口的性能优化
     if (mainWindow.webContents) {
-      // Windows 特定的滚动流畅性优化（简化版）
+      // Windows 激进的图片滚动性能优化（主窗口）
       if (process.platform === 'win32') {
-        console.log('应用Windows滚动流畅性优化...');
+        console.log('应用Windows激进图片滚动优化...');
         
-        // 只注入简单的CSS优化，避免复杂的JavaScript
+        // 激进的图片滚动优化CSS
         mainWindow.webContents.on('dom-ready', () => {
           mainWindow.webContents.insertCSS(`
-            /* Windows滚动优化CSS - 简化版 */
+            /* Windows主窗口 - 激进图片滚动性能优化 */
             html {
               scroll-behavior: smooth;
+              /* 滚动优化 */
               overflow-x: hidden;
+              overflow-y: auto;
             }
             
             body {
               scroll-behavior: smooth;
+              /* 启用容器查询和滚动优化 */
+              contain: layout style paint;
             }
             
-            /* 优化滚动条样式 */
+            /* 激进图片懒加载和渲染优化 */
+            img {
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
+              will-change: transform, opacity;
+              backface-visibility: hidden;
+              transform: translateZ(0);
+              /* 启用GPU硬件加速 */
+              -webkit-transform: translateZ(0);
+              -webkit-backface-visibility: hidden;
+              -webkit-perspective: 1000;
+              /* 图片加载优化 */
+              loading: lazy;
+              decoding: async;
+              /* 内容可见性优化 */
+              content-visibility: auto;
+              contain-intrinsic-size: 1px 1px;
+            }
+            
+            /* 大图片特殊优化 - 更激进 */
+            img[src*=".jpg"], img[src*=".jpeg"], img[src*=".png"], img[src*=".webp"], img[src*=".gif"] {
+              image-rendering: -webkit-optimize-contrast;
+              /* 避免大图片阻塞渲染 */
+              content-visibility: auto;
+              contain-intrinsic-size: 300px 200px;
+              /* 图片尺寸优化 */
+              object-fit: cover;
+              /* 强制硬件加速 */
+              transform: translate3d(0,0,0);
+              /* 内存优化 */
+              image-orientation: from-image;
+            }
+            
+            /* 激进的容器层级合成优化 */
+            div, section, article, main, aside, header, footer, nav {
+              transform: translateZ(0);
+              -webkit-transform: translateZ(0);
+              /* 启用包含 */
+              contain: layout style;
+            }
+            
+            /* 滚动容器优化 */
+            [class*="scroll"], [class*="list"], [class*="container"] {
+              will-change: scroll-position;
+              transform: translateZ(0);
+              /* 启用滚动优化 */
+              contain: strict;
+              content-visibility: auto;
+            }
+            
+            /* 禁用可能影响性能的功能 */
+            * {
+              /* 禁用文本选择以提高滚动性能 */
+              -webkit-user-select: none;
+              -moz-user-select: none;
+              -ms-user-select: none;
+              user-select: none;
+              /* 禁用拖拽 */
+              -webkit-user-drag: none;
+              -khtml-user-drag: none;
+              -moz-user-drag: none;
+              -o-user-drag: none;
+              user-drag: none;
+            }
+            
+            /* 允许输入框文本选择 */
+            input, textarea, [contenteditable] {
+              -webkit-user-select: text;
+              -moz-user-select: text;
+              -ms-user-select: text;
+              user-select: text;
+            }
+            
+            /* Chrome默认滚动条样式 */
             ::-webkit-scrollbar {
-              width: 8px;
-              height: 8px;
+              width: 12px;
+              height: 12px;
             }
             
             ::-webkit-scrollbar-track {
@@ -578,17 +815,25 @@ function createMainWindow() {
             }
             
             ::-webkit-scrollbar-thumb {
-              background: rgba(0,0,0,0.3);
-              border-radius: 4px;
+              background: ${nativeTheme.shouldUseDarkColors ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'};
+              border-radius: 6px;
+              border: 2px solid transparent;
+              background-clip: content-box;
             }
             
             ::-webkit-scrollbar-thumb:hover {
-              background: rgba(0,0,0,0.5);
+              background: ${nativeTheme.shouldUseDarkColors ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'};
+              background-clip: content-box;
+            }
+            
+            ::-webkit-scrollbar-thumb:active {
+              background: ${nativeTheme.shouldUseDarkColors ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'};
+              background-clip: content-box;
             }
           `);
         });
         
-        console.log('Windows滚动优化配置已应用');
+        console.log('Windows激进图片滚动优化配置已应用');
       }
       
       // 设置缓存模式
@@ -722,34 +967,33 @@ function createMainWindow() {
 
     // 监听系统主题变化，动态更新背景色
     nativeTheme.on('updated', () => {
-      const newBackgroundColor = nativeTheme.shouldUseDarkColors ? '#1f1f1f' : '#fcfcfc';
+      const newBackgroundColor = nativeTheme.shouldUseDarkColors ? '#000000' : '#ffffff';
       if (mainWindow) {
         mainWindow.setBackgroundColor(newBackgroundColor);
       }
     });
 
-    // Chrome 浏览器仿真：使用简化直接的显示逻辑
-    // 避免复杂的多层显示机制导致的时序问题
+    // Chrome 浏览器仿真：使用dom-ready显示主窗口，避免白屏
     mainWindow.webContents.once('dom-ready', () => {
-      console.log('DOM准备完成，立即显示窗口以确保Chrome仿真性能');
+      console.log('DOM准备完成，显示主窗口（Chrome仿真模式）');
       mainWindow.show();
       
-      // 对于Windows平台，确保窗口完全可见后进行优化
+      // Windows平台优化
       if (process.platform === 'win32') {
         setTimeout(() => {
           mainWindow.focus();
-          console.log('Windows窗口已聚焦，Chrome仿真配置生效');
+          console.log('Windows主窗口已聚焦');
         }, 100);
       }
     });
     
-    // 备用显示机制（保险措施）
+    // 备用显示机制，防止dom-ready未触发
     setTimeout(() => {
       if (mainWindow && !mainWindow.isVisible()) {
         console.log('备用显示机制激活');
         mainWindow.show();
       }
-    }, 1500);
+    }, 2000);
   } catch (error) {
     console.error('主窗口创建失败:', error);
     throw error;
@@ -761,87 +1005,54 @@ app.whenReady().then(() => {
   console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
   console.log('App ready - 测试翻译:', i18n.t('app.name'));
   
-  // 移除可能触发Windows安全警告的参数
-  // 专注于webPreferences级别的优化
-  
-  // Windows特定的滚动流畅性全局优化
+  // Windows专用：激进的图片滚动性能优化
   if (process.platform === 'win32') {
-    console.log('应用Windows专用滚动优化...');
+    console.log('应用Windows专用激进图片滚动优化...');
+    
+    // 基础渲染优化
     app.commandLine.appendSwitch('enable-smooth-scrolling');
     app.commandLine.appendSwitch('enable-gpu-rasterization');
+    app.commandLine.appendSwitch('disable-software-rasterizer');
+    app.commandLine.appendSwitch('disable-background-timer-throttling');
+    
+    // 激进的图片和滚动优化
+    app.commandLine.appendSwitch('enable-lazy-image-loading');
+    app.commandLine.appendSwitch('enable-viewport-meta');
+    app.commandLine.appendSwitch('enable-gpu-memory-buffer-compositor-resources');
     app.commandLine.appendSwitch('enable-zero-copy');
-    app.commandLine.appendSwitch('ignore-gpu-blocklist');
-    console.log('Windows滚动优化命令行参数已应用');
-  }
-  
-  // 通用基础设置
-  app.commandLine.appendSwitch('disable-features', 'TranslateUI');
-  
-  // 初始化启动管理器
-  startupManager = new StartupManager();
-  
-  // Windows 兼容性设置（移除可能触发安全警告的参数）
-  if (PlatformHelper.isWindows()) {
-    // 只保留最基础的设置
-    // 内存优化（保守设置）
-    app.commandLine.appendSwitch('max_old_space_size', '2048');
-  }
-
-  // macOS 特定设置
-  if (PlatformHelper.isMacOS()) {
-    // macOS 基础设置
-    // 移除可能有问题的命令行参数
+    app.commandLine.appendSwitch('disable-background-media-suspend');
     
-    // 设置 Dock 图标（开发模式下可能会失败，这是正常的）
-    try {
-      const iconPath = path.join(__dirname, 'public/favicon.icns');
-      if (app.dock && fs.existsSync(iconPath)) {
-        app.dock.setIcon(iconPath);
-      }
-    } catch (error) {
-      // 开发模式下 Dock 图标设置失败是正常的，打包后会有图标
-      console.log('Dock 图标设置跳过（开发模式正常现象）');
-    }
-
-    // 设置应用程序名称
-    const appName = i18n.t('app.name');
-    app.setName(appName);
+    // 内存和性能优化
+    app.commandLine.appendSwitch('max_old_space_size', '6144'); // 增加到6GB
+    app.commandLine.appendSwitch('memory-pressure-off');
+    app.commandLine.appendSwitch('disable-dev-shm-usage');
+    
+    // 图片解码优化
+    app.commandLine.appendSwitch('enable-accelerated-mjpeg-decode');
+    app.commandLine.appendSwitch('enable-accelerated-video-decode');
+    
+    // 激进的GPU和合成优化
+    app.commandLine.appendSwitch('enable-gpu-compositing');
+    app.commandLine.appendSwitch('force-gpu-rasterization');
+    app.commandLine.appendSwitch('enable-gpu-sandbox');
+    
+    // 滚动性能激进优化
+    app.commandLine.appendSwitch('enable-prefer-compositing-to-lcd-text');
+    app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
+    app.commandLine.appendSwitch('disable-gpu-sandbox'); // 与上面矛盾，但为了性能
+    app.commandLine.appendSwitch('ignore-gpu-blacklist');
+    app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
+    
+    // 禁用可能影响滚动性能的功能
+    app.commandLine.appendSwitch('disable-hang-monitor');
+    app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor');
+    app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder');
+    
+    console.log('Windows激进图片滚动优化配置完成');
   }
 
-  // Windows 特定设置
-  if (PlatformHelper.isWindows()) {
-    // 设置应用程序名称（中文）
-    const appName = 'SDUT OJ 竞赛客户端';
-    app.setName(appName);
-    console.log('Windows 应用名称设置为:', appName);
-    
-    // 设置应用程序图标
-    try {
-      const iconPath = path.join(__dirname, 'public/favicon.ico');
-      if (fs.existsSync(iconPath)) {
-        // 设置应用程序级别的图标（影响任务栏、Alt+Tab等）
-        app.setAppUserModelId('org.sdutacm.SDUTOJCompetitionSideClient');
-        console.log('Windows 应用程序图标路径:', iconPath);
-        console.log('Windows AppUserModelId 设置完成');
-      }
-    } catch (error) {
-      console.error('设置 Windows 应用程序图标失败:', error);
-    }
-  }
-
-  // Linux 特定设置
-  if (PlatformHelper.isLinux()) {
-    // Linux 基础设置
-    // 移除可能有问题的命令行参数
-    
-    // 设置应用程序名称（使用英文名称避免中文乱码）
-    const englishAppName = 'SDUT OJ Competition Side Client';
-    app.setName(englishAppName);
-    
-    // 设置窗口管理器类名（重要：这影响Dock显示）
-    app.setName('sdut-oj-competition-client');
-    
-    // 尝试设置应用图标
+  // Linux平台图标设置
+  if (process.platform === 'linux') {
     try {
       const iconPath = path.join(__dirname, 'public/icon.png');
       if (fs.existsSync(iconPath)) {
@@ -859,6 +1070,7 @@ app.whenReady().then(() => {
   }
 
   // 处理应用启动逻辑，包括可能的启动窗口
+  startupManager = new StartupManager();
   startupManager.handleAppStartup(() => {
     // 启动窗口（如果有）已完成，现在创建主窗口
     console.log('启动流程完成，创建主窗口');
@@ -952,9 +1164,27 @@ function setupMainWindowInterceptors() {
         }
       });
       
+      // 添加外部链接处理
+      contentView.webContents.on('new-window', (event, url) => {
+        event.preventDefault();
+        // 如果是外部链接，用系统默认浏览器打开
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          shell.openExternal(url);
+        }
+      });
+      
       // 主窗口 will-navigate 拦截
       contentView.webContents.on('will-navigate', (event, url) => {
         const domain = require('./utils/urlHelper').getHostname(url);
+        
+        // 检查是否是外部链接（如GitHub、文档等），直接用外部浏览器打开
+        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com', 'oj.sdutacm.cn'];
+        if (externalDomains.some(d => domain.includes(d))) {
+          event.preventDefault();
+          shell.openExternal(url);
+          return;
+        }
+        
         // 白名单：页面内点击立即弹新窗口
         if (isWhiteDomain(url, APP_CONFIG)) {
           event.preventDefault();
@@ -993,12 +1223,26 @@ function setupMainWindowInterceptors() {
       // 主窗口 setWindowOpenHandler 拦截
       contentView.webContents.setWindowOpenHandler(({ url }) => {
         const domain = require('./utils/urlHelper').getHostname(url);
+        
+        // 检查是否是外部链接，直接用系统浏览器打开
+        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com', 'oj.sdutacm.cn'];
+        if (externalDomains.some(d => domain.includes(d))) {
+          shell.openExternal(url);
+          return { action: 'deny' };
+        }
+        
         if (isWhiteDomain(url, APP_CONFIG)) {
           openNewWindow(url);
           return { action: 'deny' };
         }
         // 非白名单/主域名弹窗拦截
         if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+          // 如果是http/https链接，也尝试用外部浏览器打开
+          if (url.startsWith('http://') || url.startsWith('https://')) {
+            shell.openExternal(url);
+            return { action: 'deny' };
+          }
+          
           if (mainWindow && !mainWindow.isDestroyed()) {
             showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
           }

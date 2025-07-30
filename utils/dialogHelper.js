@@ -702,11 +702,21 @@ function showInfoDialog(parentWindow) {
           margin: 0;
           padding: 0;
           box-sizing: border-box;
-          /* 禁止用户选中文本 */
+          /* 禁止用户选中文本，但排除可点击元素 */
           user-select: none;
           -webkit-user-select: none;
           -moz-user-select: none;
           -ms-user-select: none;
+        }
+        
+        /* 确保链接和按钮可以交互 */
+        .link-item, button, a {
+          user-select: auto !important;
+          -webkit-user-select: auto !important;
+          -moz-user-select: auto !important;
+          -ms-user-select: auto !important;
+          pointer-events: auto !important;
+          cursor: pointer !important;
         }
         
         body {
@@ -961,6 +971,12 @@ function showInfoDialog(parentWindow) {
           word-spacing: normal; /* 正常单词间距 */
           font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important; /* 强制使用系统字体，不使用 emoji 字体 */
           font-variant-emoji: none; /* 禁用 emoji 字体 */
+          /* 确保链接可以被点击 */
+          pointer-events: auto;
+          user-select: none; /* 保留这个以防止文本选择，但不影响点击 */
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
         }
         
         .link-item:hover {
@@ -1012,13 +1028,13 @@ function showInfoDialog(parentWindow) {
         <div class="links-section">
           <div class="links-title">相关链接</div>
           <div class="links-container">
-            <a class="link-item" href="#" onclick="openExternalLink('https://oj.sdutacm.cn/onlinejudge3/')">
+            <a class="link-item" href="#" data-url="https://oj.sdutacm.cn/onlinejudge3/">
               <svg class="link-icon" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M13.5 3a.5.5 0 0 1 .5.5V11H2V3.5a.5.5 0 0 1 .5-.5h11zm-11-1A1.5 1.5 0 0 0 1 3.5V12h14V3.5A1.5 1.5 0 0 0 13.5 2h-11zM5 5.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm2 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm2 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0z"/>
               </svg>
               SDUT OJ 官网
             </a>
-            <a class="link-item" href="#" onclick="openExternalLink('https://github.com/ATRIOR-LCL/oj-client')">
+            <a class="link-item" href="#" data-url="https://github.com/ATRIOR-LCL/oj-client">
               <svg class="link-icon" viewBox="0 0 16 16">
                 <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
               </svg>
@@ -1035,6 +1051,7 @@ function showInfoDialog(parentWindow) {
       <script>
         // 打开外部链接的函数
         function openExternalLink(url) {
+          console.log('openExternalLink called with URL:', url);
           // 通过 console 消息发送到主进程
           console.log('OPEN_EXTERNAL_LINK:' + url);
         }
@@ -1044,13 +1061,65 @@ function showInfoDialog(parentWindow) {
           console.log('CLOSE_WINDOW');
         }
         
+        // DOM内容加载完成后设置事件监听器
+        document.addEventListener('DOMContentLoaded', function() {
+          console.log('System info dialog DOM loaded');
+          // 为所有外部链接添加点击事件监听器  
+          const linkItems = document.querySelectorAll('.link-item[data-url]');
+          console.log('Found link items:', linkItems.length);
+          
+          linkItems.forEach(function(link, index) {
+            const url = link.getAttribute('data-url');
+            console.log('Setting up link ' + index + ':', url);
+            
+            link.addEventListener('click', function(e) {
+              console.log('Link clicked event triggered for:', url);
+              e.preventDefault(); // 防止默认的链接行为
+              e.stopPropagation(); // 防止事件冒泡
+              
+              if (url) {
+                console.log('Calling openExternalLink with:', url);
+                openExternalLink(url);
+              } else {
+                console.log('No URL found on clicked element');
+              }
+            });
+            
+            // 为链接添加视觉反馈
+            link.addEventListener('mousedown', function() {
+              console.log('Mouse down on link:', url);
+              this.style.transform = 'translateY(0px) scale(0.98)';
+            });
+            
+            link.addEventListener('mouseup', function() {
+              console.log('Mouse up on link:', url);
+              this.style.transform = 'translateY(-1px) scale(1)';
+            });
+            
+            // 添加鼠标进入和离开事件用于调试
+            link.addEventListener('mouseenter', function() {
+              console.log('Mouse enter link:', url);
+              this.style.opacity = '0.8';
+            });
+            
+            link.addEventListener('mouseleave', function() {
+              console.log('Mouse leave link:', url);
+              this.style.opacity = '1';
+            });
+          });
+          
+          console.log('External link event listeners set up complete');
+          
+          // 添加全局点击监听器用于调试
+          document.addEventListener('click', function(e) {
+            console.log('Global click detected on element:', e.target.tagName, 'class:', e.target.className, 'data-url:', e.target.getAttribute('data-url'));
+          }, true);
+        });
+        
         // 添加键盘快捷键支持
         document.addEventListener('keydown', function(e) {
           // ESC 键关闭窗口
           if (e.key === 'Escape') {
-            closeWindow();
-          }
-        });
             closeWindow();
           }
           // Cmd+W (Mac) 或 Ctrl+W (Windows/Linux) 关闭窗口
