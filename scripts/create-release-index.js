@@ -20,7 +20,19 @@ function createReleaseIndex(tagName, cdnUrl, context) {
         
         // CDN URL 应该匹配实际的上传路径
         const safeKey = `${versionPath}/${fileName}`.replace(/ /g, '_');
-        const cdnFileUrl = `${cdnUrl.replace(/\/$/, '')}/${safeKey}`;
+        
+        // 智能处理 CDN URL，避免路径重复
+        let cdnFileUrl;
+        const normalizedCdnUrl = cdnUrl.replace(/\/$/, '');
+        
+        // 检查 CDN URL 是否已经包含项目路径
+        if (normalizedCdnUrl.includes('oj-competition-side-client')) {
+          // CDN URL 已包含项目路径，只添加 release/tagName/fileName
+          cdnFileUrl = `${normalizedCdnUrl}/release/${tagName}/${fileName}`;
+        } else {
+          // CDN URL 是基础路径，添加完整路径
+          cdnFileUrl = `${normalizedCdnUrl}/${safeKey}`;
+        }
         
         files.push({
           name: fileName,
@@ -49,6 +61,18 @@ function createReleaseIndex(tagName, cdnUrl, context) {
 
   console.log(`Created index with ${files.length} files`);
   console.log(`Version directory: ${cdnUrl.replace(/\/$/, '')}/${versionPath}/`);
+  
+  // 显示 CDN URL 处理逻辑信息
+  const normalizedCdnUrl = cdnUrl.replace(/\/$/, '');
+  if (normalizedCdnUrl.includes('oj-competition-side-client')) {
+    console.log(`🔧 CDN URL contains project path, using simplified path structure`);
+    console.log(`📂 Base CDN URL: ${normalizedCdnUrl}`);
+    console.log(`📁 File URL pattern: ${normalizedCdnUrl}/release/${tagName}/[filename]`);
+  } else {
+    console.log(`🔧 CDN URL is base path, using full path structure`);
+    console.log(`📂 Base CDN URL: ${normalizedCdnUrl}`);
+    console.log(`📁 File URL pattern: ${normalizedCdnUrl}/${versionPath}/[filename]`);
+  }
 }
 
 // 当直接运行脚本时，从环境变量读取参数
