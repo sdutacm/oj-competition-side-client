@@ -11,8 +11,8 @@
 
 ### 🛡️ 高级安全控制
 - **🎯 智能域名拦截** - 内置白名单/黑名单机制，智能拦截非法域名访问
-- **� 重定向拦截** - 自动检测并拦截恶意重定向，智能回退到安全域名
-- **� 开发者工具防护** - 彻底禁用开发者工具和调试功能，确保比赛公平性
+- **🔄 重定向拦截** - 自动检测并拦截恶意重定向，智能回退到安全域名
+- **🚫 开发者工具防护** - 彻底禁用开发者工具和调试功能，确保比赛公平性
 - **💬 友好拦截提示** - 可爱的随机化拦截提示，提升用户体验
 
 ### 🎨 现代化界面
@@ -142,11 +142,6 @@ docs/
 - **所有贡献者** - 感谢每一位为项目贡献代码的开发者
 - **Electron 社区** - 提供优秀的跨平台应用开发框架
 
----
-
-**© 2008-2025 SDUTACM. All Rights Reserved.**
-
-🏆 **让每一场算法竞赛都公平、安全、专业！**
 ## 📖 使用说明
 
 ### 启动应用
@@ -191,10 +186,12 @@ docs/
 ## 📊 项目统计
 
 - ⭐ **Star 数量**: ![GitHub stars](https://img.shields.io/github/stars/sdutacm/oj-competition-side-client)
-- � **下载次数**: ![GitHub downloads](https://img.shields.io/github/downloads/sdutacm/oj-competition-side-client/total)
-- � **问题追踪**: ![GitHub issues](https://img.shields.io/github/issues/sdutacm/oj-competition-side-client)
+- 📥 **下载次数**: ![GitHub downloads](https://img.shields.io/github/downloads/sdutacm/oj-competition-side-client/total)
+- 🐛 **问题追踪**: ![GitHub issues](https://img.shields.io/github/issues/sdutacm/oj-competition-side-client)
 - 🔄 **版本信息**: ![GitHub release](https://img.shields.io/github/v/release/sdutacm/oj-competition-side-client)
 
 ---
+
+🏆 **让每一场算法竞赛都公平、安全、专业！**
 
 **© 2008-2025 SDUTACM. All Rights Reserved.**
