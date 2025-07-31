@@ -396,12 +396,27 @@ function openNewWindow(url) {
         }
       });
       
-      // 添加外部链接处理
+      // 添加外部链接处理 - 遵循白名单逻辑
       contentView.webContents.on('new-window', (event, url) => {
         event.preventDefault();
-        // 如果是外部链接，用系统默认浏览器打开
-        if (url.startsWith('http://') || url.startsWith('https://')) {
+        const domain = require('./utils/urlHelper').getHostname(url);
+        
+        // 检查是否是特定的外部链接，用外部浏览器打开
+        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+        if (externalDomains.some(d => domain.includes(d))) {
           shell.openExternal(url);
+          return;
+        }
+        
+        // 如果是主域名或白名单域名，在新窗口中打开
+        if (domain === APP_CONFIG.MAIN_DOMAIN || isWhiteDomain(url, APP_CONFIG)) {
+          openNewWindow(url);
+          return;
+        }
+        
+        // 其他域名显示拦截提示
+        if (win && !win.isDestroyed()) {
+          showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
         }
       });
       
@@ -410,20 +425,27 @@ function openNewWindow(url) {
         // 这里可以添加额外的处理逻辑
       });
       
-      // 处理外部链接的另一种方式
+      // 处理导航事件 - 严格按照白名单控制
       contentView.webContents.on('will-navigate', (event, url) => {
-        // 如果是外部链接且不在白名单或主域名内，用外部浏览器打开
         const domain = require('./utils/urlHelper').getHostname(url);
         if (url.startsWith('http://') || url.startsWith('https://')) {
-          if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
-            // 检查是否是真正的外部链接（如github、外部文档等）
-            const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'oj.sdutacm.cn'];
-            if (externalDomains.some(d => domain.includes(d))) {
-              event.preventDefault();
-              shell.openExternal(url);
-              return;
-            }
+          // 检查是否是主域名或白名单域名
+          if (domain === APP_CONFIG.MAIN_DOMAIN || isWhiteDomain(url, APP_CONFIG)) {
+            // 允许导航到主域名或白名单域名
+            return;
           }
+          
+          // 检查是否是特定的外部链接，用外部浏览器打开
+          const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+          if (externalDomains.some(d => domain.includes(d))) {
+            event.preventDefault();
+            shell.openExternal(url);
+            return;
+          }
+          
+          // 其他非白名单域名阻止导航
+          event.preventDefault();
+          console.log('阻止导航到非白名单域名:', domain);
         }
       });
       
@@ -431,32 +453,29 @@ function openNewWindow(url) {
       contentView.webContents.setWindowOpenHandler(({ url }) => {
         const domain = require('./utils/urlHelper').getHostname(url);
         
-        // 检查是否是外部链接，直接用系统浏览器打开
-        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com', 'oj.sdutacm.cn'];
+        // 检查是否是特定的外部链接，直接用系统浏览器打开
+        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
         if (externalDomains.some(d => domain.includes(d))) {
           shell.openExternal(url);
           return { action: 'deny' };
         }
         
+        // 如果是主域名，允许打开
+        if (domain === APP_CONFIG.MAIN_DOMAIN) {
+          return { action: 'allow' };
+        }
+        
+        // 如果在白名单中，在新窗口中打开
         if (isWhiteDomain(url, APP_CONFIG)) {
           openNewWindow(url);
           return { action: 'deny' };
         }
-        // 非白名单/主域名弹窗拦截
-        if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
-          // 如果是http/https链接，也尝试用外部浏览器打开
-          if (url.startsWith('http://') || url.startsWith('https://')) {
-            shell.openExternal(url);
-            return { action: 'deny' };
-          }
-          
-          if (win && !win.isDestroyed()) {
-            showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
-          }
-          return { action: 'deny' };
+        
+        // 非白名单域名，显示拦截对话框
+        if (win && !win.isDestroyed()) {
+          showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
         }
-        // 主域名允许跳转
-        return { action: 'allow' };
+        return { action: 'deny' };
       });
     }
   }
@@ -1096,12 +1115,27 @@ function setupMainWindowInterceptors() {
         }
       });
       
-      // 添加外部链接处理
+      // 添加外部链接处理 - 遵循白名单逻辑
       contentView.webContents.on('new-window', (event, url) => {
         event.preventDefault();
-        // 如果是外部链接，用系统默认浏览器打开
-        if (url.startsWith('http://') || url.startsWith('https://')) {
+        const domain = require('./utils/urlHelper').getHostname(url);
+        
+        // 检查是否是特定的外部链接，用外部浏览器打开
+        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+        if (externalDomains.some(d => domain.includes(d))) {
           shell.openExternal(url);
+          return;
+        }
+        
+        // 如果是主域名或白名单域名，在新窗口中打开
+        if (domain === APP_CONFIG.MAIN_DOMAIN || isWhiteDomain(url, APP_CONFIG)) {
+          openNewWindow(url);
+          return;
+        }
+        
+        // 其他域名显示拦截提示
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
         }
       });
       
@@ -1156,32 +1190,29 @@ function setupMainWindowInterceptors() {
       contentView.webContents.setWindowOpenHandler(({ url }) => {
         const domain = require('./utils/urlHelper').getHostname(url);
         
-        // 检查是否是外部链接，直接用系统浏览器打开
-        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com', 'oj.sdutacm.cn'];
+        // 检查是否是特定的外部链接，直接用系统浏览器打开
+        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
         if (externalDomains.some(d => domain.includes(d))) {
           shell.openExternal(url);
           return { action: 'deny' };
         }
         
+        // 如果是主域名，允许打开
+        if (domain === APP_CONFIG.MAIN_DOMAIN) {
+          return { action: 'allow' };
+        }
+        
+        // 如果在白名单中，在新窗口中打开
         if (isWhiteDomain(url, APP_CONFIG)) {
           openNewWindow(url);
           return { action: 'deny' };
         }
-        // 非白名单/主域名弹窗拦截
-        if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
-          // 如果是http/https链接，也尝试用外部浏览器打开
-          if (url.startsWith('http://') || url.startsWith('https://')) {
-            shell.openExternal(url);
-            return { action: 'deny' };
-          }
-          
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
-          }
-          return { action: 'deny' };
+        
+        // 非白名单域名，显示拦截对话框
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
         }
-        // 主域名允许跳转
-        return { action: 'allow' };
+        return { action: 'deny' };
       });
     }
   }
