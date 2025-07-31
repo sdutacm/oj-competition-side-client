@@ -64,7 +64,7 @@ if (require.main === module) {
   // 创建一个简化的 context 对象
   const context = {
     repo: {
-      owner: 'ATRIOR-LCL',
+      owner: 'sdutacm',
       repo: 'oj-competition-side-client'
     }
   };
