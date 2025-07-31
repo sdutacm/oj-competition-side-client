@@ -1145,7 +1145,8 @@ function setupMainWindowInterceptors() {
         const domain = require('./utils/urlHelper').getHostname(url);
         
         // 检查是否是外部链接（如GitHub、文档等），直接用外部浏览器打开
-        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com', 'oj.sdutacm.cn'];
+        // 注意：oj.sdutacm.cn 不在此列表中，它将按照黑名单逻辑处理
+        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
         if (externalDomains.some(d => domain.includes(d))) {
           event.preventDefault();
           shell.openExternal(url);
