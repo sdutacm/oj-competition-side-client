@@ -8,6 +8,7 @@ const { LayoutManager } = require('./utils/windowHelper');
 const PlatformHelper = require('./utils/platformHelper');
 const { isWhiteDomain } = require('./utils/domainHelper');
 const { showBlockedDialog } = require('./utils/dialogHelper');
+const { getAppVersion } = require('./utils/versionHelper');
 const i18n = require('./utils/i18nManager');
 const MacMenuManager = require('./utils/macMenuManager');
 const StartupManager = require('./utils/startupManager');
@@ -810,7 +811,7 @@ function createMainWindow() {
       
       // 设置缓存模式
       mainWindow.webContents.session.setUserAgent(
-        mainWindow.webContents.getUserAgent() + ' SDUTOJCompetitionSideClient/1.0.0'
+        mainWindow.webContents.getUserAgent() + ` SDUTOJCompetitionSideClient/${getAppVersion()}`
       );
       
       // 启用持久化存储以提高性能
@@ -854,7 +855,7 @@ function createMainWindow() {
 
     // 设置自定义 User-Agent
     const defaultUserAgent = mainWindow.webContents.getUserAgent();
-    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
+    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
     mainWindow.webContents.setUserAgent(customUserAgent);
 
     // 设置窗口标题

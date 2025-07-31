@@ -1,5 +1,6 @@
 const { dialog, BrowserWindow, shell } = require('electron');
 const path = require('path');
+const { getChineseFormattedVersion, getAppVersion } = require('./versionHelper');
 
 /**
  * 显示域名拦截对话框
@@ -627,7 +628,7 @@ function showInfoDialog(parentWindow) {
 
   // 设置自定义 User-Agent
   const defaultUserAgent = infoWindow.webContents.getUserAgent();
-  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
+  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
   infoWindow.webContents.setUserAgent(customUserAgent);
 
   // 禁用信息窗口的开发者工具相关功能
@@ -998,7 +999,7 @@ function showInfoDialog(parentWindow) {
         <div class="header">
           ${logoImg}
           <div class="app-name">SDUT OJ 竞赛客户端</div>
-          <div class="app-version">版本 1.0.0</div>
+          <div class="app-version">${getChineseFormattedVersion()}</div>
           <div class="app-description">专业的在线评测系统客户端</div>
         </div>
         

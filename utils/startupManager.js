@@ -1,6 +1,7 @@
 const { BrowserWindow, app } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const { getFormattedVersion } = require('./versionHelper');
 
 class StartupManager {
   constructor() {
@@ -532,7 +533,7 @@ class StartupManager {
           <p>SDUT OJ</p>
           <p>Competition Side Client</p>
         </div>
-        <p class="version">version 1.0.0</p>
+        <p class="version">${getFormattedVersion()}</p>
       </div>
     </div>
   </body>
