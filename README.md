@@ -194,4 +194,4 @@ docs/
 
 🏆 **让每一场算法竞赛都公平、安全、专业！**
 
-**© 2008-2025 SDUTACM. All Rights Reserved.**
+*© 2008-2025 SDUTACM. All Rights Reserved.*
