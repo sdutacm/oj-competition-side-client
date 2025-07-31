@@ -137,7 +137,7 @@
       "icon": "public/icon.png",
       "category": "Education",
       "executableName": "sdut-oj-competition-client",
-      "maintainer": "ATRIOR-LCL",
+      "maintainer": "sdutacm",
       "desktop": {
         "entry": {
           "Name": "SDUT OJ Competition Side Client",
