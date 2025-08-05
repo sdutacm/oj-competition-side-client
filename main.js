@@ -1303,3 +1303,29 @@ app.on('window-all-closed', (event) => {
     app.quit();
   }
 });
+
+// macOS 专用：处理 Dock 图标点击事件（例如 Cmd+H 隐藏后重新激活）
+app.on('activate', () => {
+  console.log('应用被激活（点击 Dock 图标）');
+  
+  // 如果正在重启，不处理激活事件
+  if (isRestarting) {
+    console.log('正在重启中，跳过激活事件处理');
+    return;
+  }
+  
+  // 如果主窗口存在但被隐藏，则显示它
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (!mainWindow.isVisible()) {
+      console.log('主窗口被隐藏，正在显示...');
+      mainWindow.show();
+    }
+    // 确保窗口在前台
+    mainWindow.focus();
+    console.log('主窗口已激活并聚焦');
+  } else if (!mainWindow) {
+    // 如果主窗口不存在，重新创建
+    console.log('主窗口不存在，正在重新创建...');
+    createMainWindow();
+  }
+});

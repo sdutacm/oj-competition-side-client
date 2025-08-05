@@ -114,6 +114,25 @@ class MacMenuManager {
               }
             }
           },
+          {
+            label: i18n.t('menu.showAll'),
+            click: () => {
+              try {
+                // 显示所有应用程序窗口
+                const { app } = require('electron');
+                app.show();
+                // 确保主窗口可见并聚焦
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                  if (!this.mainWindow.isVisible()) {
+                    this.mainWindow.show();
+                  }
+                  this.mainWindow.focus();
+                }
+              } catch (error) {
+                console.warn('显示全部窗口失败:', error);
+              }
+            }
+          },
           { type: 'separator' },
           {
             label: i18n.t('menu.quit', { appName: appName }),
