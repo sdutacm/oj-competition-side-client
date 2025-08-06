@@ -17,8 +17,8 @@ console.log('✅ AppId:', packageJson.build.appId);
 console.log('✅ Product Name:', packageJson.build.productName);
 console.log('✅ Windows图标:', packageJson.build.win.icon);
 console.log('✅ Windows目标架构:', packageJson.build.win.target.map(t => `${t.target}(${t.arch.join(', ')})`).join(', '));
-console.log('✅ Publisher Name:', packageJson.build.win.publisherName);
 console.log('✅ Legal Trademarks:', packageJson.build.win.legalTrademarks);
+console.log('✅ Publisher信息: 将在afterPack中设置为SDUTACM');
 
 // 检查图标文件
 const iconPath = path.join(__dirname, '..', packageJson.build.win.icon);
@@ -85,11 +85,12 @@ if (fs.existsSync(afterPackPath)) {
 }
 
 console.log('\n🎯 修复方案总结:');
-console.log('1. ✅ package.json中添加了publisherName和legalTrademarks');
-console.log('2. ✅ installer.nsh中强化了AppUserModelId注册表设置');
-console.log('3. ✅ afterPack.js中强化了可执行文件图标嵌入');
-console.log('4. ✅ 添加了PowerShell快捷方式修复');
-console.log('5. ✅ 添加了应用程序清单文件');
+console.log('1. ✅ package.json中移除了无效的publisherName配置');
+console.log('2. ✅ publisher信息移至afterPack.js中的CompanyName设置');
+console.log('3. ✅ installer.nsh中强化了AppUserModelId注册表设置');
+console.log('4. ✅ afterPack.js中强化了可执行文件图标嵌入');
+console.log('5. ✅ 添加了PowerShell快捷方式修复');
+console.log('6. ✅ 添加了应用程序清单文件');
 
 console.log('\n📝 构建建议:');
 console.log('- 使用 npm run build:win:all 构建所有Windows架构');

@@ -145,6 +145,7 @@ module.exports = async function afterPack(context) {
           'OriginalFilename': context.packager.appInfo.productFilename + '.exe',
           'LegalCopyright': 'Copyright © 2024 SDUTACM',
           'LegalTrademarks': 'SDUT OJ Competition Side Client',
+          'CompanyName': 'SDUTACM', // Publisher信息在这里设置
           'PrivateBuild': '',
           'SpecialBuild': '',
           'Comments': '专业的在线评测系统客户端应用程序'
