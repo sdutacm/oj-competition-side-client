@@ -108,7 +108,7 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
     closable: false, // 禁用关闭按钮
     minimizable: false, // 禁用最小化按钮
     maximizable: false, // 禁用最大化按钮
-    icon: path.join(__dirname, '../public/favicon.ico'), // 设置窗口图标
+    icon: path.join(__dirname, '../public/icon.png'), // 设置窗口图标
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -134,7 +134,7 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
     try {
       const fs = require('fs');
       const path = require('path');
-      const imagePath = path.join(__dirname, '../public/favicon.ico');
+      const imagePath = path.join(__dirname, '../public/icon.png');
       const imageBuffer = fs.readFileSync(imagePath);
       return imageBuffer.toString('base64');
     } catch (error) {
@@ -563,8 +563,8 @@ function showInfoDialog(parentWindow) {
   } else if (platform === 'darwin') {
     iconPath = path.join(__dirname, '../public/favicon.icns');
   } else {
-    // Windows 使用 .ico 文件
-    iconPath = path.join(__dirname, '../public/favicon.ico');
+    // Windows 使用 .png 文件（256x256 兼容性更好）
+    iconPath = path.join(__dirname, '../public/icon.png');
   }
 
   // 创建一个新的信息窗口 - 取消模态窗口设置

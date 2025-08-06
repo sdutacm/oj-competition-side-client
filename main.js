@@ -204,7 +204,7 @@ function openNewWindow(url) {
   const width = 1400, height = 900;
   let iconPath = undefined;
   if (process.platform === 'win32') {
-    iconPath = path.join(__dirname, 'public/favicon.ico');
+    iconPath = path.join(__dirname, 'public/icon.png');
   }
   
     // 根据系统主题设置背景色，完全匹配系统颜色避免白屏
@@ -688,8 +688,8 @@ function createMainWindow() {
     } else if (platform === 'darwin') {
       iconPath = path.join(__dirname, 'public/favicon.icns');
     } else {
-      // Windows 使用 .ico 文件
-      iconPath = path.join(__dirname, 'public/favicon.ico');
+      // Windows 使用 .png 文件（256x256 兼容性更好）
+      iconPath = path.join(__dirname, 'public/icon.png');
     }
 
     // 根据系统主题设置背景色，完全匹配系统颜色避免白屏
@@ -1157,6 +1157,33 @@ app.whenReady().then(() => {
     try {
       app.setAppUserModelId('org.sdutacm.SDUTOJCompetitionSideClient');
       console.log('Windows AppUserModelId 启动时设置完成');
+      
+      // 主动刷新任务栏图标缓存 - 解决图标延迟显示问题
+      setTimeout(() => {
+        try {
+          const { exec } = require('child_process');
+          // 刷新图标缓存
+          exec('ie4uinit.exe -ClearIconCache', (error) => {
+            if (error) {
+              console.log('图标缓存清理命令执行失败（正常情况）:', error.message);
+            } else {
+              console.log('图标缓存清理完成');
+            }
+          });
+          
+          // 通知系统任务栏图标变更
+          exec('powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -Command "try { Add-Type -TypeDefinition \\"using System; using System.Runtime.InteropServices; public class Shell32 { [DllImport(\\\\\\"shell32.dll\\\\\\") ] public static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2); }\\"; [Shell32]::SHChangeNotify(0x08000000, 0x0000, [IntPtr]::Zero, [IntPtr]::Zero) } catch { Write-Host \\"Shell notification failed\\" }"', (error) => {
+            if (error) {
+              console.log('Shell通知命令执行失败（正常情况）:', error.message);
+            } else {
+              console.log('Shell变更通知完成');
+            }
+          });
+        } catch (refreshError) {
+          console.log('图标缓存刷新过程中的错误（可以忽略）:', refreshError.message);
+        }
+      }, 2000); // 延迟2秒执行，确保主窗口已显示
+      
     } catch (error) {
       console.log('AppUserModelId 启动设置失败:', error);
     }
