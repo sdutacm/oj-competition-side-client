@@ -534,6 +534,15 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
 let currentInfoWindow = null;
 
 /**
+ * 检查指定窗口是否是关于窗口
+ * @param {BrowserWindow} window - 要检查的窗口
+ * @returns {boolean} 如果是关于窗口返回 true
+ */
+function isAboutWindow(window) {
+  return currentInfoWindow && !currentInfoWindow.isDestroyed() && currentInfoWindow === window;
+}
+
+/**
  * 显示系统信息窗口
  * @param {BrowserWindow} parentWindow - 父窗口
  */
@@ -1242,5 +1251,6 @@ function showInfoDialog(parentWindow) {
 
 module.exports = {
   showBlockedDialog,
-  showInfoDialog
+  showInfoDialog,
+  isAboutWindow
 };

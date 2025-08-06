@@ -43,6 +43,26 @@ const APP_CONFIG = {
   ])
 };
 
+// 检查是否是可以打开外部链接的特殊页面（如关于页面等）
+function isExternalLinkAllowedContext(webContents) {
+  if (!webContents) return false;
+  
+  // 检查是否是关于窗口（从 dialogHelper 导入检查函数）
+  try {
+    const dialogHelper = require('./utils/dialogHelper');
+    if (dialogHelper && dialogHelper.isAboutWindow) {
+      const ownerWindow = webContents.getOwnerBrowserWindow();
+      if (ownerWindow && dialogHelper.isAboutWindow(ownerWindow)) {
+        return true;
+      }
+    }
+  } catch (error) {
+    console.warn('检查关于窗口失败:', error);
+  }
+  
+  return false;
+}
+
 // 重定向拦截器，应用于任意 BrowserView
 function applyRedirectInterceptor(view, win, isMainWindow = false) {
   if (view && view.webContents) {
@@ -540,8 +560,22 @@ function openNewWindow(url) {
         event.preventDefault();
         const domain = require('./utils/urlHelper').getHostname(url);
         
-        // 检查是否是特定的外部链接，用外部浏览器打开
-        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+        // 检查是否是GitHub链接，只有在允许的上下文中才用外部浏览器打开
+        if (domain.includes('github.com')) {
+          if (isExternalLinkAllowedContext(contentView.webContents)) {
+            shell.openExternal(url);
+            return;
+          } else {
+            // 在非关于页面的情况下，阻止GitHub链接打开外部浏览器
+            if (win && !win.isDestroyed()) {
+              showBlockedDialogWithDebounce(win, domain, 'GitHub链接只能在关于页面或系统信息页面中打开', 'default');
+            }
+            return;
+          }
+        }
+        
+        // 检查是否是其他特定的外部链接，用外部浏览器打开
+        const externalDomains = ['docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
         if (externalDomains.some(d => domain.includes(d))) {
           shell.openExternal(url);
           return;
@@ -575,7 +609,7 @@ function openNewWindow(url) {
           }
           
           // 检查是否是特定的外部链接，用外部浏览器打开
-          const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+          const externalDomains = ['docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
           if (externalDomains.some(d => domain.includes(d))) {
             event.preventDefault();
             shell.openExternal(url);
@@ -593,7 +627,7 @@ function openNewWindow(url) {
         const domain = require('./utils/urlHelper').getHostname(url);
         
         // 检查是否是特定的外部链接，直接用系统浏览器打开
-        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+        const externalDomains = ['docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
         if (externalDomains.some(d => domain.includes(d))) {
           shell.openExternal(url);
           return { action: 'deny' };
@@ -1328,7 +1362,7 @@ function setupMainWindowInterceptors() {
         const domain = require('./utils/urlHelper').getHostname(url);
         
         // 检查是否是特定的外部链接，用外部浏览器打开
-        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+        const externalDomains = ['docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
         if (externalDomains.some(d => domain.includes(d))) {
           shell.openExternal(url);
           return;
@@ -1352,7 +1386,7 @@ function setupMainWindowInterceptors() {
         
         // 检查是否是外部链接（如GitHub、文档等），直接用外部浏览器打开
         // 注意：oj.sdutacm.cn 不在此列表中，它将按照黑名单逻辑处理
-        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+        const externalDomains = ['docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
         if (externalDomains.some(d => domain.includes(d))) {
           event.preventDefault();
           shell.openExternal(url);
@@ -1399,7 +1433,7 @@ function setupMainWindowInterceptors() {
         const domain = require('./utils/urlHelper').getHostname(url);
         
         // 检查是否是特定的外部链接，直接用系统浏览器打开
-        const externalDomains = ['github.com', 'docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+        const externalDomains = ['docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
         if (externalDomains.some(d => domain.includes(d))) {
           shell.openExternal(url);
           return { action: 'deny' };
