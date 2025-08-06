@@ -1,6 +1,6 @@
 {
   "name": "oj-competition-side-client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端应用程序",
   "author": {
     "name": "SDUTACM",
@@ -28,7 +28,8 @@
     "publish:mac:arm64": "npm run verify:icon && electron-builder --mac --arm64 --publish=always",
     "publish:linux": "npm run verify:icon && electron-builder --linux --publish=always",
     "upload:cos": "node scripts/upload-to-cos.js",
-    "verify:icon": "node scripts/verifyIcon.js"
+    "verify:icon": "node scripts/verifyIcon.js",
+    "test:taskbar": "node scripts/testTaskbarIcon.js"
   },
   "devDependencies": {
     "electron": "^27.0.0",
@@ -47,7 +48,7 @@
     "afterPack": "scripts/afterPack.js",
     "compression": "normal",
     "npmRebuild": false,
-    "buildVersion": "1.0.0",
+    "buildVersion": "1.0.1",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -64,7 +65,7 @@
       "!**/node_modules/.cache/**/*"
     ],
     "extraMetadata": {
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     "publish": [
       {
@@ -140,10 +141,16 @@
         {
           "from": "public/favicon.ico",
           "to": "app.ico"
+        },
+        {
+          "from": "public/favicon.ico",
+          "to": "icon.ico"
         }
       ],
       "fileAssociations": [],
-      "protocols": []
+      "protocols": [],
+      "publisherName": "SDUTACM",
+      "legalTrademarks": "SDUT OJ Competition Side Client"
     },
     "linux": {
       "icon": "public/icon.png",
@@ -195,8 +202,8 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": false,
-      "createStartMenuShortcut": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
       "license": null,
       "artifactName": "SDUTOJCompetitionSideClient_windows_installer_${arch}_${version}.${ext}",
       "installerIcon": "public/favicon.ico",

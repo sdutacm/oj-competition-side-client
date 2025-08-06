@@ -131,23 +131,54 @@ module.exports = async function afterPack(context) {
   if (process.platform === 'win32') {
     try {
       const rcedit = require('rcedit');
-      console.log('🎨 使用rcedit设置Windows可执行文件图标和信息...');
+      console.log('🎨 使用rcedit设置Windows可执行文件图标和信息（任务栏图标修复）...');
       
       await rcedit(executablePath, {
         icon: iconPath,
         'version-string': {
           'CompanyName': 'SDUTACM',
-          'ProductName': 'SDUT OJ 竞赛客户端',
+          'ProductName': 'SDUT OJ 竞赛客户端', 
           'FileDescription': 'SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端',
-          'FileVersion': context.packager.appInfo.buildVersion || '0.0.2',
-          'ProductVersion': context.packager.appInfo.version || '0.0.2',
+          'FileVersion': context.packager.appInfo.buildVersion || '1.0.0',
+          'ProductVersion': context.packager.appInfo.version || '1.0.0',
           'InternalName': 'SDUTOJCompetitionSideClient',
           'OriginalFilename': context.packager.appInfo.productFilename + '.exe',
-          'LegalCopyright': 'Copyright © 2024 SDUTACM'
-        }
+          'LegalCopyright': 'Copyright © 2024 SDUTACM',
+          'LegalTrademarks': 'SDUT OJ Competition Side Client',
+          'PrivateBuild': '',
+          'SpecialBuild': '',
+          'Comments': '专业的在线评测系统客户端应用程序'
+        },
+        // 强化可执行文件图标嵌入 - 任务栏图标修复的关键
+        'requested-execution-level': 'asInvoker',
+        'application-manifest': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity
+    version="1.0.0.0"
+    processorArchitecture="*"
+    name="org.sdutacm.SDUTOJCompetitionSideClient"
+    type="win32"
+  />
+  <description>SDUT OJ 竞赛客户端</description>
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/>
+      <supportedOS Id="{4a2f28e3-53b9-4441-ba9c-d69d4a4a6e38}"/>
+      <supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a2440225f93a}"/>
+      <supportedOS Id="{e2011457-1546-43c5-a5fe-008deee3d3f0}"/>
+    </application>
+  </compatibility>
+</assembly>`
       });
       
-      console.log('✅ Windows可执行文件图标和版本信息设置完成');
+      console.log('✅ Windows可执行文件图标和版本信息设置完成（任务栏图标已修复）');
       
       // 确保图标文件复制到输出目录供NSIS使用
       const outputIconPath = path.join(context.appOutDir, 'favicon.ico');
