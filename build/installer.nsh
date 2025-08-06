@@ -1,42 +1,4 @@
 !macro customInstall
-  ; 检查和安装 Visual C++ Redistributable
-  DetailPrint "检查 Visual C++ Redistributable..."
-  
-  ; 检查 VC++ 2019/2022 Redistributable
-  ReadRegStr $0 HKLM "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" "Installed"
-  ${If} $0 != "1"
-    DetailPrint "Visual C++ Redistributable 未安装，尝试自动安装..."
-    MessageBox MB_YESNO|MB_ICONQUESTION "应用程序需要 Microsoft Visual C++ Redistributable。是否自动下载并安装？" IDYES install_vcredist IDNO skip_vcredist
-    
-    install_vcredist:
-      DetailPrint "正在下载 Visual C++ Redistributable..."
-      NSISdl::download "https://aka.ms/vs/17/release/vc_redist.x64.exe" "$TEMP\vc_redist.x64.exe"
-      Pop $R0
-      ${If} $R0 == "success"
-        DetailPrint "正在安装 Visual C++ Redistributable..."
-        ExecWait '"$TEMP\vc_redist.x64.exe" /quiet /norestart' $0
-        Delete "$TEMP\vc_redist.x64.exe"
-        ${If} $0 == 0
-          DetailPrint "Visual C++ Redistributable 安装成功"
-        ${Else}
-          DetailPrint "Visual C++ Redistributable 安装失败，错误代码: $0"
-          MessageBox MB_OK|MB_ICONWARNING "Visual C++ Redistributable 安装失败。如果应用程序无法运行，请手动安装 Microsoft Visual C++ Redistributable。"
-        ${EndIf}
-      ${Else}
-        DetailPrint "下载 Visual C++ Redistributable 失败: $R0"
-        MessageBox MB_OK|MB_ICONWARNING "无法下载 Visual C++ Redistributable。如果应用程序无法运行，请手动安装 Microsoft Visual C++ Redistributable。"
-      ${EndIf}
-      Goto after_vcredist
-    
-    skip_vcredist:
-      DetailPrint "跳过 Visual C++ Redistributable 安装"
-      MessageBox MB_OK|MB_ICONINFO "如果应用程序无法运行，请手动安装 Microsoft Visual C++ Redistributable。"
-      
-    after_vcredist:
-  ${Else}
-    DetailPrint "Visual C++ Redistributable 已安装"
-  ${EndIf}
-  
   ; 确保图标文件被复制到安装目录
   SetOutPath "$INSTDIR"
   File "${PROJECT_DIR}\public\favicon.ico"
@@ -79,9 +41,6 @@
   WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient" "AppUserModelId" "org.sdutacm.SDUTOJCompetitionSideClient"
   WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient\DefaultIcon" "" "$INSTDIR\favicon.ico,0"
   WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient\shell\open\command" "" '"$INSTDIR\${PRODUCT_FILENAME}" "%1"'
-  
-  ; 使用PowerShell修复快捷方式的AppUserModelId属性 - 任务栏图标的最终修复
-  nsExec::ExecToLog 'powershell.exe -WindowStyle Hidden -Command "$$shell = New-Object -ComObject WScript.Shell; $$desktop_shortcut = $$shell.CreateShortcut(\"$$env:USERPROFILE\\Desktop\\${PRODUCT_NAME}.lnk\"); $$desktop_shortcut.Save(); $$startmenu_shortcut = $$shell.CreateShortcut(\"$$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\${PRODUCT_NAME}\\${PRODUCT_NAME}.lnk\"); $$startmenu_shortcut.Save();"'
 !macroend
 
 !macro customUnInstall
