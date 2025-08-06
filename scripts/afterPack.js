@@ -106,22 +106,35 @@ module.exports = async function afterPack(context) {
   const readmePath = path.join(context.appOutDir, 'README_WINDOWS.txt');
   const readmeContent = `SDUT OJ 竞赛客户端 - Windows 安装说明
 
-✅ 此应用包含自动白名单配置！
+✅ 此应用包含自动白名单配置和运行时依赖检查！
 
 📦 安装步骤:
 1. 运行安装程序
-2. 安装过程会自动将应用添加到 Windows Defender 白名单
-3. 安装完成后可直接使用
+2. 安装过程会自动检查并安装必需的 Visual C++ Redistributable
+3. 自动将应用添加到 Windows Defender 白名单
+4. 安装完成后可直接使用
 
-⚠️ 如果杀毒软件仍有提示:
-- 请选择"允许"或"信任"此应用
-- 或手动将应用添加到杀毒软件白名单
+⚠️ 如果遇到运行时错误:
+1. 确保已安装 Microsoft Visual C++ Redistributable (x64)
+   下载地址: https://aka.ms/vs/17/release/vc_redist.x64.exe
+2. 如果杀毒软件有提示，请选择"允许"或"信任"此应用
+3. 对于 C 盘安装问题，请尝试安装到其他驱动器
+4. 确保 Windows 系统已更新到最新版本
 
 🔧 Windows性能优化:
 - 应用已针对Windows进行滚动和渲染优化
 - 建议关闭不必要的后台程序以获得最佳性能
+- 如果遇到显示问题，请更新显卡驱动程序
+
+🛠️ 故障排除:
+- "该文件没有与之关联的应用" 错误：重新安装 Visual C++ Redistributable
+- "sxstrace.exe" 相关错误：运行 'sxstrace trace' 命令查看详细错误信息
+- 应用无法启动：检查 Windows 事件查看器中的应用程序日志
 
 📞 技术支持: https://github.com/sdutacm/oj-competition-side-client/issues
+
+构建环境信息: GitHub Actions (CI/CD)
+构建时间: ${new Date().toISOString()}
 `;
   
   fs.writeFileSync(readmePath, readmeContent);
@@ -176,6 +189,30 @@ module.exports = async function afterPack(context) {
       <supportedOS Id="{e2011457-1546-43c5-a5fe-008deee3d3f0}"/>
     </application>
   </compatibility>
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity
+        type="win32"
+        name="Microsoft.Windows.Common-Controls"
+        version="6.0.0.0"
+        processorArchitecture="*"
+        publicKeyToken="6595b64144ccf1df"
+        language="*"
+      />
+    </dependentAssembly>
+  </dependency>
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity
+        type="win32"
+        name="Microsoft.VC142.CRT"
+        version="14.0.0.0"
+        processorArchitecture="*"
+        publicKeyToken="1fc8b3b9a1e18e3b"
+        language="*"
+      />
+    </dependentAssembly>
+  </dependency>
 </assembly>`
       });
       

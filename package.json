@@ -29,6 +29,7 @@
     "publish:linux": "npm run verify:icon && electron-builder --linux --publish=always",
     "upload:cos": "node scripts/upload-to-cos.js",
     "verify:icon": "node scripts/verifyIcon.js",
+    "verify:windows": "node scripts/verifyWindowsBuild.js",
     "test:taskbar": "node scripts/testTaskbarIcon.js"
   },
   "devDependencies": {
