@@ -1,5 +1,5 @@
 !macro customInstall
-  ; 确保图标文件被复制到安装目录（使用正确的路径）
+  ; 确保图标文件被复制到安装目录
   SetOutPath "$INSTDIR"
   File "${PROJECT_DIR}\public\favicon.ico"
   
@@ -11,24 +11,33 @@
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_FILENAME}" "" "$INSTDIR\favicon.ico" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\卸载 ${PRODUCT_NAME}.lnk" "$INSTDIR\Uninstall ${PRODUCT_NAME}.exe" "" "$INSTDIR\favicon.ico" 0
   
-  ; 设置应用程序注册表项（使用用户级注册表，不需要管理员权限）
+  ; 关键修复：设置AppUserModelId确保任务栏图标正确显示
+  WriteRegStr HKCU "Software\Classes\Applications\${PRODUCT_FILENAME}\shell\open" "CommandId" "org.sdutacm.SDUTOJCompetitionSideClient"
+  WriteRegStr HKCU "Software\Classes\Applications\${PRODUCT_FILENAME}" "ApplicationCompany" "SDUTACM"
+  WriteRegStr HKCU "Software\Classes\Applications\${PRODUCT_FILENAME}" "ApplicationName" "${PRODUCT_NAME}"
+  WriteRegStr HKCU "Software\Classes\Applications\${PRODUCT_FILENAME}" "ApplicationDescription" "SDUT OJ 竞赛客户端"
+  WriteRegStr HKCU "Software\Classes\Applications\${PRODUCT_FILENAME}" "ApplicationIcon" "$INSTDIR\favicon.ico"
+  
+  ; 设置应用程序注册表项（用户级注册表）
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_FILENAME}" "" "$INSTDIR\${PRODUCT_FILENAME}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_FILENAME}" "Path" "$INSTDIR"
   
-  ; 添加到Windows Defender白名单（自动化脚本）
-  FileOpen $0 "$INSTDIR\add2Ignore.ps1" w
-  StrCpy $R0 'Add-MpPreference -ControlledFolderAccessAllowedApplications "$INSTDIR\${APP_EXECUTABLE_FILENAME}"$\n'
-  FileWrite $0 $R0
-  StrCpy $R0 'Add-MpPreference -ExclusionProcess "$INSTDIR\${APP_EXECUTABLE_FILENAME}"$\n'
-  FileWrite $0 $R0
-  FileClose $0
-  Sleep 100
-  ExpandEnvStrings $0 "%COMSPEC%"
-  ExecShell "" '"$0"' "/C powershell -ExecutionPolicy Bypass .\add2Ignore.ps1 -FFFeatureOff" SW_HIDE
+  ; 关键修复：注册AppUserModelId到Windows系统
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts" "org.sdutacm.SDUTOJCompetitionSideClient_" "0"
+  
+  ; 设置应用程序默认图标
+  WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient" "" "${PRODUCT_NAME}"
+  WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient\DefaultIcon" "" "$INSTDIR\favicon.ico,0"
+  WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient\shell\open\command" "" '"$INSTDIR\${PRODUCT_FILENAME}" "%1"'
 !macroend
 
 !macro customUnInstall
-  ; 删除注册表项（从用户级注册表删除）
+  ; 删除AppUserModelId相关注册表项
+  DeleteRegKey HKCU "Software\Classes\Applications\${PRODUCT_FILENAME}"
+  DeleteRegKey HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient"
+  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts" "org.sdutacm.SDUTOJCompetitionSideClient_"
+  
+  ; 删除注册表项
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_FILENAME}"
   
   ; 删除快捷方式
@@ -37,7 +46,6 @@
   Delete "$SMPROGRAMS\${PRODUCT_NAME}\卸载 ${PRODUCT_NAME}.lnk"
   RMDir "$SMPROGRAMS\${PRODUCT_NAME}"
   
-  ; 删除图标文件和PowerShell脚本
+  ; 删除图标文件
   Delete "$INSTDIR\favicon.ico"
-  Delete "$INSTDIR\add2Ignore.ps1"
 !macroend

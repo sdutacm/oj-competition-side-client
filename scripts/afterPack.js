@@ -131,19 +131,52 @@ module.exports = async function afterPack(context) {
   if (process.platform === 'win32') {
     try {
       const rcedit = require('rcedit');
-      console.log('Attempting to set icon using rcedit...');
+      console.log('🎨 使用rcedit设置Windows可执行文件图标和信息...');
       
       await rcedit(executablePath, {
-        icon: iconPath
+        icon: iconPath,
+        'version-string': {
+          'CompanyName': 'SDUTACM',
+          'ProductName': 'SDUT OJ 竞赛客户端',
+          'FileDescription': 'SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端',
+          'FileVersion': context.packager.appInfo.buildVersion || '0.0.2',
+          'ProductVersion': context.packager.appInfo.version || '0.0.2',
+          'InternalName': 'SDUTOJCompetitionSideClient',
+          'OriginalFilename': context.packager.appInfo.productFilename + '.exe',
+          'LegalCopyright': 'Copyright © 2024 SDUTACM'
+        }
       });
       
-      console.log('Icon set successfully using rcedit');
+      console.log('✅ Windows可执行文件图标和版本信息设置完成');
+      
+      // 确保图标文件复制到输出目录供NSIS使用
+      const outputIconPath = path.join(context.appOutDir, 'favicon.ico');
+      if (!fs.existsSync(outputIconPath)) {
+        fs.copyFileSync(iconPath, outputIconPath);
+        console.log('✅ 图标文件复制到输出目录完成');
+      }
+      
     } catch (error) {
-      console.warn('Failed to set icon using rcedit:', error.message);
-      // Don't throw error, just warn - this is not critical for functionality
+      console.warn('⚠️  rcedit设置失败:', error.message);
+      // 尝试基本的图标复制
+      try {
+        const outputIconPath = path.join(context.appOutDir, 'favicon.ico');
+        fs.copyFileSync(iconPath, outputIconPath);
+        console.log('✅ 基本图标复制完成');
+      } catch (copyError) {
+        console.error('❌ 图标复制也失败:', copyError.message);
+      }
     }
   } else {
-    console.log('Skipping rcedit on non-Windows platform - will be handled during Windows build');
+    console.log('跳过rcedit - 在非Windows平台上构建，图标将在Windows构建时处理');
+    // 但仍然复制图标文件
+    try {
+      const outputIconPath = path.join(context.appOutDir, 'favicon.ico');
+      fs.copyFileSync(iconPath, outputIconPath);
+      console.log('✅ 图标文件复制完成（跨平台构建）');
+    } catch (copyError) {
+      console.warn('⚠️  跨平台图标复制失败:', copyError.message);
+    }
   }
 };
 

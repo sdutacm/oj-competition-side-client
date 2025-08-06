@@ -4,8 +4,8 @@
 
 ## 开发环境要求
 
-- **Node.js**: 16.0.0 或更高版本
-- **npm**: 7.0.0 或更高版本
+- **Node.js**: 20.0.0 或更高版本
+- **npm**: 8.0.0 或更高版本
 - **Git**: 任意版本
 - **操作系统**: Windows 10+、macOS 10.14+、Linux (Ubuntu 18.04+)
 
@@ -154,10 +154,6 @@ oj-competition-side-client/
       {
         "target": "dmg",
         "arch": ["x64", "arm64"]
-      },
-      {
-        "target": "zip",
-        "arch": ["x64", "arm64"]
       }
     ]
   }
@@ -227,6 +223,7 @@ npm run build:linux  # Linux
 - 工具模块放在 `utils/` 目录
 - 静态资源放在 `public/` 目录
 - 构建脚本放在 `scripts/` 目录
+- shell 脚本放在 `bin/` 目录
 - 文档放在 `docs/` 目录
 
 ### 注释规范

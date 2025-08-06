@@ -1,6 +1,6 @@
 {
   "name": "oj-competition-side-client",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端应用程序",
   "author": {
     "name": "SDUTACM",
@@ -9,18 +9,26 @@
   "main": "main.js",
   "scripts": {
     "start": "electron . --max-old-space-size=4096 --max-semi-space-size=512",
-    "build": "electron-builder",
-    "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac && npm run fix:mac",
-    "build:mac:x64": "electron-builder --mac --x64 && npm run fix:mac",
-    "build:mac:arm64": "electron-builder --mac --arm64 && npm run fix:mac",
+    "build": "npm run verify:icon && electron-builder",
+    "build:win": "npm run verify:icon && electron-builder --win --x64",
+    "build:win:x64": "npm run verify:icon && electron-builder --win --x64",
+    "build:win:arm64": "npm run verify:icon && electron-builder --win --arm64",
+    "build:win:all": "npm run verify:icon && electron-builder --win",
+    "build:win:clean": "rm -rf dist && npm run verify:icon && electron-builder --win --x64",
+    "build:mac": "npm run verify:icon && electron-builder --mac && npm run fix:mac",
+    "build:mac:x64": "npm run verify:icon && electron-builder --mac --x64 && npm run fix:mac",
+    "build:mac:arm64": "npm run verify:icon && electron-builder --mac --arm64 && npm run fix:mac",
     "fix:mac": "chmod +x bin/fix-macos.sh && bin/fix-macos.sh",
-    "publish:win": "electron-builder --win --publish=always",
-    "publish:mac": "electron-builder --mac --publish=always",
-    "publish:mac:x64": "electron-builder --mac --x64 --publish=always",
-    "publish:mac:arm64": "electron-builder --mac --arm64 --publish=always",
-    "publish:linux": "electron-builder --linux --publish=always",
-    "upload:cos": "node scripts/upload-to-cos.js"
+    "publish:win": "npm run verify:icon && electron-builder --win --publish=always",
+    "publish:win:x64": "npm run verify:icon && electron-builder --win --x64 --publish=always",
+    "publish:win:arm64": "npm run verify:icon && electron-builder --win --arm64 --publish=always",
+    "publish:win:all": "npm run verify:icon && electron-builder --win --publish=always",
+    "publish:mac": "npm run verify:icon && electron-builder --mac --publish=always",
+    "publish:mac:x64": "npm run verify:icon && electron-builder --mac --x64 --publish=always",
+    "publish:mac:arm64": "npm run verify:icon && electron-builder --mac --arm64 --publish=always",
+    "publish:linux": "npm run verify:icon && electron-builder --linux --publish=always",
+    "upload:cos": "node scripts/upload-to-cos.js",
+    "verify:icon": "node scripts/verifyIcon.js"
   },
   "devDependencies": {
     "electron": "^27.0.0",
@@ -37,8 +45,12 @@
     "generateUpdatesFilesForAllChannels": false,
     "electronUpdaterCompatibility": ">=2.16",
     "afterPack": "scripts/afterPack.js",
+    "compression": "normal",
+    "npmRebuild": false,
+    "buildVersion": "1.0.0",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "files": [
       "main.js",
@@ -48,10 +60,11 @@
       "package.json",
       "!**/*.yml",
       "!**/*.yaml",
-      "!**/*.blockmap"
+      "!**/*.blockmap",
+      "!**/node_modules/.cache/**/*"
     ],
     "extraMetadata": {
-      "version": "0.0.2"
+      "version": "1.0.0"
     },
     "publish": [
       {
@@ -104,30 +117,29 @@
       "target": [
         {
           "target": "nsis",
-          "arch": "x64"
-        },
-        {
-          "target": "nsis",
-          "arch": "arm64"
+          "arch": ["x64", "arm64"]
         },
         {
           "target": "portable",
-          "arch": "x64"
-        },
-        {
-          "target": "portable",
-          "arch": "arm64"
+          "arch": ["x64", "arm64"]
         }
       ],
       "executableName": "SDUT OJ 竞赛客户端",
-      "artifactName": "SDUTOJCompetitionSideClient_windows_${arch}_${version}.${ext}",
+      "artifactName": "SDUTOJCompetitionSideClient_windows_${target}_${arch}_${version}.${ext}",
       "forceCodeSigning": false,
       "verifyUpdateCodeSignature": false,
       "signAndEditExecutable": true,
+      "requestedExecutionLevel": "asInvoker",
       "extraFiles": [
         {
           "from": "public/favicon.ico",
           "to": "favicon.ico"
+        }
+      ],
+      "extraResources": [
+        {
+          "from": "public/favicon.ico",
+          "to": "app.ico"
         }
       ],
       "fileAssociations": [],
@@ -204,7 +216,11 @@
       "allowElevation": false,
       "deleteAppDataOnUninstall": false,
       "include": "build/installer.nsh",
-      "differentialPackage": false
+      "differentialPackage": false,
+      "packElevateHelper": false,
+      "removeDefaultUninstallWelcomePage": false,
+      "warningsAsErrors": false,
+      "unicode": true
     },
     "portable": {
       "artifactName": "SDUTOJCompetitionSideClient_windows_portable_${arch}_${version}.${ext}",
