@@ -7,10 +7,11 @@ const { exec } = require('child_process');
  * Handles platform-specific post-packaging tasks
  */
 module.exports = async function afterPack(context) {
-  const platformName = context.platformName || context.platform?.name || process.platform;
+  const platformName = context.electronPlatformName || context.platformName || context.platform?.name || process.platform;
   console.log('AfterPack hook called for:', platformName);
   console.log('Build platform:', process.platform);
   console.log('Context platform info:', {
+    electronPlatformName: context.electronPlatformName,
     platformName: context.platformName,
     platform: context.platform,
     arch: context.arch
@@ -77,34 +78,32 @@ module.exports = async function afterPack(context) {
     return;
   }
 
-  // Handle Windows builds (existing code)
-  if (platformName !== 'win32') {
-    console.log('Skipping afterPack for non-Windows/non-macOS platform:', platformName);
-    return;
-  }
+  // Handle Windows builds
+  if (platformName === 'win32' || context.electronPlatformName === 'win32') {
+    console.log('Processing Windows build...');
 
-  const executablePath = context.appOutDir + '/' + context.packager.appInfo.productFilename + '.exe';
-  const iconPath = path.join(context.packager.projectDir, 'public', 'favicon.ico');
+    const executablePath = context.appOutDir + '/' + context.packager.appInfo.productFilename + '.exe';
+    const iconPath = path.join(context.packager.projectDir, 'public', 'favicon.ico');
 
-  console.log('Executable path:', executablePath);
-  console.log('Icon path:', iconPath);
+    console.log('Executable path:', executablePath);
+    console.log('Icon path:', iconPath);
 
-  // Check if files exist
-  if (!fs.existsSync(executablePath)) {
-    console.warn('Executable file not found:', executablePath);
-    return;
-  }
+    // Check if files exist
+    if (!fs.existsSync(executablePath)) {
+      console.warn('Executable file not found:', executablePath);
+      return;
+    }
 
-  if (!fs.existsSync(iconPath)) {
-    console.warn('Icon file not found:', iconPath);
-    return;
-  }
+    if (!fs.existsSync(iconPath)) {
+      console.warn('Icon file not found:', iconPath);
+      return;
+    }
 
-  console.log('Both executable and icon files exist');
+    console.log('Both executable and icon files exist');
 
-  // Create Windows user guide
-  const readmePath = path.join(context.appOutDir, 'README_WINDOWS.txt');
-  const readmeContent = `SDUT OJ 竞赛客户端 - Windows 安装说明
+    // Create Windows user guide
+    const readmePath = path.join(context.appOutDir, 'README_WINDOWS.txt');
+    const readmeContent = `SDUT OJ 竞赛客户端 - Windows 安装说明
 
 ✅ 此应用包含自动白名单配置和运行时依赖检查！
 
@@ -133,39 +132,42 @@ module.exports = async function afterPack(context) {
 
 📞 技术支持: https://github.com/sdutacm/oj-competition-side-client/issues
 
-构建环境信息: GitHub Actions (CI/CD)
+构建环境信息: ${process.platform === 'win32' ? 'Windows Native' : 'Cross-platform (macOS/Linux)'}
 构建时间: ${new Date().toISOString()}
 `;
-  
-  fs.writeFileSync(readmePath, readmeContent);
-  console.log('📝 创建Windows用户说明文件完成');
+    
+    fs.writeFileSync(readmePath, readmeContent);
+    console.log('📝 创建Windows用户说明文件完成');
 
-  // Only attempt rcedit on Windows platform or if building for Windows
-  if (process.platform === 'win32') {
-    try {
-      const rcedit = require('rcedit');
-      console.log('🎨 使用rcedit设置Windows可执行文件图标和信息（任务栏图标修复）...');
-      
-      await rcedit(executablePath, {
-        icon: iconPath,
-        'version-string': {
-          'CompanyName': 'SDUTACM',
-          'ProductName': 'SDUT OJ 竞赛客户端', 
-          'FileDescription': 'SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端',
-          'FileVersion': context.packager.appInfo.buildVersion || '1.0.0',
-          'ProductVersion': context.packager.appInfo.version || '1.0.0',
-          'InternalName': 'SDUTOJCompetitionSideClient',
-          'OriginalFilename': context.packager.appInfo.productFilename + '.exe',
-          'LegalCopyright': 'Copyright © 2024 SDUTACM',
-          'LegalTrademarks': 'SDUT OJ Competition Side Client',
-          'CompanyName': 'SDUTACM', // Publisher信息在这里设置
-          'PrivateBuild': '',
-          'SpecialBuild': '',
-          'Comments': '专业的在线评测系统客户端应用程序'
-        },
-        // 强化可执行文件图标嵌入 - 任务栏图标修复的关键
-        'requested-execution-level': 'asInvoker',
-        'application-manifest': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    // Only attempt rcedit on Windows platform or use alternative approach for cross-platform builds
+    console.log('Host platform:', process.platform);
+    console.log('Target platform:', platformName);
+    
+    if (process.platform === 'win32') {
+      // We're building on Windows, use rcedit directly
+      try {
+        const rcedit = require('rcedit');
+        console.log('🎨 使用rcedit设置Windows可执行文件图标和信息（任务栏图标修复）...');
+        
+        await rcedit(executablePath, {
+          icon: iconPath,
+          'version-string': {
+            'CompanyName': 'SDUTACM',
+            'ProductName': 'SDUT OJ 竞赛客户端', 
+            'FileDescription': 'SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端',
+            'FileVersion': context.packager.appInfo.buildVersion || '1.0.0',
+            'ProductVersion': context.packager.appInfo.version || '1.0.0',
+            'InternalName': 'SDUTOJCompetitionSideClient',
+            'OriginalFilename': context.packager.appInfo.productFilename + '.exe',
+            'LegalCopyright': 'Copyright © 2024 SDUTACM',
+            'LegalTrademarks': 'SDUT OJ Competition Side Client',
+            'PrivateBuild': '',
+            'SpecialBuild': '',
+            'Comments': '专业的在线评测系统客户端应用程序'
+          },
+          // 强化可执行文件图标嵌入 - 任务栏图标修复的关键
+          'requested-execution-level': 'asInvoker',
+          'application-manifest': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
   <assemblyIdentity
     version="1.0.0.0"
@@ -214,39 +216,36 @@ module.exports = async function afterPack(context) {
     </dependentAssembly>
   </dependency>
 </assembly>`
-      });
-      
-      console.log('✅ Windows可执行文件图标和版本信息设置完成（任务栏图标已修复）');
-      
-      // 确保图标文件复制到输出目录供NSIS使用
+        });
+        
+        console.log('✅ Windows可执行文件图标和版本信息设置完成（任务栏图标已修复）');
+        
+      } catch (error) {
+        console.warn('⚠️  rcedit设置失败:', error.message);
+        console.log('将依赖 electron-builder 的内置图标嵌入功能');
+      }
+    } else {
+      // Cross-platform build - rely on electron-builder's built-in capabilities
+      console.log('🔄 跨平台构建 - 依赖 electron-builder 内置图标嵌入功能');
+      console.log('注意：任务栏图标修复主要依赖 NSIS 安装脚本和 main.js 中的 AppUserModelId 设置');
+    }
+    
+    // Always ensure icon files are copied (works on all platforms)
+    try {
       const outputIconPath = path.join(context.appOutDir, 'favicon.ico');
       if (!fs.existsSync(outputIconPath)) {
         fs.copyFileSync(iconPath, outputIconPath);
         console.log('✅ 图标文件复制到输出目录完成');
       }
-      
-    } catch (error) {
-      console.warn('⚠️  rcedit设置失败:', error.message);
-      // 尝试基本的图标复制
-      try {
-        const outputIconPath = path.join(context.appOutDir, 'favicon.ico');
-        fs.copyFileSync(iconPath, outputIconPath);
-        console.log('✅ 基本图标复制完成');
-      } catch (copyError) {
-        console.error('❌ 图标复制也失败:', copyError.message);
-      }
-    }
-  } else {
-    console.log('跳过rcedit - 在非Windows平台上构建，图标将在Windows构建时处理');
-    // 但仍然复制图标文件
-    try {
-      const outputIconPath = path.join(context.appOutDir, 'favicon.ico');
-      fs.copyFileSync(iconPath, outputIconPath);
-      console.log('✅ 图标文件复制完成（跨平台构建）');
     } catch (copyError) {
-      console.warn('⚠️  跨平台图标复制失败:', copyError.message);
+      console.warn('⚠️  图标文件复制失败:', copyError.message);
     }
+    
+    return;
   }
+
+  // For other platforms
+  console.log('Skipping afterPack for platform:', platformName);
 };
 
 function execPromise(command) {

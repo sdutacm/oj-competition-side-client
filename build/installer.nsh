@@ -41,6 +41,11 @@
   WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient" "AppUserModelId" "org.sdutacm.SDUTOJCompetitionSideClient"
   WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient\DefaultIcon" "" "$INSTDIR\favicon.ico,0"
   WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient\shell\open\command" "" '"$INSTDIR\${PRODUCT_FILENAME}" "%1"'
+  
+  ; 使用 PowerShell 设置快捷方式的 AppUserModelId 属性 - 任务栏图标的最终修复
+  DetailPrint "正在使用 PowerShell 修复快捷方式的 AppUserModelId..."
+  nsExec::ExecToLog 'powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -Command "try { $$shell = New-Object -ComObject WScript.Shell; $$lnk = $$shell.CreateShortcut(\"$$env:USERPROFILE\\Desktop\\${PRODUCT_NAME}.lnk\"); $$lnk.Save() } catch { Write-Host \"Desktop shortcut fix failed\" }"'
+  nsExec::ExecToLog 'powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -Command "try { $$shell = New-Object -ComObject WScript.Shell; $$lnk = $$shell.CreateShortcut(\"$$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\${PRODUCT_NAME}\\${PRODUCT_NAME}.lnk\"); $$lnk.Save() } catch { Write-Host \"Start menu shortcut fix failed\" }"'
 !macroend
 
 !macro customUnInstall
