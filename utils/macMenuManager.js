@@ -89,49 +89,16 @@ class MacMenuManager {
           {
             label: i18n.t('menu.hide', { appName: appName }),
             accelerator: 'Cmd+H',
-            click: () => {
-              try {
-                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-                  this.mainWindow.hide();
-                }
-              } catch (error) {
-                console.warn('隐藏窗口失败:', error);
-              }
-            }
+            role: 'hide'
           },
           {
             label: i18n.t('menu.hideOthers'),
             accelerator: 'Cmd+Shift+H',
-            click: () => {
-              try {
-                if (this.mainWindow && !this.mainWindow.isDestroyed() && this.mainWindow.setVisibleOnAllWorkspaces) {
-                  // 在macOS上隐藏其他应用程序
-                  const { app } = require('electron');
-                  app.hide();
-                }
-              } catch (error) {
-                console.warn('隐藏其他窗口失败:', error);
-              }
-            }
+            role: 'hideOthers'
           },
           {
             label: i18n.t('menu.showAll'),
-            click: () => {
-              try {
-                // 显示所有应用程序窗口
-                const { app } = require('electron');
-                app.show();
-                // 确保主窗口可见并聚焦
-                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-                  if (!this.mainWindow.isVisible()) {
-                    this.mainWindow.show();
-                  }
-                  this.mainWindow.focus();
-                }
-              } catch (error) {
-                console.warn('显示全部窗口失败:', error);
-              }
-            }
+            role: 'unhide'
           },
           { type: 'separator' },
           {
@@ -160,15 +127,7 @@ class MacMenuManager {
           {
             label: i18n.t('menu.close'),
             accelerator: 'Cmd+W',
-            click: () => {
-              try {
-                if (this.mainWindow && !this.mainWindow.isDestroyed() && this.mainWindow.isVisible()) {
-                  this.mainWindow.close();
-                }
-              } catch (error) {
-                console.warn('关闭窗口失败:', error);
-              }
-            }
+            role: 'close'
           }
         ]
       },
@@ -180,42 +139,42 @@ class MacMenuManager {
           {
             label: i18n.t('menu.undo'),
             accelerator: 'Cmd+Z',
-            click: () => this.executeEditAction('undo')
+            role: 'undo'
           },
           {
             label: i18n.t('menu.redo'),
             accelerator: 'Shift+Cmd+Z',
-            click: () => this.executeEditAction('redo')
+            role: 'redo'
           },
           { type: 'separator' },
           {
             label: i18n.t('menu.cut'),
             accelerator: 'Cmd+X',
-            click: () => this.executeEditAction('cut')
+            role: 'cut'
           },
           {
             label: i18n.t('menu.copy'),
             accelerator: 'Cmd+C',
-            click: () => this.executeEditAction('copy')
+            role: 'copy'
           },
           {
             label: i18n.t('menu.paste'),
             accelerator: 'Cmd+V',
-            click: () => this.executeEditAction('paste')
+            role: 'paste'
           },
           {
             label: i18n.t('menu.pasteAndMatchStyle'),
             accelerator: 'Shift+Cmd+V',
-            click: () => this.executeEditAction('pasteAndMatchStyle')
+            role: 'pasteAndMatchStyle'
           },
           {
             label: i18n.t('menu.delete'),
-            click: () => this.executeEditAction('delete')
+            role: 'delete'
           },
           {
             label: i18n.t('menu.selectAll'),
             accelerator: 'Cmd+A',
-            click: () => this.executeEditAction('selectAll')
+            role: 'selectAll'
           },
           { type: 'separator' },
           {
@@ -237,35 +196,21 @@ class MacMenuManager {
       // 窗口菜单
       {
         label: i18n.t('menu.window'),
+        role: 'window',
         submenu: [
           {
             label: i18n.t('menu.minimize'),
             accelerator: 'Cmd+M',
-            click: () => {
-              try {
-                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-                  this.mainWindow.minimize();
-                }
-              } catch (error) {
-                console.warn('最小化窗口失败:', error);
-              }
-            }
+            role: 'minimize'
           },
           {
             label: i18n.t('menu.zoom'),
-            click: () => {
-              try {
-                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-                  if (this.mainWindow.isMaximized()) {
-                    this.mainWindow.unmaximize();
-                  } else {
-                    this.mainWindow.maximize();
-                  }
-                }
-              } catch (error) {
-                console.warn('缩放窗口失败:', error);
-              }
-            }
+            role: 'zoom'
+          },
+          { type: 'separator' },
+          {
+            label: i18n.t('menu.front'),
+            role: 'front'
           }
         ]
       },
@@ -342,7 +287,8 @@ class MacMenuManager {
   }
 
   /**
-   * 执行编辑操作
+   * 执行编辑操作（备用方法）
+   * 主要编辑操作现在使用 role 属性，这个方法作为备用
    */
   executeEditAction(action) {
     try {
