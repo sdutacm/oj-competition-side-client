@@ -1,68 +1,57 @@
 !macro customInstall
-  ; 确保图标文件被复制到安装目录
+  ; 安全的应用程序安装 - 移除所有可能导致蓝屏的系统操作
+  DetailPrint "正在安全安装应用程序..."
+  
+  ; 确保图标文件被复制到安装目录（安全操作）
   SetOutPath "$INSTDIR"
   File "${PROJECT_DIR}\public\favicon.ico"
   
-  ; 创建桌面快捷方式并设置图标
+  ; 安全创建桌面快捷方式
   CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_FILENAME}" "" "$INSTDIR\favicon.ico" 0
   
-  ; 创建开始菜单快捷方式并设置图标
+  ; 安全创建开始菜单快捷方式
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_FILENAME}" "" "$INSTDIR\favicon.ico" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\卸载 ${PRODUCT_NAME}.lnk" "$INSTDIR\Uninstall ${PRODUCT_NAME}.exe" "" "$INSTDIR\favicon.ico" 0
   
-  ; 强化任务栏图标修复：设置AppUserModelId和应用程序注册表
+  ; 安全的注册表设置（不涉及系统级操作）
   WriteRegStr HKCU "Software\Classes\Applications\${PRODUCT_FILENAME}" "ApplicationCompany" "SDUTACM"
   WriteRegStr HKCU "Software\Classes\Applications\${PRODUCT_FILENAME}" "ApplicationName" "SDUT OJ 竞赛客户端"
   WriteRegStr HKCU "Software\Classes\Applications\${PRODUCT_FILENAME}" "ApplicationDescription" "专业的在线评测系统客户端"
   WriteRegStr HKCU "Software\Classes\Applications\${PRODUCT_FILENAME}" "ApplicationIcon" "$INSTDIR\favicon.ico"
   WriteRegStr HKCU "Software\Classes\Applications\${PRODUCT_FILENAME}" "AppUserModelId" "org.sdutacm.SDUTOJCompetitionSideClient"
-  WriteRegStr HKCU "Software\Classes\Applications\${PRODUCT_FILENAME}\shell\open" "CommandId" "org.sdutacm.SDUTOJCompetitionSideClient"
   
-  ; 关键修复：直接注册AppUserModelId到Windows系统注册表
+  ; 安全的AppUserModelId注册表设置
   WriteRegStr HKCU "Software\Classes\AppUserModelId\org.sdutacm.SDUTOJCompetitionSideClient" "DisplayName" "SDUT OJ 竞赛客户端"
   WriteRegStr HKCU "Software\Classes\AppUserModelId\org.sdutacm.SDUTOJCompetitionSideClient" "IconUri" "$INSTDIR\favicon.ico"
-  WriteRegStr HKCU "Software\Classes\AppUserModelId\org.sdutacm.SDUTOJCompetitionSideClient" "IconBackgroundColor" "#FFFFFF"
-  WriteRegStr HKCU "Software\Classes\AppUserModelId\org.sdutacm.SDUTOJCompetitionSideClient" "PackageInstallPath" "$INSTDIR"
   WriteRegStr HKCU "Software\Classes\AppUserModelId\org.sdutacm.SDUTOJCompetitionSideClient" "ShowInSettings" "0"
   
-  ; 设置应用程序注册表项（用户级注册表）
+  ; 应用程序路径注册（安全操作）
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_FILENAME}" "" "$INSTDIR\${PRODUCT_FILENAME}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_FILENAME}" "Path" "$INSTDIR"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_FILENAME}" "ApplicationCompany" "SDUTACM"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_FILENAME}" "ApplicationName" "SDUT OJ 竞赛客户端"
   
-  ; 注册AppUserModelId到Windows Toast通知系统
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts" "org.sdutacm.SDUTOJCompetitionSideClient_" "0"
+  ; 移除所有可能导致蓝屏的危险操作：
+  ; - 移除 ie4uinit.exe 调用
+  ; - 移除 taskkill/explorer.exe 操作  
+  ; - 移除系统广播消息
+  ; - 移除PowerShell执行
   
-  ; 设置应用程序默认图标和协议关联
-  WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient" "" "SDUT OJ 竞赛客户端"
-  WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient" "ApplicationIcon" "$INSTDIR\favicon.ico,0"
-  WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient" "AppUserModelId" "org.sdutacm.SDUTOJCompetitionSideClient"
-  WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient\DefaultIcon" "" "$INSTDIR\favicon.ico,0"
-  WriteRegStr HKCU "Software\Classes\org.sdutacm.SDUTOJCompetitionSideClient\shell\open\command" "" '"$INSTDIR\${PRODUCT_FILENAME}" "%1"'
+  DetailPrint "安全安装完成 - 已移除所有可能导致系统不稳定的操作"
   
-  ; 使用 PowerShell 设置快捷方式的 AppUserModelId 属性 - 任务栏图标的最终修复
-  DetailPrint "正在使用 PowerShell 修复快捷方式的 AppUserModelId..."
-  nsExec::ExecToLog 'powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -Command "try { $$shell = New-Object -ComObject WScript.Shell; $$lnk = $$shell.CreateShortcut(\"$$env:USERPROFILE\\Desktop\\${PRODUCT_NAME}.lnk\"); $$lnk.Save() } catch { Write-Host \"Desktop shortcut fix failed\" }"'
-  nsExec::ExecToLog 'powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -Command "try { $$shell = New-Object -ComObject WScript.Shell; $$lnk = $$shell.CreateShortcut(\"$$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\${PRODUCT_NAME}\\${PRODUCT_NAME}.lnk\"); $$lnk.Save() } catch { Write-Host \"Start menu shortcut fix failed\" }"'
-  
-  ; 关键修复：立即刷新图标缓存 - 防止首次启动图标失效
-  DetailPrint "正在刷新图标缓存以防止首次启动图标失效..."
-  ExecWait '"$SYSDIR\ie4uinit.exe" -ClearIconCache' $0
-  DetailPrint "图标缓存清理完成 (结果: $0)"
-  
-  ; 通知系统图标已更改
-  SendMessage ${HWND_BROADCAST} ${WM_SETTINGCHANGE} 0 "STR:ShellIconCache" /TIMEOUT=3000
-  
-  ; 短暂重启 Explorer 确保图标立即生效（关键步骤）
-  DetailPrint "正在重启 Windows Explorer 以确保图标立即显示..."
-  ExecWait 'taskkill /f /im explorer.exe' $1
-  Sleep 1500
-  Exec 'explorer.exe'
-  Sleep 2000
-  
-  DetailPrint "图标配置完成 - 首次启动应正确显示任务栏图标"
+  ; 创建安全说明文件
+  FileOpen $0 "$INSTDIR\安全说明.txt" w
+  FileWrite $0 "SDUT OJ 竞赛客户端 - 安全安装说明$\r$\n"
+  FileWrite $0 "$\r$\n"
+  FileWrite $0 "✅ 此版本已移除所有可能导致系统不稳定的操作$\r$\n"
+  FileWrite $0 "$\r$\n"
+  FileWrite $0 "如果任务栏图标显示不正确：$\r$\n"
+  FileWrite $0 "1. 右键点击桌面 → 刷新$\r$\n"
+  FileWrite $0 "2. 注销并重新登录Windows$\r$\n"
+  FileWrite $0 "3. 重启计算机$\r$\n"
+  FileWrite $0 "$\r$\n"
+  FileWrite $0 "应用程序功能不受图标显示问题影响$\r$\n"
+  FileClose $0
+!macroend
 !macroend
 
 !macro customUnInstall

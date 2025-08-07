@@ -210,22 +210,26 @@ module.exports = async function afterPack(context) {
             }
           });
           
-          // 2. GitHub Actions 专用：创建启动脚本以确保图标正确显示
-          const startupScriptPath = path.join(context.appOutDir, 'fix-taskbar-icon.bat');
-          const startupScript = `@echo off
-REM GitHub Actions build - Windows taskbar icon fix
-REM This script helps fix the first-launch icon issue
+          // 2. GitHub Actions 专用：创建安全的用户说明文件（移除可能危险的BAT脚本）
+          const userGuidePath = path.join(context.appOutDir, 'TASKBAR_ICON_FIX.txt');
+          const userGuide = `SDUT OJ 竞赛客户端 - 任务栏图标修复说明
 
-echo Fixing Windows taskbar icon cache...
-ie4uinit.exe -ClearIconCache >nul 2>&1
-timeout /t 1 /nobreak >nul
+⚠️ 安全提示：为防止系统不稳定，已移除自动图标缓存刷新脚本
 
-echo Starting application...
-start "" "%~dp0${context.packager.appInfo.productFilename}.exe"
+🔧 如果任务栏图标显示不正确，请手动执行以下安全步骤：
+
+1. 关闭应用程序
+2. 右键点击桌面空白处 → 刷新
+3. 重新启动应用程序
+
+🚨 重要：请勿使用可能导致系统不稳定的脚本或命令
+
+✅ 应用程序本身是安全的，图标问题不影响功能
+📞 如有问题请联系技术支持
 `;
           
-          fs.writeFileSync(startupScriptPath, startupScript);
-          console.log('✅ CI: 创建图标修复启动脚本');
+          fs.writeFileSync(userGuidePath, userGuide);
+          console.log('✅ CI: 创建安全的图标修复说明文件');
           
         } catch (ciError) {
           console.warn('⚠️  GitHub Actions 特殊处理失败:', ciError.message);
