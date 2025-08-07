@@ -210,26 +210,35 @@ module.exports = async function afterPack(context) {
             }
           });
           
-          // 2. GitHub Actions 专用：创建安全的用户说明文件（移除可能危险的BAT脚本）
+          // 2. GitHub Actions 专用：创建智能图标修复说明文件
           const userGuidePath = path.join(context.appOutDir, 'TASKBAR_ICON_FIX.txt');
-          const userGuide = `SDUT OJ 竞赛客户端 - 任务栏图标修复说明
+          const userGuide = `SDUT OJ 竞赛客户端 - 任务栏图标智能修复说明
 
-⚠️ 安全提示：为防止系统不稳定，已移除自动图标缓存刷新脚本
+🎯 首次启动图标问题解决方案：
 
-🔧 如果任务栏图标显示不正确，请手动执行以下安全步骤：
+✅ 自动修复（推荐）：
+应用程序已集成智能图标刷新机制，首次启动时会：
+1. 自动最小化窗口500毫秒
+2. 立即恢复窗口显示
+3. 强制Windows刷新任务栏图标
 
+🔧 如果自动修复无效，请手动执行：
 1. 关闭应用程序
 2. 右键点击桌面空白处 → 刷新
 3. 重新启动应用程序
+4. 如仍无效，注销并重新登录Windows
 
-🚨 重要：请勿使用可能导致系统不稳定的脚本或命令
+� 原理说明：
+- Windows需要时间识别新应用程序的AppUserModelId
+- 通过短暂的窗口状态变化可触发图标缓存更新
+- 第二次启动时图标通常会正常显示
 
-✅ 应用程序本身是安全的，图标问题不影响功能
+✅ 应用程序功能不受图标显示影响
 📞 如有问题请联系技术支持
 `;
           
           fs.writeFileSync(userGuidePath, userGuide);
-          console.log('✅ CI: 创建安全的图标修复说明文件');
+          console.log('✅ CI: 创建智能图标修复说明文件');
           
         } catch (ciError) {
           console.warn('⚠️  GitHub Actions 特殊处理失败:', ciError.message);

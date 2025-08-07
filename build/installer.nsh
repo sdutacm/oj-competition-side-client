@@ -26,9 +26,21 @@
   WriteRegStr HKCU "Software\Classes\AppUserModelId\org.sdutacm.SDUTOJCompetitionSideClient" "IconUri" "$INSTDIR\favicon.ico"
   WriteRegStr HKCU "Software\Classes\AppUserModelId\org.sdutacm.SDUTOJCompetitionSideClient" "ShowInSettings" "0"
   
+  ; 强化AppUserModelId识别 - 帮助Windows首次启动时正确显示图标
+  WriteRegStr HKCU "Software\Classes\AppUserModelId\org.sdutacm.SDUTOJCompetitionSideClient" "IconBackgroundColor" "#FFFFFF"
+  WriteRegStr HKCU "Software\Classes\AppUserModelId\org.sdutacm.SDUTOJCompetitionSideClient" "PackageInstallPath" "$INSTDIR"
+  WriteRegStr HKCU "Software\Classes\AppUserModelId\org.sdutacm.SDUTOJCompetitionSideClient" "RelaunchCommand" '"$INSTDIR\${PRODUCT_FILENAME}"'
+  WriteRegStr HKCU "Software\Classes\AppUserModelId\org.sdutacm.SDUTOJCompetitionSideClient" "RelaunchDisplayNameResource" "SDUT OJ 竞赛客户端"
+  WriteRegStr HKCU "Software\Classes\AppUserModelId\org.sdutacm.SDUTOJCompetitionSideClient" "RelaunchIconResource" "$INSTDIR\favicon.ico,0"
+  
   ; 应用程序路径注册（安全操作）
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_FILENAME}" "" "$INSTDIR\${PRODUCT_FILENAME}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_FILENAME}" "Path" "$INSTDIR"
+  
+  ; Windows任务栏通知注册 - 帮助首次启动图标识别
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts" "org.sdutacm.SDUTOJCompetitionSideClient_" "0"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\org.sdutacm.SDUTOJCompetitionSideClient" "ShowInActionCenter" "0"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\org.sdutacm.SDUTOJCompetitionSideClient" "Enabled" "1"
   
   ; 移除所有可能导致蓝屏的危险操作：
   ; - 移除 ie4uinit.exe 调用

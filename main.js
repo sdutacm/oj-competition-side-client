@@ -1268,6 +1268,35 @@ app.whenReady().then(() => {
     // 启动窗口（如果有）已完成，现在创建主窗口
     console.log('启动流程完成，创建主窗口');
     createMainWindow();
+    
+    // Windows专用：首次启动任务栏图标刷新机制
+    if (process.platform === 'win32') {
+      // 延迟一小段时间确保窗口完全创建后再刷新图标
+      setTimeout(() => {
+        try {
+          // 重新确认AppUserModelId（确保Windows系统识别）
+          app.setAppUserModelId('org.sdutacm.SDUTOJCompetitionSideClient');
+          
+          // 触发任务栏图标更新的安全方法
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            // 通过窗口状态变化触发图标刷新
+            const wasMinimized = mainWindow.isMinimized();
+            if (!wasMinimized) {
+              // 短暂最小化再恢复，强制刷新任务栏图标
+              mainWindow.minimize();
+              setTimeout(() => {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.restore();
+                  console.log('✅ Windows任务栏图标刷新完成（首次启动修复）');
+                }
+              }, 100);
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️  Windows任务栏图标刷新失败:', error.message);
+        }
+      }, 500); // 500ms延迟确保窗口完全创建
+    }
   });
 }).catch(error => {
   console.error('应用启动失败:', error);
