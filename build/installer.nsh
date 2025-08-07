@@ -50,19 +50,61 @@
   
   DetailPrint "安全安装完成 - 已移除所有可能导致系统不稳定的操作"
   
-  ; 创建安全说明文件
-  FileOpen $0 "$INSTDIR\安全说明.txt" w
-  FileWrite $0 "SDUT OJ 竞赛客户端 - 安全安装说明$\r$\n"
+  ; 创建智能启动脚本 - 解决"立即启动"图标问题
+  FileOpen $0 "$INSTDIR\智能启动.bat" w
+  FileWrite $0 "@echo off$\r$\n"
+  FileWrite $0 "REM 智能启动脚本 - 确保图标正确显示$\r$\n"
   FileWrite $0 "$\r$\n"
-  FileWrite $0 "✅ 此版本已移除所有可能导致系统不稳定的操作$\r$\n"
+  FileWrite $0 "REM 等待注册表设置生效$\r$\n"
+  FileWrite $0 "timeout /t 2 /nobreak >nul$\r$\n"
   FileWrite $0 "$\r$\n"
-  FileWrite $0 "如果任务栏图标显示不正确：$\r$\n"
-  FileWrite $0 "1. 右键点击桌面 → 刷新$\r$\n"
-  FileWrite $0 "2. 注销并重新登录Windows$\r$\n"
-  FileWrite $0 "3. 重启计算机$\r$\n"
+  FileWrite $0 "REM 启动应用程序$\r$\n"
+  FileWrite $0 'start "" "%~dp0${PRODUCT_FILENAME}.exe"$\r$\n'
   FileWrite $0 "$\r$\n"
-  FileWrite $0 "应用程序功能不受图标显示问题影响$\r$\n"
+  FileWrite $0 "REM 自动清理启动脚本$\r$\n"
+  FileWrite $0 "timeout /t 3 /nobreak >nul$\r$\n"
+  FileWrite $0 'del "%~f0" >nul 2>&1$\r$\n'
   FileClose $0
+  
+  ; 创建安全说明文件
+  FileOpen $1 "$INSTDIR\安全说明.txt" w
+  FileWrite $1 "SDUT OJ 竞赛客户端 - 安全安装说明$\r$\n"
+  FileWrite $1 "$\r$\n"
+  FileWrite $1 "✅ 此版本已移除所有可能导致系统不稳定的操作$\r$\n"
+  FileWrite $1 "$\r$\n"
+  FileWrite $1 "🎯 安装后启动说明：$\r$\n"
+  FileWrite $1 "- 勾选'立即启动'：使用智能启动脚本（2秒延迟）$\r$\n"
+  FileWrite $1 "- 桌面快捷方式：直接启动应用程序$\r$\n"
+  FileWrite $1 "- 两种方式都能正确显示任务栏图标$\r$\n"
+  FileWrite $1 "$\r$\n"
+  FileWrite $1 "如果任务栏图标仍显示不正确：$\r$\n"
+  FileWrite $1 "1. 右键点击桌面 → 刷新$\r$\n"
+  FileWrite $1 "2. 注销并重新登录Windows$\r$\n"
+  FileWrite $1 "3. 重启计算机$\r$\n"
+  FileWrite $1 "$\r$\n"
+  FileWrite $1 "应用程序功能不受图标显示问题影响$\r$\n"
+  FileClose $1
+!macroend
+
+; 自定义运行完成后的行为 - 解决"立即启动"图标问题
+!macro customRunAfterFinish
+  ; 使用智能启动脚本而不是直接启动应用程序
+  DetailPrint "正在使用智能启动脚本..."
+  
+  ; 检查智能启动脚本是否存在
+  IfFileExists "$INSTDIR\智能启动.bat" start_with_script direct_start
+  
+  start_with_script:
+    DetailPrint "使用智能启动脚本（延迟启动以确保图标正确显示）"
+    ExecShell "open" "$INSTDIR\智能启动.bat" "" SW_HIDE
+    Goto start_complete
+    
+  direct_start:
+    DetailPrint "智能启动脚本不存在，使用直接启动"
+    ExecShell "open" "$INSTDIR\${PRODUCT_FILENAME}.exe"
+  
+  start_complete:
+    DetailPrint "应用程序启动完成"
 !macroend
 
 !macro customUnInstall
