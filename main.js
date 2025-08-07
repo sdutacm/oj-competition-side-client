@@ -1,6 +1,17 @@
 const { app, BrowserWindow, nativeTheme, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+
+// 🔥 Windows专用：极早期设置AppUserModelId - 确保任务栏图标从一开始就正确
+if (process.platform === 'win32') {
+  try {
+    app.setAppUserModelId('org.sdutacm.SDUTOJCompetitionSideClient');
+    console.log('✅ Windows AppUserModelId 预启动设置完成（防止首次启动图标失效）');
+  } catch (error) {
+    console.warn('⚠️  AppUserModelId 预启动设置失败:', error);
+  }
+}
+
 const ToolbarManager = require('./utils/toolbarManager');
 const ContentViewManager = require('./utils/contentViewManager');
 const ShortcutManager = require('./utils/shortcutManager');
@@ -1152,43 +1163,6 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
-  // Windows专用：尽早设置AppUserModelId确保任务栏图标正确
-  if (process.platform === 'win32') {
-    try {
-      app.setAppUserModelId('org.sdutacm.SDUTOJCompetitionSideClient');
-      console.log('Windows AppUserModelId 启动时设置完成');
-      
-      // 主动刷新任务栏图标缓存 - 解决图标延迟显示问题
-      setTimeout(() => {
-        try {
-          const { exec } = require('child_process');
-          // 刷新图标缓存
-          exec('ie4uinit.exe -ClearIconCache', (error) => {
-            if (error) {
-              console.log('图标缓存清理命令执行失败（正常情况）:', error.message);
-            } else {
-              console.log('图标缓存清理完成');
-            }
-          });
-          
-          // 通知系统任务栏图标变更
-          exec('powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -Command "try { Add-Type -TypeDefinition \\"using System; using System.Runtime.InteropServices; public class Shell32 { [DllImport(\\\\\\"shell32.dll\\\\\\") ] public static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2); }\\"; [Shell32]::SHChangeNotify(0x08000000, 0x0000, [IntPtr]::Zero, [IntPtr]::Zero) } catch { Write-Host \\"Shell notification failed\\" }"', (error) => {
-            if (error) {
-              console.log('Shell通知命令执行失败（正常情况）:', error.message);
-            } else {
-              console.log('Shell变更通知完成');
-            }
-          });
-        } catch (refreshError) {
-          console.log('图标缓存刷新过程中的错误（可以忽略）:', refreshError.message);
-        }
-      }, 2000); // 延迟2秒执行，确保主窗口已显示
-      
-    } catch (error) {
-      console.log('AppUserModelId 启动设置失败:', error);
-    }
-  }
-  
   // 确保 i18n 完全初始化
   console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
   console.log('App ready - 测试翻译:', i18n.t('app.name'));

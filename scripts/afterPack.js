@@ -179,6 +179,58 @@ module.exports = async function afterPack(context) {
       // Cross-platform build - rely on electron-builder's built-in capabilities
       console.log('🔄 跨平台构建 - 依赖 electron-builder 内置图标嵌入功能');
       console.log('注意：任务栏图标修复主要依赖 NSIS 安装脚本和 main.js 中的 AppUserModelId 设置');
+      
+      // GitHub Actions 特殊处理：确保图标正确嵌入
+      if (process.env.GITHUB_ACTIONS) {
+        console.log('🤖 检测到 GitHub Actions 环境，应用强化图标嵌入...');
+        
+        // 在 GitHub Actions 中，强化图标嵌入以防止首次启动图标失效
+        try {
+          // 1. 确保图标文件被正确复制到多个位置
+          const ciIconPaths = [
+            path.join(context.appOutDir, 'favicon.ico'),
+            path.join(context.appOutDir, 'app.ico'),
+            path.join(context.appOutDir, 'icon.ico'),
+            path.join(context.appOutDir, 'resources', 'favicon.ico'),
+            path.join(context.appOutDir, 'resources', 'app', 'favicon.ico')
+          ];
+          
+          ciIconPaths.forEach(targetPath => {
+            try {
+              const targetDir = path.dirname(targetPath);
+              if (!fs.existsSync(targetDir)) {
+                fs.mkdirSync(targetDir, { recursive: true });
+              }
+              if (!fs.existsSync(targetPath)) {
+                fs.copyFileSync(iconPath, targetPath);
+                console.log(`✅ CI: 图标复制到 ${path.basename(targetPath)}`);
+              }
+            } catch (copyErr) {
+              console.warn(`⚠️  CI: 图标复制失败 ${path.basename(targetPath)}:`, copyErr.message);
+            }
+          });
+          
+          // 2. GitHub Actions 专用：创建启动脚本以确保图标正确显示
+          const startupScriptPath = path.join(context.appOutDir, 'fix-taskbar-icon.bat');
+          const startupScript = `@echo off
+REM GitHub Actions build - Windows taskbar icon fix
+REM This script helps fix the first-launch icon issue
+
+echo Fixing Windows taskbar icon cache...
+ie4uinit.exe -ClearIconCache >nul 2>&1
+timeout /t 1 /nobreak >nul
+
+echo Starting application...
+start "" "%~dp0${context.packager.appInfo.productFilename}.exe"
+`;
+          
+          fs.writeFileSync(startupScriptPath, startupScript);
+          console.log('✅ CI: 创建图标修复启动脚本');
+          
+        } catch (ciError) {
+          console.warn('⚠️  GitHub Actions 特殊处理失败:', ciError.message);
+        }
+      }
     }
     
     // Always ensure icon files are copied (works on all platforms)

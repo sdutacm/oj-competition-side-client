@@ -46,6 +46,23 @@
   DetailPrint "正在使用 PowerShell 修复快捷方式的 AppUserModelId..."
   nsExec::ExecToLog 'powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -Command "try { $$shell = New-Object -ComObject WScript.Shell; $$lnk = $$shell.CreateShortcut(\"$$env:USERPROFILE\\Desktop\\${PRODUCT_NAME}.lnk\"); $$lnk.Save() } catch { Write-Host \"Desktop shortcut fix failed\" }"'
   nsExec::ExecToLog 'powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -Command "try { $$shell = New-Object -ComObject WScript.Shell; $$lnk = $$shell.CreateShortcut(\"$$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\${PRODUCT_NAME}\\${PRODUCT_NAME}.lnk\"); $$lnk.Save() } catch { Write-Host \"Start menu shortcut fix failed\" }"'
+  
+  ; 关键修复：立即刷新图标缓存 - 防止首次启动图标失效
+  DetailPrint "正在刷新图标缓存以防止首次启动图标失效..."
+  ExecWait '"$SYSDIR\ie4uinit.exe" -ClearIconCache' $0
+  DetailPrint "图标缓存清理完成 (结果: $0)"
+  
+  ; 通知系统图标已更改
+  SendMessage ${HWND_BROADCAST} ${WM_SETTINGCHANGE} 0 "STR:ShellIconCache" /TIMEOUT=3000
+  
+  ; 短暂重启 Explorer 确保图标立即生效（关键步骤）
+  DetailPrint "正在重启 Windows Explorer 以确保图标立即显示..."
+  ExecWait 'taskkill /f /im explorer.exe' $1
+  Sleep 1500
+  Exec 'explorer.exe'
+  Sleep 2000
+  
+  DetailPrint "图标配置完成 - 首次启动应正确显示任务栏图标"
 !macroend
 
 !macro customUnInstall
