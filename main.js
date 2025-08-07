@@ -1,4 +1,4 @@
-const { app, BrowserWindow, nativeTheme, shell } = require('electron');
+const { app, BrowserWindow, nativeTheme, shell, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -698,19 +698,59 @@ function createMainWindow() {
       iconPath = path.join(__dirname, 'public/icon.png');
     } else if (platform === 'darwin') {
       iconPath = path.join(__dirname, 'public/favicon.icns');
+    } else if (platform === 'win32') {
+      // Windows 专用：使用 favicon.ico 确保任务栏图标正确显示
+      iconPath = path.join(__dirname, 'public/favicon.ico');
+      
+      // 验证图标文件是否存在
+      if (!fs.existsSync(iconPath)) {
+        console.warn('⚠️  Windows图标文件不存在:', iconPath);
+        // 备用图标
+        iconPath = path.join(__dirname, 'public/icon.png');
+      } else {
+        console.log('✅ Windows使用favicon.ico图标:', iconPath);
+      }
     } else {
-      // Windows 使用 .png 文件（256x256 兼容性更好）
+      // 其他平台使用 .png 文件
       iconPath = path.join(__dirname, 'public/icon.png');
     }
 
     // 根据系统主题设置背景色，完全匹配系统颜色避免白屏
     const backgroundColor = nativeTheme.shouldUseDarkColors ? '#000000' : '#ffffff';
 
+    // Windows专用：使用nativeImage正确设置图标，确保任务栏图标显示
+    let windowIcon = null;
+    if (platform === 'win32' && fs.existsSync(iconPath)) {
+      try {
+        // 为Windows创建原生图标对象
+        windowIcon = nativeImage.createFromPath(iconPath);
+        if (!windowIcon.isEmpty()) {
+          console.log('✅ Windows图标创建成功，尺寸:', windowIcon.getSize());
+          
+          // 设置应用程序图标（这是关键！）
+          app.setAppUserModelId('org.sdutacm.SDUTOJCompetitionSideClient');
+          
+          // 如果可能的话，设置应用级别的图标
+          if (typeof app.setIcon === 'function') {
+            app.setIcon(windowIcon);
+          }
+        } else {
+          console.warn('⚠️  Windows图标创建失败，图标为空');
+          windowIcon = iconPath; // 回退到路径
+        }
+      } catch (error) {
+        console.warn('⚠️  Windows图标处理错误:', error.message);
+        windowIcon = iconPath; // 回退到路径
+      }
+    } else {
+      windowIcon = iconPath; // 非Windows或文件不存在时使用路径
+    }
+
     // 创建主窗口
     const windowOptions = {
       width: 1440,
       height: 900,
-      icon: iconPath, // 设置应用图标
+      icon: windowIcon, // 使用处理后的图标
       backgroundColor: backgroundColor, // 设置背景色，避免白屏
       webPreferences: {
         nodeIntegration: platformConfig.nodeIntegration,
@@ -796,6 +836,23 @@ function createMainWindow() {
     }
 
     mainWindow = new BrowserWindow(windowOptions);
+
+    // Windows专用：任务栏图标强化设置
+    if (process.platform === 'win32' && windowIcon && typeof windowIcon !== 'string') {
+      try {
+        // 强制设置窗口图标（确保任务栏图标正确）
+        mainWindow.setIcon(windowIcon);
+        
+        // 设置应用程序表示的任务栏按钮图标
+        if (mainWindow.setThumbnailClip) {
+          // 可选：设置任务栏缩略图
+        }
+        
+        console.log('✅ Windows窗口图标设置完成');
+      } catch (error) {
+        console.warn('⚠️  Windows窗口图标设置失败:', error.message);
+      }
+    }
 
     // 设置窗口的性能优化
     if (mainWindow.webContents) {
@@ -1268,35 +1325,6 @@ app.whenReady().then(() => {
     // 启动窗口（如果有）已完成，现在创建主窗口
     console.log('启动流程完成，创建主窗口');
     createMainWindow();
-    
-    // Windows专用：首次启动任务栏图标刷新机制
-    if (process.platform === 'win32') {
-      // 延迟一小段时间确保窗口完全创建后再刷新图标
-      setTimeout(() => {
-        try {
-          // 重新确认AppUserModelId（确保Windows系统识别）
-          app.setAppUserModelId('org.sdutacm.SDUTOJCompetitionSideClient');
-          
-          // 触发任务栏图标更新的安全方法
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            // 通过窗口状态变化触发图标刷新
-            const wasMinimized = mainWindow.isMinimized();
-            if (!wasMinimized) {
-              // 短暂最小化再恢复，强制刷新任务栏图标
-              mainWindow.minimize();
-              setTimeout(() => {
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                  mainWindow.restore();
-                  console.log('✅ Windows任务栏图标刷新完成（首次启动修复）');
-                }
-              }, 100);
-            }
-          }
-        } catch (error) {
-          console.warn('⚠️  Windows任务栏图标刷新失败:', error.message);
-        }
-      }, 500); // 500ms延迟确保窗口完全创建
-    }
   });
 }).catch(error => {
   console.error('应用启动失败:', error);
