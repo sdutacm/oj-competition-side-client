@@ -586,7 +586,7 @@ function openNewWindow(url) {
         }
         
         // 检查是否是其他特定的外部链接，用外部浏览器打开
-        const externalDomains = ['docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+        const externalDomains = ['https://github.com/sdutacm/oj-competition-side-client'];
         if (externalDomains.some(d => domain.includes(d))) {
           shell.openExternal(url);
           return;
@@ -620,7 +620,7 @@ function openNewWindow(url) {
           }
           
           // 检查是否是特定的外部链接，用外部浏览器打开
-          const externalDomains = ['docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+          const externalDomains = ['https://github.com/sdutacm/oj-competition-side-client'];
           if (externalDomains.some(d => domain.includes(d))) {
             event.preventDefault();
             shell.openExternal(url);
@@ -638,7 +638,7 @@ function openNewWindow(url) {
         const domain = require('./utils/urlHelper').getHostname(url);
         
         // 检查是否是特定的外部链接，直接用系统浏览器打开
-        const externalDomains = ['docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+        const externalDomains = ['https://github.com/sdutacm/oj-competition-side-client'];
         if (externalDomains.some(d => domain.includes(d))) {
           shell.openExternal(url);
           return { action: 'deny' };
@@ -1420,7 +1420,7 @@ function setupMainWindowInterceptors() {
         const domain = require('./utils/urlHelper').getHostname(url);
         
         // 检查是否是特定的外部链接，用外部浏览器打开
-        const externalDomains = ['docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+        const externalDomains = ['https://github.com/sdutacm/oj-competition-side-client'];
         if (externalDomains.some(d => domain.includes(d))) {
           shell.openExternal(url);
           return;
@@ -1444,7 +1444,7 @@ function setupMainWindowInterceptors() {
         
         // 检查是否是外部链接（如GitHub、文档等），直接用外部浏览器打开
         // 注意：oj.sdutacm.cn 不在此列表中，它将按照黑名单逻辑处理
-        const externalDomains = ['docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+        const externalDomains = ['https://github.com/sdutacm/oj-competition-side-client'];
         if (externalDomains.some(d => domain.includes(d))) {
           event.preventDefault();
           shell.openExternal(url);
@@ -1491,7 +1491,7 @@ function setupMainWindowInterceptors() {
         const domain = require('./utils/urlHelper').getHostname(url);
         
         // 检查是否是特定的外部链接，直接用系统浏览器打开
-        const externalDomains = ['docs.microsoft.com', 'developer.mozilla.org', 'stackoverflow.com', 'google.com', 'baidu.com'];
+        const externalDomains = ['https://github.com/sdutacm/oj-competition-side-client'];
         if (externalDomains.some(d => domain.includes(d))) {
           shell.openExternal(url);
           return { action: 'deny' };
