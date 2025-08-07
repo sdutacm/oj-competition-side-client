@@ -52,7 +52,6 @@
   FileWrite $0 "应用程序功能不受图标显示问题影响$\r$\n"
   FileClose $0
 !macroend
-!macroend
 
 !macro customUnInstall
   ; 删除AppUserModelId相关注册表项 - 完整清理
