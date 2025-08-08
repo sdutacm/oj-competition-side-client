@@ -7,11 +7,8 @@ const path = require('path');
  * @returns {string}
  */
 function getCustomUserAgent(defaultUserAgent) {
-  let pkgVersion = '1.0.0';
-  try {
-    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
-    if (pkg && pkg.version) pkgVersion = pkg.version;
-  } catch {}
+  const { getAppVersion } = require('./versionHelper');
+  let pkgVersion = getAppVersion();
   return `${defaultUserAgent} SDUTOJCompetitionSideClient/${pkgVersion}`;
 }
 

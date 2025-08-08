@@ -40,8 +40,9 @@ function createNewWindow(url, options = {}, useSimpleMode = false) {
   }
 
   // 设置自定义 User-Agent
+  const { getAppVersion } = require('./versionHelper');
   const defaultUserAgent = newWin.webContents.getUserAgent();
-  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
+  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
   newWin.webContents.setUserAgent(customUserAgent);
 
   // 禁用新窗口的开发者工具相关功能
@@ -87,10 +88,11 @@ function setupNavigationForNewWindow(window, url, homeUrl) {
     });
 
     // 设置 User-Agent
-    const defaultUserAgent = toolbarView.webContents.getUserAgent();
-    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
-    toolbarView.webContents.setUserAgent(customUserAgent);
-    contentView.webContents.setUserAgent(customUserAgent);
+  const { getAppVersion } = require('./versionHelper');
+  const defaultUserAgent = toolbarView.webContents.getUserAgent();
+  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
+  toolbarView.webContents.setUserAgent(customUserAgent);
+  contentView.webContents.setUserAgent(customUserAgent);
 
     // 禁用开发者工具
     disableDevToolsForBrowserView(toolbarView);
@@ -444,8 +446,9 @@ function createSimpleNewWindow(url, options = {}) {
   }
 
   // 设置自定义 User-Agent
+  const { getAppVersion } = require('./versionHelper');
   const defaultUserAgent = newWin.webContents.getUserAgent();
-  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
+  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
   newWin.webContents.setUserAgent(customUserAgent);
 
   // 禁用开发者工具

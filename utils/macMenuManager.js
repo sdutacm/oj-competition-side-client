@@ -265,8 +265,9 @@ class MacMenuManager {
    * 显示系统关于对话框
    */
   showSystemAboutDialog() {
-    const appName = i18n.t('app.name');
-    const version = require('../package.json').version || '1.0.0';
+  const appName = i18n.t('app.name');
+  const { getAppVersion } = require('./versionHelper');
+  const version = getAppVersion();
     
     // 根据语言设置对话框标题
     const currentLanguage = i18n.getCurrentLanguage() || 'zh-CN';

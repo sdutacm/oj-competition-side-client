@@ -96,8 +96,9 @@ class ToolbarManager {
     // 设置自定义 User-Agent 并加载内容
     const webContents = this.toolbarView.webContents;
     const defaultUserAgent = webContents.getUserAgent();
-    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
-    webContents.setUserAgent(customUserAgent);
+  const { getAppVersion } = require('./versionHelper');
+  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
+  webContents.setUserAgent(customUserAgent);
 
     // 禁用工具栏视图的开发者工具相关功能
     this.disableDevToolsForToolbar();
@@ -1589,7 +1590,7 @@ class ToolbarManager {
           <p>SDUT OJ</p>
           <p>Competition Side Client</p>
         </div>
-        <p class="version">version 1.0.0</p>
+  <p class="version">version ${require('./versionHelper').getAppVersion()}</p>
       </div>
     </div>
   </body>

@@ -331,8 +331,9 @@ function openNewWindow(url) {
     
     // 设置自定义 User-Agent
     const defaultUserAgent = contentView.webContents.getUserAgent();
-    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
-    contentView.webContents.setUserAgent(customUserAgent);
+  const { getAppVersion } = require('./utils/versionHelper');
+  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
+  contentView.webContents.setUserAgent(customUserAgent);
     
     // 加载URL到内容视图
     contentView.webContents.loadURL(url);
@@ -448,7 +449,6 @@ function createMainWindow() {
     mainWindow = new BrowserWindow({
       width: 1400,
       height: 900,
-      show: false, // 不立即显示，等页面加载完成
       center: true, // 确保窗口居中
       backgroundColor: backgroundColor,
       webPreferences: {
@@ -461,18 +461,6 @@ function createMainWindow() {
         enableWebSQL: false // 禁用WebSQL
       }
     });
-    
-    // 不在主窗口加载URL，由BrowserView负责内容加载
-    // mainWindow.loadURL(APP_CONFIG.HOME_URL); // 删除此行，避免重复加载
-    
-    // 在DOM准备完成后立即注入关键CSS（这里将不会触发，因为主窗口不加载内容）
-    // mainWindow.webContents.on('dom-ready', () => {
-    //   mainWindow.webContents.insertCSS(`
-    //     * { scroll-behavior: auto !important; }
-    //     html, body, div, section, article, main, aside, nav { scroll-behavior: auto !important; }
-    //     * { -webkit-overflow-scrolling: auto !important; }
-    //   `).catch(() => {});
-    // });
     
     // 由于主窗口不加载内容，使用setTimeout延迟显示，让BrowserView先准备
     setTimeout(() => {
@@ -496,72 +484,12 @@ function createMainWindow() {
             // 快捷键已经在 ShortcutManager 中注册，无需额外的菜单管理器
             console.log('非 macOS 系统，快捷键通过 ShortcutManager 处理');
           }
-          
           console.log('核心UI组件初始化完成');
         } catch (error) {
           console.error('核心UI组件初始化失败:', error);
         }
-        
-        // 延迟注入性能优化CSS到内容视图
-        setTimeout(() => {
-          if (contentViewManager && contentViewManager.getView()) {
-            const contentView = contentViewManager.getView();
-            if (contentView && contentView.webContents) {
-              contentView.webContents.insertCSS(`
-                /* 强制禁用平滑滚动 - 使用更强的选择器 */
-                * {
-                  scroll-behavior: auto !important;
-                }
-                html {
-                  scroll-behavior: auto !important;
-                }
-                body {
-                  scroll-behavior: auto !important;
-                }
-                div, section, article, main, aside, nav, header, footer {
-                  scroll-behavior: auto !important;
-                }
-                
-                /* 禁用所有可能的平滑滚动CSS属性 */
-                * {
-                  -webkit-overflow-scrolling: auto !important;
-                  overflow-scrolling: auto !important;
-                  scroll-snap-type: none !important;
-                  scroll-padding: 0 !important;
-                  scroll-margin: 0 !important;
-                }
-                
-                /* 优化滚动性能 */
-                * {
-                  -webkit-transform: translateZ(0);
-                  -webkit-backface-visibility: hidden;
-                  -webkit-perspective: 1000;
-                }
-                
-                /* 保留原有动画和过渡效果，不强制禁用 */
-                /* 移除了 animation: none 和 transition: none 的强制设置 */
-                
-                /* 强制硬件加速特定元素 */
-                body, main, .container, .content, div[class*="container"], div[class*="scroll"], div[id*="scroll"] {
-                  -webkit-transform: translate3d(0,0,0) !important;
-                  transform: translate3d(0,0,0) !important;
-                  will-change: transform !important;
-                }
-                
-                /* 保留视觉效果，只禁用可能影响滚动性能的特定效果 */
-                /* 保留 box-shadow, text-shadow 等视觉效果 */
-                /* 只禁用可能严重影响性能的 filter 和 backdrop-filter */
-                * {
-                  backdrop-filter: none !important;
-                  -webkit-backdrop-filter: none !important;
-                }
-              `).catch(() => {});
-              console.log('性能优化CSS注入到内容视图完成（保留动画效果）');
-            }
-          }
-        }, 500); // 延迟0.5秒注入性能CSS到内容视图
       }
-    }, 100); // 100ms后显示窗口，给BrowserView准备时间
+    }, 0);
     
     // 超时显示机制
     setTimeout(() => {
@@ -690,11 +618,22 @@ function createViews() {
     console.log('创建内容视图...');
     contentViewManager.createContentView();
     console.log('内容视图创建完成');
-    
+
+    // Windows/Linux 平台：内容视图创建后再注册快捷键，确保 webContents 存在
+    if (shortcutManager && process.platform !== 'darwin') {
+      try {
+        console.log('内容视图创建后注册主窗口快捷键...');
+        shortcutManager.registerShortcuts();
+        console.log('主窗口快捷键注册完成');
+      } catch (error) {
+        console.warn('主窗口快捷键注册失败:', error);
+      }
+    }
+
     // 设置主窗口的拦截逻辑
     setupMainWindowInterceptors();
     console.log('主窗口拦截器设置完成');
-    
+
     console.log('所有视图快速创建完成');
   } catch (error) {
     console.error('创建视图失败:', error);
