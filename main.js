@@ -1,7 +1,6 @@
 const { app, BrowserWindow, BrowserView, nativeTheme, shell, nativeImage, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
-
 const ToolbarManager = require('./utils/toolbarManager');
 const ContentViewManager = require('./utils/contentViewManager');
 const ShortcutManager = require('./utils/shortcutManager');
@@ -285,7 +284,7 @@ function openNewWindow(url) {
   newWindowShortcutManager.initialUrl = url;
   newWindowShortcutManager.homeUrl = url;
   win._shortcutManager = newWindowShortcutManager;
-  
+
   // 设置新窗口导航监听器以自动更新按钮状态
   const setupNavigationListeners = (contentView, toolbarManager) => {
     if (contentView && contentView.webContents && toolbarManager) {
@@ -300,18 +299,18 @@ function openNewWindow(url) {
           console.log('新窗口按钮状态更新失败（已忽略）:', error.message);
         }
       };
-      
+
       // 监听内容视图的导航事件
       const webContents = contentView.webContents;
       webContents.on('did-navigate', updateButtonStates);
       webContents.on('did-navigate-in-page', updateButtonStates);
       webContents.on('did-finish-load', updateButtonStates);
-      
+
       // 延迟执行初始状态更新
       setTimeout(updateButtonStates, 100);
     }
   };
-  
+
   // 为新窗口创建工具栏管理器
   try {
     const newWindowToolbarManager = new ToolbarManager(win, (action) => {
@@ -320,13 +319,13 @@ function openNewWindow(url) {
       }
     }, null);
     win._toolbarManager = newWindowToolbarManager;
-    
+
     // 创建工具栏视图
     newWindowToolbarManager.createToolbarView();
   } catch (error) {
     console.warn('新窗口工具栏创建失败，但不影响核心功能:', error);
   }
-  
+
   // 为新窗口创建布局管理器和内容视图
   try {
     // 创建内容视图并添加到窗口
@@ -342,55 +341,55 @@ function openNewWindow(url) {
         enableWebSQL: false
       }
     });
-    
+
     win.addBrowserView(contentView);
     newWindowContentViewManager.contentView = contentView;
-    
+
     // 设置自定义 User-Agent
     const defaultUserAgent = contentView.webContents.getUserAgent();
     const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/1.0.0`;
     contentView.webContents.setUserAgent(customUserAgent);
-    
+
     // 加载URL到内容视图
     contentView.webContents.loadURL(url);
-    
+
     // 应用重定向拦截器到新窗口的内容视图
     applyRedirectInterceptor(contentView, win, false);
-    
+
     // 设置新窗口内容视图的导航拦截器
     contentView.webContents.setWindowOpenHandler(({ url: newUrl }) => {
       const domain = require('./utils/urlHelper').getHostname(newUrl);
-      
+
       // 检查是否是特定的外部链接，但只在关于界面中允许
       // 这里我们不检查GitHub，因为新窗口不应该是关于界面
-      
+
       // 如果是主域名，允许在当前窗口打开
       if (domain === APP_CONFIG.MAIN_DOMAIN) {
         return { action: 'allow' };
       }
-      
+
       // 如果在白名单中，在新窗口中打开
       if (isWhiteDomain(newUrl, APP_CONFIG)) {
         openNewWindow(newUrl);
         return { action: 'deny' };
       }
-      
+
       // 非白名单域名，显示拦截对话框
       showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
       return { action: 'deny' };
     });
-    
+
     // 新窗口内容视图导航拦截
     contentView.webContents.on('will-navigate', (event, newUrl) => {
       const domain = require('./utils/urlHelper').getHostname(newUrl);
-      
+
       // GitHub链接一律拦截，不允许在新窗口中打开外部浏览器
       if (domain.includes('github.com')) {
         event.preventDefault();
         showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
         return;
       }
-      
+
       // 白名单：页面内点击立即弹新窗口
       if (isWhiteDomain(newUrl, APP_CONFIG)) {
         event.preventDefault();
@@ -405,14 +404,14 @@ function openNewWindow(url) {
       }
       // 主域名和白名单允许跳转
     });
-    
+
     // 在内容视图创建后设置导航监听器
     setupNavigationListeners(contentView, win._toolbarManager);
     console.log('新窗口导航监听器设置完成');
-    
+
     const newWindowLayoutManager = new LayoutManager(win, win._toolbarManager, newWindowContentViewManager);
     win._layoutManager = newWindowLayoutManager;
-    
+
     // 设置布局
     newWindowLayoutManager.layoutViews();
     newWindowLayoutManager.setupResizeListener();
@@ -420,7 +419,7 @@ function openNewWindow(url) {
   } catch (error) {
     console.warn('新窗口布局管理器创建失败:', error);
   }
-  
+
   // 为新窗口注册快捷键
   try {
     console.log('注册新窗口快捷键...');
@@ -429,7 +428,7 @@ function openNewWindow(url) {
   } catch (error) {
     console.warn('新窗口快捷键注册失败，但不影响核心功能:', error);
   }
-  
+
   // 事件处理
   win.on('closed', () => {
     // 清理快捷键管理器
@@ -447,7 +446,7 @@ function openNewWindow(url) {
     }
     console.log('新窗口已关闭');
   });
-  
+
   return win;
 }
 
@@ -477,11 +476,6 @@ function createMainWindow() {
       }
     });
 
-    // 加载网站
-    // mainWindow.loadURL(APP_CONFIG.HOME_URL);
-
-    // 页面准备完成后显示
-
     setTimeout(() => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.show();
@@ -499,57 +493,6 @@ function createMainWindow() {
           console.error('初始化失败:', error);
         }
       }
-      // setTimeout(() => {
-      //   if (contentViewManager && contentViewManager.getView()) {
-      //     const contentView = contentViewManager.getView();
-      //     if (contentView && contentView.webContents) {
-      //       contentView.webContents.insertCSS(`
-      //           * {
-      //             scroll-behavior: auto !important;
-      //           }
-      //           html {
-      //             scroll-behavior: auto !important;
-      //           }
-      //           body {
-      //             scroll-behavior: auto !important;
-      //           }
-      //           div, section, article, main, aside, nav, header, footer {
-      //             scroll-behavior: auto !important;
-      //           }
-
-      //           * {
-      //             -webkit-overflow-scrolling: auto !important;
-      //             overflow-scrolling: auto !important;
-      //             scroll-snap-type: none !important;
-      //             scroll-padding: 0 !important;
-      //             scroll-margin: 0 !important;
-      //           }
-
-      //           /* 优化滚动性能 */
-      //           * {
-      //             -webkit-transform: translateZ(0);
-      //             -webkit-backface-visibility: hidden;
-      //             -webkit-perspective: 1000;
-      //           }
-
-      //           /* 强制硬件加速特定元素 */
-      //           body, main, .container, .content, div[class*="container"], div[class*="scroll"], div[id*="scroll"] {
-      //             -webkit-transform: translate3d(0,0,0) !important;
-      //             transform: translate3d(0,0,0) !important;
-      //             will-change: transform !important;
-      //           }
-
-      //           /* 保留视觉效果，只禁用可能影响滚动性能的特定效果 */
-      //           /* 保留 box-shadow, text-shadow 等视觉效果 */
-      //           /* 只禁用可能严重影响性能的 filter 和 backdrop-filter */
-      //           * {
-      //             backdrop-filter: none !important;
-      //             -webkit-backdrop-filter: none !important;
-      //           }
-      //         `)
-      //     }
-      //   }
-      // }, 0);
     }, 0);
 
 
@@ -561,13 +504,11 @@ function createMainWindow() {
       }
     }, 5000);
 
-    // 基本事件处理
     mainWindow.on('closed', () => {
       mainWindow = null;
     });
 
-    console.log('稳定优化主窗口创建完成');
-    return; // 提前返回，跳过所有其他初始化
+    return;
   } catch (error) {
     console.error('主窗口创建失败:', error);
     throw error;
@@ -803,7 +744,7 @@ app.on('browser-window-created', (event, win) => {
     win.setMenuBarVisibility(false);
     // 只对新弹窗清除菜单，主窗口需要保留菜单以支持快捷键
     if (win !== mainWindow) {
-      win.setMenu(null);
+      // win.setMenu(null);
     }
   } catch { }
 });
@@ -886,10 +827,8 @@ app.on('activate', () => {
     }
     // 确保窗口在前台
     mainWindow.focus();
-    console.log('主窗口已激活并聚焦');
   } else if (!mainWindow) {
     // 如果主窗口不存在，重新创建
-    console.log('主窗口不存在，正在重新创建...');
     createMainWindow();
   }
 });

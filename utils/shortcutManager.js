@@ -11,6 +11,7 @@ class ShortcutManager {
     // 统一使用 PlatformHelper 默认快捷键
     this.shortcuts = PlatformHelper.getNavigationShortcuts();
     this.keyHandlers = new Map(); // 存储按键处理器
+    this._beforeInputHandler = null; // 存储 before-input 事件处理器
   }
 
   /**
@@ -42,9 +43,18 @@ class ShortcutManager {
               this.initialUrl = url;
               console.log('智能更新 initialUrl:', url);
             }
-          } catch {}
+          } catch { }
         });
+        this._beforeInputHandler = (event, input) => {
+          const shortcut = this.getShortcutKey(input);
+          if (this.keyHandlers.has(shortcut)) {
+            event.preventDefault();
+            this.keyHandlers.get(shortcut)();
+          }
+        };
+        webContents.on('before-input-event', this._beforeInputHandler);
       }
+
       if (!isMac) {
         // 仅非 Mac 下自定义菜单和快捷键
         const shortcuts = this.shortcuts;
@@ -165,7 +175,7 @@ class ShortcutManager {
   unregisterAll() {
     this.keyHandlers.clear();
     if (this.mainWindow && this._beforeInputHandler) {
-      const webContents = this.mainWindow.webContents;
+      const webContents = this.contentViewManager.getWebContents();
       if (webContents) {
         webContents.removeListener('before-input-event', this._beforeInputHandler);
       }
@@ -173,10 +183,11 @@ class ShortcutManager {
     }
   }
 
+
   /**
    * 处理按键输入
    */
-  handleKeyInput() {}
+  handleKeyInput() { }
 
   /**
    * 检查是否是开发者工具快捷键
@@ -202,7 +213,7 @@ class ShortcutManager {
       back: 'Cmd+Left',
       forward: 'Cmd+Right',
       refresh: 'Cmd+R',
-      home: 'Cmd+Shift+H',
+      home: 'Cmd+Control+Shift+H',
       info: 'Cmd+I'
     };
     const shortcuts = isMac ? macShortcuts : this.shortcuts;
@@ -275,32 +286,26 @@ class ShortcutManager {
    */
   getShortcutKey(input) {
     const keys = [];
-
-    // 修饰键
-    if (input.control) keys.push('Ctrl');
-    if (input.alt) keys.push('Alt');
-    if (input.shift) keys.push('Shift');
     if (input.meta) keys.push('Cmd');
+    if (input.control) keys.push('Control');
+    if (input.shift) keys.push('Shift');
+    if (input.alt) keys.push('Alt');
 
-    // 主键 - 处理特殊键
-    if (input.key) {
+    if (input.code && input.code.startsWith('Key')) {
+      keys.push(input.code.replace('Key', '').toUpperCase());
+    } else if (input.key) {
       let key = input.key;
-
-      // 处理方向键
       if (key === 'ArrowLeft') key = 'Left';
       else if (key === 'ArrowRight') key = 'Right';
       else if (key === 'ArrowUp') key = 'Up';
       else if (key === 'ArrowDown') key = 'Down';
-      // 处理功能键
       else if (key.startsWith('F') && key.length > 1) key = key.toUpperCase();
-      // 处理字母键
-      else if (key.length === 1) key = key.toUpperCase();
-
       keys.push(key);
     }
-
     return keys.join('+');
   }
+
+
 
   /**
    * 处理工具栏动作
