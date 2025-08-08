@@ -10,7 +10,6 @@ class ToolbarManager {
     this.toolbarView = null;
     this.onActionCallback = onActionCallback;
     this.startupManager = startupManager;
-    // 保留兼容性，如果没有传入 startupManager，则保留原有逻辑
     this.startupStateFile = path.join(app.getPath('userData'), 'startup-state.json');
   }
 
