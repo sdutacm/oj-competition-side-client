@@ -97,8 +97,9 @@ class ShortcutManager {
         }
       } else {
         // macOS: 如果是主窗口，跳过菜单创建（由 MacMenuManager 负责）
-        // 只有新窗口才需要设置简单菜单
+        // 只有新窗口才需要设置简单菜单和快捷键
         if (!this.isMainWindow) {
+          const shortcuts = this.shortcuts;
           const template = [
             {
               label: 'SDUT OJ 竞赛客户端',
@@ -113,6 +114,36 @@ class ShortcutManager {
                 },
                 { type: 'separator' },
                 { role: 'quit' }
+              ]
+            },
+            {
+              label: '导航',
+              submenu: [
+                {
+                  label: '后退 (⌘+←)',
+                  accelerator: shortcuts.back,
+                  click: () => this.keyHandlers.get(shortcuts.back)?.()
+                },
+                {
+                  label: '前进 (⌘+→)',
+                  accelerator: shortcuts.forward,
+                  click: () => this.keyHandlers.get(shortcuts.forward)?.()
+                },
+                {
+                  label: '刷新 (⌘+R)',
+                  accelerator: shortcuts.refresh,
+                  click: () => this.keyHandlers.get(shortcuts.refresh)?.()
+                },
+                {
+                  label: '主页 (⌘+⇧+H)',
+                  accelerator: shortcuts.home,
+                  click: () => this.keyHandlers.get(shortcuts.home)?.()
+                },
+                {
+                  label: '系统信息 (⌘+I)',
+                  accelerator: shortcuts.info,
+                  click: () => this.keyHandlers.get(shortcuts.info)?.()
+                }
               ]
             },
             {
@@ -152,16 +183,15 @@ class ShortcutManager {
           ];
           const menu = require('electron').Menu.buildFromTemplate(template);
           require('electron').Menu.setApplicationMenu(menu);
-        }
-        // 不隐藏菜单栏，保留原生体验
-        // 主动聚焦内容区，确保快捷键可用
-        try {
-          const webContents = this.contentViewManager.getWebContents();
-          if (webContents && webContents.focus) {
-            webContents.focus();
+          // 主动聚焦内容区，确保快捷键可用
+          try {
+            const webContents = this.contentViewManager.getWebContents();
+            if (webContents && webContents.focus) {
+              webContents.focus();
+            }
+          } catch (e) {
+            // 忽略聚焦异常
           }
-        } catch (e) {
-          // 忽略聚焦异常
         }
       }
     } catch (error) {
@@ -213,7 +243,7 @@ class ShortcutManager {
       back: 'Cmd+Left',
       forward: 'Cmd+Right',
       refresh: 'Cmd+R',
-      home: 'Cmd+Control+Shift+H',
+      home: 'Cmd+Shift+H',
       info: 'Cmd+I'
     };
     const shortcuts = isMac ? macShortcuts : this.shortcuts;
