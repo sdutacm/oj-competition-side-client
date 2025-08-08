@@ -478,20 +478,26 @@ class LayoutManager {
     const contentBounds = this.mainWindow.getContentBounds();
 
     // 设置工具栏位置（内容区域顶部）
-    this.toolbarManager.setBounds({
-      x: 0,
-      y: 0,
-      width: contentBounds.width,
-      height: this.toolbarHeight
-    });
+    if (this.toolbarManager) {
+      this.toolbarManager.setBounds({
+        x: 0,
+        y: 0,
+        width: contentBounds.width,
+        height: this.toolbarHeight
+      });
+    }
 
     // 设置内容视图位置（工具栏下方）
-    this.contentViewManager.setBounds({
-      x: 0,
-      y: this.toolbarHeight,
-      width: contentBounds.width,
-      height: contentBounds.height - this.toolbarHeight
-    });
+    // 对于新窗口，可能没有 contentViewManager，内容直接在主窗口的 webContents 中
+    if (this.contentViewManager) {
+      this.contentViewManager.setBounds({
+        x: 0,
+        y: this.toolbarHeight,
+        width: contentBounds.width,
+        height: contentBounds.height - this.toolbarHeight
+      });
+    }
+    // 新窗口的内容区域布局由主窗口的内容区域自动处理
   }
 
   /**

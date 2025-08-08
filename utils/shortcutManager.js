@@ -2,11 +2,12 @@ const PlatformHelper = require('./platformHelper');
 const { showInfoDialog } = require('./dialogHelper');
 
 class ShortcutManager {
-  constructor(contentViewManager, homeUrl, mainWindow = null) {
+  constructor(contentViewManager, homeUrl, mainWindow = null, isMainWindow = false) {
     this.contentViewManager = contentViewManager;
     this.homeUrl = homeUrl;
     this.initialUrl = homeUrl; // 保证为完整初始 url
     this.mainWindow = mainWindow;
+    this.isMainWindow = isMainWindow; // 记录是否为主窗口
     // 统一使用 PlatformHelper 默认快捷键
     this.shortcuts = PlatformHelper.getNavigationShortcuts();
     this.keyHandlers = new Map(); // 存储按键处理器

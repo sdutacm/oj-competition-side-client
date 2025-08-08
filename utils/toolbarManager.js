@@ -1851,7 +1851,8 @@ class ToolbarManager {
               }
             }
             
-            if (action === 'refresh' || action === 'home') {
+            // 为导航按钮添加动画效果
+            if (action === 'back' || action === 'forward' || action === 'refresh' || action === 'home') {
               btn.classList.add('animate');
               setTimeout(() => {
                 btn.classList.remove('animate');
@@ -1866,9 +1867,13 @@ class ToolbarManager {
             const forwardBtn = document.querySelector('[data-action="forward"]');
             if (backBtn) {
               backBtn.disabled = !canGoBack;
+              // 确保移除可能的动画类
+              backBtn.classList.remove('animate');
             }
             if (forwardBtn) {
               forwardBtn.disabled = !canGoForward;
+              // 确保移除可能的动画类
+              forwardBtn.classList.remove('animate');
             }
           };
 

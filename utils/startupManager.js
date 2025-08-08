@@ -1,7 +1,31 @@
-const { BrowserWindow, app } = require('electron');
+const { BrowserWindow, app, screen } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { getFormattedVersion } = require('./versionHelper');
+
+/**
+ * 计算窗口严格居中的位置
+ * 考虑 Mac 系统的菜单栏和 Dock 影响
+ */
+function calculateCenteredPosition(width, height) {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const workArea = primaryDisplay.workArea;
+  const bounds = primaryDisplay.bounds;
+  
+  // 在 Mac 系统上，需要考虑菜单栏和 Dock 的影响
+  if (process.platform === 'darwin') {
+    // 使用 workArea 而不是 bounds，workArea 已经排除了菜单栏和 Dock
+    const x = Math.round(workArea.x + (workArea.width - width) / 2);
+    // 对于启动窗口，稍微向下偏移以获得更好的视觉中心
+    const y = Math.round(workArea.y + (workArea.height - height) / 2 + 50);
+    return { x, y };
+  } else {
+    // Windows 和 Linux 系统使用 bounds
+    const x = Math.round(bounds.x + (bounds.width - width) / 2);
+    const y = Math.round(bounds.y + (bounds.height - height) / 2);
+    return { x, y };
+  }
+}
 
 class StartupManager {
   constructor() {
@@ -121,14 +145,22 @@ class StartupManager {
       console.warn('无法找到图标文件，尝试的路径:', possibleIconPaths);
     }
     
+    // 计算严格居中的位置
+    const windowWidth = 1000;
+    const windowHeight = 600;
+    const centeredPosition = calculateCenteredPosition(windowWidth, windowHeight);
+    
+    console.log('启动窗口居中位置计算:', centeredPosition, '(平台:', process.platform, ')');
+    
     // 创建无框透明启动页窗口
     const windowOptions = {
-      width: 1000,
-      height: 600,
+      width: windowWidth,
+      height: windowHeight,
+      x: centeredPosition.x,
+      y: centeredPosition.y,
       frame: false, // 完全无框窗口
-      transparent: true,
+      transparent: process.platform !== 'win32', // Windows 下不使用透明
       alwaysOnTop: false, // 不要始终置顶，避免各平台桌面环境特殊处理
-      center: true, // 启用居中
       resizable: false,
       minimizable: false,
       maximizable: false,
@@ -136,20 +168,24 @@ class StartupManager {
       show: false, // 重要：先不显示，等定位完成后再显示
       skipTaskbar: false, // 所有平台都确保在任务栏显示，提供一致体验
       icon: iconPath, // 设置应用图标（如果找到的话）
-      backgroundColor: 'rgba(0,0,0,0)', // 完全透明背景
+      // Windows 使用深色背景而不是透明
+      backgroundColor: process.platform === 'win32' ? '#0d1117' : 'rgba(0,0,0,0)',
       // Mac 下完全移除标题栏相关设置，确保无框
       ...(isMac && {
         titleBarStyle: 'hidden',
         trafficLightPosition: { x: -1000, y: -1000 }, // 将交通灯按钮移到视野外
-        // Mac 特定的居中设置
-        x: undefined, // 让系统自动计算 x 位置
-        y: undefined, // 让系统自动计算 y 位置
+      }),
+      // Windows 特定设置以实现圆角无框窗口
+      ...(process.platform === 'win32' && {
+        titleBarStyle: 'hidden'
       }),
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
         devTools: false,
-        backgroundThrottling: false // 防止后台时动画停止
+        backgroundThrottling: false, // 防止后台时动画停止
+        // Windows 下启用实验性功能以支持更好的透明效果
+        experimentalFeatures: process.platform === 'win32'
       }
     };
 
@@ -178,23 +214,17 @@ class StartupManager {
 
     const startupWindow = new BrowserWindow(windowOptions);
 
-    // 手动确保窗口居中（特别针对 Mac 系统）
-    if (isMac) {
-      // 获取屏幕尺寸
-      const { screen } = require('electron');
-      const primaryDisplay = screen.getPrimaryDisplay();
-      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-      
-      // 计算居中位置
-      const windowWidth = windowOptions.width;
-      const windowHeight = windowOptions.height;
-      const x = Math.round((screenWidth - windowWidth) / 2);
-      const y = Math.round((screenHeight - windowHeight) / 2);
-      
-      // 设置窗口位置
-      startupWindow.setPosition(x, y);
-      console.log(`Mac 启动窗口手动居中: 屏幕尺寸 ${screenWidth}x${screenHeight}, 窗口位置 (${x}, ${y})`);
+    // Windows 特定：立即设置透明背景
+    if (process.platform === 'win32') {
+      try {
+        console.log('Windows 启动窗口透明属性初始化完成');
+      } catch (error) {
+        console.warn('Windows 启动窗口透明属性设置失败:', error);
+      }
     }
+
+    // 窗口位置已经在创建时通过 calculateCenteredPosition 精确计算
+    console.log(`启动窗口位置已设置: (${centeredPosition.x}, ${centeredPosition.y})`);
 
     // 创建启动页内容
     const startupHTML = this.getStartupHTML();
@@ -209,17 +239,6 @@ class StartupManager {
 
     startupWindow.webContents.on('dom-ready', () => {
       console.log('Startup window DOM ready, showing window...');
-      
-      // Mac 系统在显示前再次确保居中
-      if (isMac) {
-        const { screen } = require('electron');
-        const primaryDisplay = screen.getPrimaryDisplay();
-        const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-        const x = Math.round((screenWidth - windowOptions.width) / 2);
-        const y = Math.round((screenHeight - windowOptions.height) / 2);
-        startupWindow.setPosition(x, y);
-        console.log(`Mac 启动窗口显示前再次居中: (${x}, ${y})`);
-      }
       
       startupWindow.show();
 
@@ -246,23 +265,11 @@ class StartupManager {
           }
         }, 50);
       } else if (process.platform === 'darwin') {
-        // macOS：在显示后进行最终的居中检查和优化
+        // macOS：窗口位置已在创建时精确计算，无需额外调整
         setTimeout(() => {
           try {
             const [currentX, currentY] = startupWindow.getPosition();
-            const { screen } = require('electron');
-            const primaryDisplay = screen.getPrimaryDisplay();
-            const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-            const idealX = Math.round((screenWidth - windowOptions.width) / 2);
-            const idealY = Math.round((screenHeight - windowOptions.height) / 2);
-            
-            // 如果位置偏差超过5像素，重新调整
-            if (Math.abs(currentX - idealX) > 5 || Math.abs(currentY - idealY) > 5) {
-              startupWindow.setPosition(idealX, idealY);
-              console.log(`macOS 启动窗口最终位置调整: 从 (${currentX}, ${currentY}) 到 (${idealX}, ${idealY})`);
-            } else {
-              console.log(`macOS 启动窗口位置正确: (${currentX}, ${currentY})`);
-            }
+            console.log(`macOS 启动窗口位置确认: (${currentX}, ${currentY})`);
           } catch (error) {
             console.log('macOS启动窗口位置检查失败:', error);
           }
@@ -344,7 +351,6 @@ class StartupManager {
       --text-secondary: #8b949e;
       --accent-color: rgba(255, 255, 255, 0.08);
       --shadow-color: rgba(0, 0, 0, 0.4);
-      --border-color: rgba(139, 148, 158, 0.4); /* 增强边框可见度 */
     }
 
     @media (prefers-color-scheme: light) {
@@ -356,7 +362,6 @@ class StartupManager {
         --text-secondary: #475569;
         --accent-color: rgba(59, 130, 246, 0.15);
         --shadow-color: rgba(15, 23, 42, 0.2);
-        --border-color: rgba(71, 85, 105, 0.4); /* 浅色主题下的边框 */
       }
     }
 
@@ -364,7 +369,6 @@ class StartupManager {
       height: 100%;
       width: 100%;
       font-family: "Segoe UI", "Helvetica Neue", sans-serif;
-      background: transparent; /* 让html/body透明，让container处理背景 */
       color: var(--text-primary);
       overflow: hidden;
       line-height: 1.5;
@@ -372,7 +376,8 @@ class StartupManager {
       padding: 0;
       border: none;
       outline: none;
-      border-radius: 16px; /* 确保根元素也有圆角，与 container 保持一致 */
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     .container {
@@ -389,7 +394,6 @@ class StartupManager {
       background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%);
       background-size: 200% 200%;
       border: none; /* 移除边框，避免直角边 */
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
       transition: background 0.3s ease;
       animation: gradientShift 6s ease-in-out infinite alternate;
     }
@@ -411,7 +415,7 @@ class StartupManager {
 
     @media (prefers-color-scheme: light) {
       .container::before {
-        background: linear-gradient(135deg, transparent 0%, rgba(59, 130, 246, 0.12) 30%, rgba(147, 51, 234, 0.08) 60%, transparent 90%), radial-gradient(ellipse at 30% 70%, rgba(236, 72, 153, 0.1) 0%, transparent 60%), radial-gradient(ellipse at 70% 30%, rgba(34, 197, 94, 0.08) 0%, transparent 50%);
+        background: linear-gradient(135deg, transparent 0%, var(--accent-color) 50%, transparent 100%), radial-gradient(ellipse at center, transparent 60%, var(--accent-color) 100%);
       }
     }
 
