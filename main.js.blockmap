@@ -502,16 +502,16 @@ function createMainWindow() {
     });
     
     // 不在主窗口加载URL，由BrowserView负责内容加载
-    mainWindow.loadURL(APP_CONFIG.HOME_URL); // 删除此行，避免重复加载
+    // mainWindow.loadURL(APP_CONFIG.HOME_URL); // 删除此行，避免重复加载
     
     // 在DOM准备完成后立即注入关键CSS（这里将不会触发，因为主窗口不加载内容）
-    mainWindow.webContents.on('dom-ready', () => {
-      mainWindow.webContents.insertCSS(`
-        * { scroll-behavior: auto !important; }
-        html, body, div, section, article, main, aside, nav { scroll-behavior: auto !important; }
-        * { -webkit-overflow-scrolling: auto !important; }
-      `).catch(() => {});
-    });
+    // mainWindow.webContents.on('dom-ready', () => {
+    //   mainWindow.webContents.insertCSS(`
+    //     * { scroll-behavior: auto !important; }
+    //     html, body, div, section, article, main, aside, nav { scroll-behavior: auto !important; }
+    //     * { -webkit-overflow-scrolling: auto !important; }
+    //   `).catch(() => {});
+    // });
     
     // 由于主窗口不加载内容，使用setTimeout延迟显示，让BrowserView先准备
     setTimeout(() => {

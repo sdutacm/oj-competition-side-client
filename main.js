@@ -200,10 +200,13 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
 function openNewWindow(url) {
   console.log('创建优化新窗口:', url);
   
+  const backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
+  
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
     show: false, // 不立即显示，等加载完成
+    backgroundColor: backgroundColor,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -299,71 +302,30 @@ function createMainWindow() {
     mainWindow.loadURL(APP_CONFIG.HOME_URL);
     
     // 在DOM准备完成后立即注入关键CSS
-    mainWindow.webContents.on('dom-ready', () => {
-      mainWindow.webContents.insertCSS(`
-        * { scroll-behavior: auto !important; }
-        html, body, div, section, article, main, aside, nav { scroll-behavior: auto !important; }
-        * { -webkit-overflow-scrolling: auto !important; }
-      `).catch(() => {});
-    });
+    // mainWindow.webContents.on('dom-ready', () => {
+    //   mainWindow.webContents.insertCSS(`
+    //     * { scroll-behavior: auto !important; }
+    //     html, body, div, section, article, main, aside, nav { scroll-behavior: auto !important; }
+    //     * { -webkit-overflow-scrolling: auto !important; }
+    //   `).catch(() => {});
+    // });
     
     // 页面准备完成后显示
     mainWindow.once('ready-to-show', () => {
       mainWindow.show();
       mainWindow.focus();
       console.log('主窗口显示完成');
-      
-      // 立即注入基础性能CSS
-      mainWindow.webContents.insertCSS(`
-        * { scroll-behavior: auto !important; }
-        html, body { scroll-behavior: auto !important; }
-      `).catch(() => {});
-      
-      // 注入性能优化CSS，解决滚动延迟和动画掉帧
-      // setTimeout(() => {
-      //   mainWindow.webContents.insertCSS(`
-      //     /* 强制禁用平滑滚动 - 使用更强的选择器 */
-      //     * {
-      //       scroll-behavior: auto !important;
-      //     }
-      //     html {
-      //       scroll-behavior: auto !important;
-      //     }
-      //     body {
-      //       scroll-behavior: auto !important;
-      //     }
-      //     div, section, article, main, aside, nav, header, footer {
-      //       scroll-behavior: auto !important;
-      //     }
-          
-      //     /* 禁用所有可能的平滑滚动CSS属性 */
-      //     * {
-      //       -webkit-overflow-scrolling: auto !important;
-      //       overflow-scrolling: auto !important;
-      //       scroll-snap-type: none !important;
-      //       scroll-padding: 0 !important;
-      //       scroll-margin: 0 !important;
-      //     }
-          
-      //     /* 优化滚动性能 */
-      //     * {
-      //       -webkit-transform: translateZ(0);
-      //       -webkit-backface-visibility: hidden;
-      //       -webkit-perspective: 1000;
-      //     }
-          
-      //     /* 禁用可能影响性能的效果 */
-      //     * {
-      //       -webkit-box-shadow: none !important;
-      //       box-shadow: none !important;
-      //       text-shadow: none !important;
-      //       -webkit-filter: none !important;
-      //       filter: none !important;
-      //       backdrop-filter: none !important;
-      //       -webkit-backdrop-filter: none !important;
-      //     }
-      //   `).catch(() => {});
-      // }, 1000); // 延迟1秒注入，确保页面基本加载完成
+      try {
+        initializeManagers();
+        createViews();
+        setupLayout();
+
+        if(process.platform === 'darwin') {
+          macMenuManager = new MacMenuManager(mainWindow);
+        }
+      }catch(error) {
+        console.error('初始化失败:', error);
+      }
     });
     
     // 超时显示机制
@@ -393,20 +355,13 @@ app.whenReady().then(() => {
     console.log('macOS 系统 - 初始化 i18n');
     console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
     console.log('App ready - 测试翻译:', i18n.t('app.name'));
-  } else {
-    console.log('非 macOS 系统 - 跳过 i18n 初始化');
   }
 
-  // 临时绕过 StartupManager 以测试性能问题
-  console.log('启动流程完成，直接创建主窗口（绕过启动窗口）');
-  createMainWindow();
-
-  // 原始代码（已注释用于测试）
-  // startupManager = new StartupManager();
-  // startupManager.handleAppStartup(() => {
-  //   console.log('启动流程完成，创建主窗口');
-  //   createMainWindow();
-  // });
+  startupManager = new StartupManager();
+  startupManager.handleAppStartup(() => {
+    console.log('启动窗口完成，创建主窗口');
+    createMainWindow();
+  });
 }).catch(error => {
   console.error('应用启动失败:', error);
 });
