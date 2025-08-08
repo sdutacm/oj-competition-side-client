@@ -205,7 +205,7 @@ function openNewWindow(url) {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
-    show: false, // 不立即显示，等加载完成
+    // show: false, // 不立即显示，等加载完成
     backgroundColor: backgroundColor,
     webPreferences: {
       nodeIntegration: false,
@@ -285,7 +285,6 @@ function createMainWindow() {
     mainWindow = new BrowserWindow({
       width: 1200,
       height: 800,
-      show: false, // 不立即显示，等页面加载完成
       backgroundColor: backgroundColor,
       webPreferences: {
         nodeIntegration: false,
@@ -299,26 +298,79 @@ function createMainWindow() {
     });
 
     // 加载网站
-    mainWindow.loadURL(APP_CONFIG.HOME_URL);
+    // mainWindow.loadURL(APP_CONFIG.HOME_URL);
 
     // 页面准备完成后显示
 
-    mainWindow.once('ready-to-show', () => {
-      mainWindow.show();
-      mainWindow.focus();
-      console.log('主窗口显示完成');
-      try {
-        initializeManagers();
-        createViews();
-        setupLayout();
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+        console.log('主窗口显示完成');
+        try {
+          initializeManagers();
+          createViews();
+          setupLayout();
 
-        if (process.platform === 'darwin') {
-          macMenuManager = new MacMenuManager(mainWindow);
+          if (process.platform === 'darwin') {
+            macMenuManager = new MacMenuManager(mainWindow);
+          }
+        } catch (error) {
+          console.error('初始化失败:', error);
         }
-      } catch (error) {
-        console.error('初始化失败:', error);
       }
-    });
+      // setTimeout(() => {
+      //   if (contentViewManager && contentViewManager.getView()) {
+      //     const contentView = contentViewManager.getView();
+      //     if (contentView && contentView.webContents) {
+      //       contentView.webContents.insertCSS(`
+      //           * {
+      //             scroll-behavior: auto !important;
+      //           }
+      //           html {
+      //             scroll-behavior: auto !important;
+      //           }
+      //           body {
+      //             scroll-behavior: auto !important;
+      //           }
+      //           div, section, article, main, aside, nav, header, footer {
+      //             scroll-behavior: auto !important;
+      //           }
+                
+      //           * {
+      //             -webkit-overflow-scrolling: auto !important;
+      //             overflow-scrolling: auto !important;
+      //             scroll-snap-type: none !important;
+      //             scroll-padding: 0 !important;
+      //             scroll-margin: 0 !important;
+      //           }
+                
+      //           /* 优化滚动性能 */
+      //           * {
+      //             -webkit-transform: translateZ(0);
+      //             -webkit-backface-visibility: hidden;
+      //             -webkit-perspective: 1000;
+      //           }
+                
+      //           /* 强制硬件加速特定元素 */
+      //           body, main, .container, .content, div[class*="container"], div[class*="scroll"], div[id*="scroll"] {
+      //             -webkit-transform: translate3d(0,0,0) !important;
+      //             transform: translate3d(0,0,0) !important;
+      //             will-change: transform !important;
+      //           }
+                
+      //           /* 保留视觉效果，只禁用可能影响滚动性能的特定效果 */
+      //           /* 保留 box-shadow, text-shadow 等视觉效果 */
+      //           /* 只禁用可能严重影响性能的 filter 和 backdrop-filter */
+      //           * {
+      //             backdrop-filter: none !important;
+      //             -webkit-backdrop-filter: none !important;
+      //           }
+      //         `)
+      //     }
+      //   }
+      // }, 0);
+    }, 0);
 
 
     // 超时显示机制
@@ -391,7 +443,7 @@ function initializeManagers() {
     // 设置主窗口的初始 url
     shortcutManager.initialUrl = APP_CONFIG.HOME_URL;
     shortcutManager.homeUrl = APP_CONFIG.HOME_URL;
-    
+
     // 暂时简化工具栏管理器创建
     try {
       toolbarManager = new ToolbarManager(mainWindow, (action) => {

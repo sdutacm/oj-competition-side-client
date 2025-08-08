@@ -16,6 +16,56 @@ class ContentViewManager {
   }
 
   /**
+ * 注入自定义优化CSS，支持首次创建和页面刷新后注入
+ * @param {BrowserView} contentView
+ */
+  injectPerfCSS(contentView) {
+    if (!contentView || !contentView.webContents) return;
+    contentView.webContents.insertCSS(`
+                * {
+                  scroll-behavior: auto !important;
+                }
+                html {
+                  scroll-behavior: auto !important;
+                }
+                body {
+                  scroll-behavior: auto !important;
+                }
+                div, section, article, main, aside, nav, header, footer {
+                  scroll-behavior: auto !important;
+                }
+                
+                * {
+                  -webkit-overflow-scrolling: auto !important;
+                  overflow-scrolling: auto !important;
+                  scroll-snap-type: none !important;
+                  scroll-padding: 0 !important;
+                  scroll-margin: 0 !important;
+                }
+                
+                /* 优化滚动性能 */
+                * {
+                  -webkit-transform: translateZ(0);
+                  -webkit-backface-visibility: hidden;
+                  -webkit-perspective: 1000;
+                }
+                
+                /* 强制硬件加速特定元素 */
+                body, main, .container, .content, div[class*="container"], div[class*="scroll"], div[id*="scroll"] {
+                  -webkit-transform: translate3d(0,0,0) !important;
+                  transform: translate3d(0,0,0) !important;
+                  will-change: transform !important;
+                }
+
+                /* 只禁用可能严重影响性能的 filter 和 backdrop-filter */
+                * {
+                  backdrop-filter: none !important;
+                  -webkit-backdrop-filter: none !important;
+                }
+              `);
+  }
+
+  /**
    * 设置工具栏管理器
    */
   setToolbarManager(toolbarManager) {
@@ -55,6 +105,14 @@ class ContentViewManager {
       contentView.webContents.loadURL(url);
     }
 
+    // 注入CSS - 页面首次加载时注入
+    this.injectPerfCSS(contentView);
+
+    // 页面每次完成加载时都注入CSS，防止刷新时丢失
+    contentView.webContents.on('did-finish-load', () => {
+      this.injectPerfCSS(contentView);
+    });
+
     // 禁用内容视图的开发者工具相关功能和快捷键，仅拦截开发者工具快捷键
     this.disableDevToolsForContentView(contentView);
 
@@ -89,11 +147,11 @@ class ContentViewManager {
       try {
         targetWindow.show();
         targetWindow.focus();
-      } catch {}
+      } catch { }
     }
     if (contentView.webContents && contentView.webContents.focus) {
       setTimeout(() => {
-        try { contentView.webContents.focus(); } catch {}
+        try { contentView.webContents.focus(); } catch { }
       }, 0);
     }
 
@@ -101,7 +159,7 @@ class ContentViewManager {
     try {
       targetWindow.setMenuBarVisibility(false);
       targetWindow.setMenu(null);
-    } catch {}
+    } catch { }
 
     return contentView;
   }
@@ -114,12 +172,12 @@ class ContentViewManager {
     const webContents = contentView?.webContents;
     if (webContents) {
       webContents.removeAllListeners('before-input-event');
-      
+
       // 性能优化：缓存DOM检查结果
       let lastInputCheckTime = 0;
       let lastInputCheckResult = false;
       const INPUT_CHECK_CACHE_TIME = 100; // 缓存100ms
-      
+
       webContents.on('before-input-event', (event, input) => {
         // 拦截开发者工具快捷键
         if (
@@ -139,16 +197,16 @@ class ContentViewManager {
           let win = null;
           try {
             win = webContents.hostWebContents ? webContents.hostWebContents : require('electron').remote ? require('electron').remote.getCurrentWindow() : null;
-          } catch {}
+          } catch { }
           const isWinAlive = !win || (win && !win.isDestroyed());
-          
+
           // 性能优化：使用缓存的DOM检查函数
           const checkIsInputFocused = () => {
             const now = Date.now();
             if (now - lastInputCheckTime < INPUT_CHECK_CACHE_TIME) {
               return Promise.resolve(lastInputCheckResult);
             }
-            
+
             return webContents.executeJavaScript(`(() => {
               const el = document.activeElement;
               if (!el) return false;
@@ -162,7 +220,7 @@ class ContentViewManager {
               return result;
             }).catch(() => false);
           };
-          
+
           // 后退 Cmd+Left/Cmd+ArrowLeft
           if (
             input.meta && !input.shift && !input.alt && !input.control &&
@@ -201,10 +259,10 @@ class ContentViewManager {
               let initialUrl = this.config.HOME_URL;
               try {
                 // 通过 webContents 获取窗口引用
-                const win = webContents.hostWebContents ? 
-                  require('electron').BrowserWindow.fromWebContents(webContents.hostWebContents) : 
+                const win = webContents.hostWebContents ?
+                  require('electron').BrowserWindow.fromWebContents(webContents.hostWebContents) :
                   require('electron').BrowserWindow.getFocusedWindow();
-                
+
                 if (win && win._shortcutManager && win._shortcutManager.initialUrl) {
                   initialUrl = win._shortcutManager.initialUrl;
                   console.log('ContentViewManager 使用 ShortcutManager.initialUrl:', initialUrl);
@@ -212,7 +270,7 @@ class ContentViewManager {
               } catch (e) {
                 console.log('获取 initialUrl 失败:', e);
               }
-              
+
               webContents.loadURL(initialUrl);
               event.preventDefault();
             }
