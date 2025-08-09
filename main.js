@@ -18,10 +18,25 @@ let layoutManager = null;
 let macMenuManager = null;
 let startupManager = null;
 
-// Windows 系统性能优化 - 尽早禁用硬件加速
-if (process.platform === 'win32') {
-  console.log('Windows 系统 - 尽早禁用硬件加速');
-  app.disableHardwareAcceleration();
+// 退出确认状态
+let isQuittingConfirmed = false;
+
+// 窗口管理 - 追踪所有创建的窗口
+let allWindows = [];
+
+// 关闭所有子窗口的辅助函数
+function closeAllChildWindows() {
+  console.log(`准备关闭 ${allWindows.length} 个子窗口`);
+  allWindows.forEach(win => {
+    try {
+      if (win && !win.isDestroyed()) {
+        win.destroy();
+      }
+    } catch (error) {
+      console.warn('关闭子窗口失败:', error);
+    }
+  });
+  allWindows = [];
 }
 
 // 应用配置
@@ -217,6 +232,17 @@ function openNewWindow(url) {
       spellcheck: false,
       webgl: false,
       enableWebSQL: false
+    }
+  });
+
+  // 将新窗口添加到追踪列表
+  allWindows.push(win);
+  
+  // 监听新窗口关闭事件，从追踪列表中移除
+  win.on('closed', () => {
+    const index = allWindows.indexOf(win);
+    if (index !== -1) {
+      allWindows.splice(index, 1);
     }
   });
 
@@ -499,7 +525,57 @@ function createMainWindow() {
       }
     }, 5000);
 
+    mainWindow.on('close', (event) => {
+      // 如果正在重启过程中，直接允许关闭，不显示确认对话框
+      if (isRestarting) {
+        console.log('重启过程中，跳过关闭确认对话框');
+        return; // 允许默认关闭行为
+      }
+      
+      // 如果已经确认过退出，也直接允许关闭
+      if (isQuittingConfirmed) {
+        console.log('已确认退出，跳过关闭确认对话框');
+        return; // 允许默认关闭行为
+      }
+      
+      // 阻止默认关闭行为
+      event.preventDefault();
+      
+      // 显示关闭确认对话框
+      const { dialog } = require('electron');
+      const options = {
+        type: 'question',
+        title: '确认关闭',
+        message: '确定要关闭应用程序吗？',
+        detail: '关闭后所有窗口都将被关闭，当前的浏览状态将不会保存。',
+        buttons: ['取消', '确认关闭'],
+        defaultId: 0, // 默认选中"取消"
+        cancelId: 0,  // ESC键对应"取消"
+        noLink: true
+      };
+
+      dialog.showMessageBox(mainWindow, options).then((result) => {
+        if (result.response === 1) { // 用户点击了"确认关闭"
+          // 设置退出确认标志，避免 before-quit 事件重复确认
+          isQuittingConfirmed = true;
+          
+          // 先关闭所有子窗口
+          closeAllChildWindows();
+          
+          // 最后关闭主窗口
+          mainWindow.destroy();
+        }
+        // 如果用户点击了"取消"，什么都不做，窗口保持打开
+      }).catch((error) => {
+        console.error('显示关闭确认对话框失败:', error);
+        // 出错时也不关闭窗口，保持安全
+      });
+    });
+
     mainWindow.on('closed', () => {
+      // 清理所有子窗口
+      closeAllChildWindows();
+      
       mainWindow = null;
     });
   } catch (error) {
@@ -827,23 +903,84 @@ let isRestarting = false; // 标记是否正在重启
 
 // 导出重启状态设置函数
 global.setRestartingState = (state) => {
+  console.log(`设置重启状态: ${isRestarting} -> ${state}`);
   isRestarting = state;
+  // 重启时重置退出确认标志
+  if (state) {
+    isQuittingConfirmed = false;
+    // 重启时清理所有子窗口
+    closeAllChildWindows();
+  }
 };
 
 app.on('reopen-main-window', () => {
+  console.log('收到重新打开主窗口事件');
   isRestarting = true; // 设置重启标记
   // 立即重新创建主窗口，无需延迟
   if (!mainWindow) {
     try {
       // 重新创建主窗口
       createMainWindow();
+      console.log('重启完成，清除重启标记');
       isRestarting = false; // 重启完成，清除标记
+      isQuittingConfirmed = false; // 重置退出确认标志
     } catch (error) {
       console.error('重置后主窗口创建失败:', error);
+      console.log('重启失败，清除重启标记');
       isRestarting = false; // 发生错误也要清除标记
+      isQuittingConfirmed = false; // 重置退出确认标志
     }
   } else {
+    console.log('主窗口已存在，清除重启标记');
     isRestarting = false; // 主窗口已存在，清除标记
+    isQuittingConfirmed = false; // 重置退出确认标志
+  }
+});
+
+app.on('before-quit', (event) => {
+  // 如果是通过主窗口关闭确认对话框触发的退出，不需要再次确认
+  if (isQuittingConfirmed) {
+    return;
+  }
+  
+  // 如果正在重启，也不需要确认
+  if (isRestarting) {
+    return;
+  }
+  
+  // 阻止默认退出行为，显示确认对话框
+  event.preventDefault();
+  
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    // 如果主窗口存在，通过主窗口的 close 事件来处理
+    // 这样可以复用主窗口的确认逻辑
+    mainWindow.close();
+  } else {
+    // 如果主窗口不存在，直接显示确认对话框
+    const { dialog } = require('electron');
+    const options = {
+      type: 'question',
+      title: '确认退出',
+      message: '确定要退出应用程序吗？',
+      detail: '退出后所有窗口都将被关闭。',
+      buttons: ['取消', '确认退出'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true
+    };
+
+    dialog.showMessageBox(null, options).then((result) => {
+      if (result.response === 1) {
+        isQuittingConfirmed = true;
+        
+        // 先关闭所有子窗口
+        closeAllChildWindows();
+        
+        app.quit();
+      }
+    }).catch((error) => {
+      console.error('显示退出确认对话框失败:', error);
+    });
   }
 });
 

@@ -22,19 +22,7 @@ class ContentViewManager {
   injectPerfCSS(contentView) {
     if (!contentView || !contentView.webContents) return;
     contentView.webContents.insertCSS(`
-                * {
-                  scroll-behavior: auto !important;
-                }
-                html {
-                  scroll-behavior: auto !important;
-                }
-                body {
-                  scroll-behavior: auto !important;
-                }
-                div, section, article, main, aside, nav, header, footer {
-                  scroll-behavior: auto !important;
-                }
-                
+                /* 优化滚动性能，但保留网页原有的动画和过渡效果 */
                 * {
                   -webkit-overflow-scrolling: auto !important;
                   overflow-scrolling: auto !important;
@@ -43,27 +31,18 @@ class ContentViewManager {
                   scroll-margin: 0 !important;
                 }
                 
-                /* 确保所有固定定位元素正常工作 - 覆盖所有可能的干扰 */
-                *[style*="position:fixed"], *[style*="position: fixed"] {
-                  position: fixed !important;
-                  -webkit-transform: none !important;
-                  transform: none !important;
-                  will-change: auto !important;
-                  -webkit-backface-visibility: visible !important;
-                  backface-visibility: visible !important;
-                }
-                
-                /* 通过计算样式检查的固定定位元素 */
-                nav, header, .navbar, .header, .top-bar, .fixed-top, .sticky-top {
-                  -webkit-transform: none !important;
-                  transform: none !important;
-                  will-change: auto !important;
-                }
-                
-                /* 强制 ant-layout-header 使用工具栏背景色 */
+                /* 确保所有固定定位元素正常工作 - 仅针对真正的固定定位问题 */
                 .ant-layout-header {
+                  /* 只修复已知有问题的 ant-layout-header */
                   background-color: #fcfcfc !important;
                   background: #fcfcfc !important;
+                }
+                
+                /* 仅在 ant-layout-header 确实有固定定位问题时才修复 */
+                .ant-layout-header[style*="position:fixed"], 
+                .ant-layout-header[style*="position: fixed"] {
+                  position: fixed !important;
+                  /* 只在必要时修复 transform，不影响其他动画 */
                 }
                 
                 /* 暗色模式下的背景色 */
@@ -74,7 +53,7 @@ class ContentViewManager {
                   }
                 }
 
-                /* 只禁用可能严重影响性能的 filter 和 backdrop-filter */
+                /* 只禁用可能严重影响性能的 filter 和 backdrop-filter，保留其他动画能力 */
                 * {
                   backdrop-filter: none !important;
                   -webkit-backdrop-filter: none !important;
