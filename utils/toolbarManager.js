@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { app } = require('electron');
 const PlatformHelper = require('./platformHelper');
-
+const { calculateCenteredPosition } = require('./screenCenterPosition')
 class ToolbarManager {
   constructor(mainWindow, onActionCallback, startupManager = null) {
     this.mainWindow = mainWindow;
@@ -1223,14 +1223,21 @@ class ToolbarManager {
       }
     };
 
+    const windowDimensions = {
+      width: 1000,
+      height: 600
+    };
+    const centeredPosition = calculateCenteredPosition(windowDimensions.width, windowDimensions.height);
+
     // 创建无框启动页窗口
     const windowOptions = {
-      width: 1000,
-      height: 600,
+      width: windowDimensions.width,
+      height: windowDimensions.height,
+      x: centeredPosition.x,
+      y: centeredPosition.y,
       frame: false, // 无框窗口
       resizable: false,
       alwaysOnTop: false, // 不要始终置顶，避免各平台桌面环境特殊处理
-      center: true,
       show: false, // 先不显示，等内容加载完成后再显示
       transparent: true, // 启用透明窗口
       backgroundColor: 'rgba(0,0,0,0)', // 设置透明背景

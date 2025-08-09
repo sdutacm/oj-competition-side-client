@@ -2,30 +2,7 @@ const { BrowserWindow, app, screen } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { getFormattedVersion } = require('./versionHelper');
-
-/**
- * 计算窗口严格居中的位置
- * 考虑 Mac 系统的菜单栏和 Dock 影响
- */
-function calculateCenteredPosition(width, height) {
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const workArea = primaryDisplay.workArea;
-  const bounds = primaryDisplay.bounds;
-  
-  // 在 Mac 系统上，需要考虑菜单栏和 Dock 的影响
-  if (process.platform === 'darwin') {
-    // 使用 workArea 而不是 bounds，workArea 已经排除了菜单栏和 Dock
-    const x = Math.round(workArea.x + (workArea.width - width) / 2);
-    // 对于启动窗口，稍微向下偏移以获得更好的视觉中心
-    const y = Math.round(workArea.y + (workArea.height - height) / 2 + 50);
-    return { x, y };
-  } else {
-    // Windows 和 Linux 系统使用 bounds
-    const x = Math.round(bounds.x + (bounds.width - width) / 2);
-    const y = Math.round(bounds.y + (bounds.height - height) / 2);
-    return { x, y };
-  }
-}
+const { calculateCenteredPosition } = require('./screenCenterPosition');
 
 class StartupManager {
   constructor() {
@@ -38,18 +15,15 @@ class StartupManager {
   shouldShowStartupWindow() {
     try {
       if (!fs.existsSync(this.startupStateFile)) {
-        // 第一次运行程序
         console.log('First time startup - will show startup window');
         return true;
       }
-      
+
       const state = JSON.parse(fs.readFileSync(this.startupStateFile, 'utf8'));
       const shouldShow = state.showStartupOnNextLaunch === true;
-      console.log('Startup state check:', shouldShow ? 'Show startup window' : 'Skip startup window');
       return shouldShow;
     } catch (error) {
       console.error('Error reading startup state:', error);
-      // 出错时默认显示启动窗口
       return true;
     }
   }
@@ -86,13 +60,13 @@ class StartupManager {
     }
   }
 
-    /**
-   * 显示启动窗口
-   * @param {Function} callback 启动窗口关闭后的回调
-   */
+  /**
+ * 显示启动窗口
+ * @param {Function} callback 启动窗口关闭后的回调
+ */
   showStartupWindow(callback) {
     console.log('Creating startup window...');
-    
+
     let callbackCalled = false;
     const safeCallback = () => {
       if (!callbackCalled) {
@@ -102,7 +76,7 @@ class StartupManager {
     };
 
     const isMac = process.platform === 'darwin';
-    
+
     // 根据平台选择图标
     const os = require('os');
     const platform = os.platform();
@@ -144,14 +118,12 @@ class StartupManager {
     if (!iconPath) {
       console.warn('无法找到图标文件，尝试的路径:', possibleIconPaths);
     }
-    
+
     // 计算严格居中的位置
-    const windowWidth = 1000;
-    const windowHeight = 600;
+    const windowWidth = 1400;
+    const windowHeight = 800;
     const centeredPosition = calculateCenteredPosition(windowWidth, windowHeight);
-    
-    console.log('启动窗口居中位置计算:', centeredPosition, '(平台:', process.platform, ')');
-    
+
     // 创建无框透明启动页窗口
     const windowOptions = {
       width: windowWidth,
@@ -165,11 +137,9 @@ class StartupManager {
       minimizable: false,
       maximizable: false,
       fullscreenable: false,
-      show: false, // 重要：先不显示，等定位完成后再显示
       skipTaskbar: false, // 所有平台都确保在任务栏显示，提供一致体验
       icon: iconPath, // 设置应用图标（如果找到的话）
-      // Windows 使用深色背景而不是透明
-      backgroundColor: process.platform === 'win32' ? '#0d1117' : 'rgba(0,0,0,0)',
+      backgroundColor: 'rgba(0, 0, 0, 0)',
       // Mac 下完全移除标题栏相关设置，确保无框
       ...(isMac && {
         titleBarStyle: 'hidden',
@@ -184,7 +154,6 @@ class StartupManager {
         contextIsolation: true,
         devTools: false,
         backgroundThrottling: false, // 防止后台时动画停止
-        // Windows 下启用实验性功能以支持更好的透明效果
         experimentalFeatures: process.platform === 'win32'
       }
     };
@@ -211,7 +180,7 @@ class StartupManager {
         skipTaskbar: false,
       });
     }
-
+    console.log('启动窗口选项:', windowOptions);
     const startupWindow = new BrowserWindow(windowOptions);
 
     // Windows 特定：立即设置透明背景
@@ -238,8 +207,6 @@ class StartupManager {
     }
 
     startupWindow.webContents.on('dom-ready', () => {
-      console.log('Startup window DOM ready, showing window...');
-      
       startupWindow.show();
 
       // 平台特定的窗口优化
@@ -252,7 +219,7 @@ class StartupManager {
           } catch (error) {
             console.log('设置启动窗口类名失败:', error);
           }
-        }, 100);
+        }, 0);
       } else if (process.platform === 'win32') {
         // Windows：确保窗口在任务栏正确显示
         setTimeout(() => {
@@ -263,7 +230,7 @@ class StartupManager {
           } catch (error) {
             console.log('设置Windows启动窗口标题失败:', error);
           }
-        }, 50);
+        }, 0);
       } else if (process.platform === 'darwin') {
         // macOS：窗口位置已在创建时精确计算，无需额外调整
         setTimeout(() => {
@@ -273,7 +240,7 @@ class StartupManager {
           } catch (error) {
             console.log('macOS启动窗口位置检查失败:', error);
           }
-        }, 100);
+        }, 0);
       }
 
       // 5秒后关闭启动窗口
@@ -307,7 +274,7 @@ class StartupManager {
    */
   handleAppStartup(onStartupComplete) {
     console.log('HandleAppStartup called');
-    
+
     if (this.shouldShowStartupWindow()) {
       console.log('Showing startup window - first time or after reset');
       this.showStartupWindow(() => {

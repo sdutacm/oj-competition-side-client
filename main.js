@@ -1,7 +1,6 @@
-const { app, BrowserWindow, BrowserView, nativeTheme, shell, nativeImage } = require('electron');
+const { app, BrowserWindow, BrowserView, nativeTheme, shell, nativeImage, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
-
 const ToolbarManager = require('./utils/toolbarManager');
 const ContentViewManager = require('./utils/contentViewManager');
 const ShortcutManager = require('./utils/shortcutManager');
@@ -13,6 +12,7 @@ const { getAppVersion } = require('./utils/versionHelper');
 const i18n = require('./utils/i18nManager');
 const MacMenuManager = require('./utils/macMenuManager');
 const StartupManager = require('./utils/startupManager');
+const { calculateCenteredPosition } = require('./utils/screenCenterPosition');
 
 let mainWindow = null;
 let toolbarManager = null;
@@ -50,10 +50,12 @@ const APP_CONFIG = {
   ])
 };
 
+
+
 // 检查是否是可以打开外部链接的特殊页面（如关于页面等）
 function isExternalLinkAllowedContext(webContents) {
   if (!webContents) return false;
-  
+
   // 检查是否是关于窗口（从 dialogHelper 导入检查函数）
   try {
     const dialogHelper = require('./utils/dialogHelper');
@@ -66,7 +68,7 @@ function isExternalLinkAllowedContext(webContents) {
   } catch (error) {
     console.warn('检查关于窗口失败:', error);
   }
-  
+
   return false;
 }
 
@@ -76,7 +78,7 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
     let lastRedirectBlockedUrl = '';
     let lastRedirectBlockedTime = 0;
     let currentPageUrl = ''; // 记录当前页面URL
-    
+
     // 监听页面导航开始，记录URL
     view.webContents.on('did-start-navigation', (event, url) => {
       if (!url.startsWith('data:') && url !== 'about:blank') {
@@ -84,7 +86,7 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
         console.log('页面导航开始，记录URL:', currentPageUrl);
       }
     });
-    
+
     // 监听页面导航完成，更新URL记录
     view.webContents.on('did-navigate', (event, url) => {
       if (!url.startsWith('data:') && url !== 'about:blank') {
@@ -92,7 +94,7 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
         console.log('页面导航完成，更新URL:', currentPageUrl);
       }
     });
-    
+
     view.webContents.on('will-navigate', (event, url) => {
       const domain = require('./utils/urlHelper').getHostname(url);
       if (isMainWindow && isWhiteDomain(url, APP_CONFIG)) {
@@ -112,17 +114,17 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
       }
       event.preventDefault();
     });
-    
+
     view.webContents.on('will-redirect', (event, url) => {
       console.log('检测到重定向，从', currentPageUrl, '到', url);
-      
+
       const redirectDomain = require('./utils/urlHelper').getHostname(url);
       if (redirectDomain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
         event.preventDefault();
         if (win && !win.isDestroyed()) {
           showBlockedDialogWithDebounce(win, redirectDomain, '非法重定向拦截，已自动回退主页', 'redirect');
         }
-        
+
         // 自动回退主页（仅新窗口需要，主窗口不回退）
         if (!isMainWindow) {
           // 使用 setTimeout 异步执行，避免在事件处理期间同步加载URL
@@ -155,12 +157,12 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
                   console.log('重定向拦截，当前URL无效，使用系统主域名:', targetUrl);
                 }
               }
-              
+
               // 检查窗口是否仍然有效
               if (view && view.webContents && !view.webContents.isDestroyed()) {
                 view.webContents.loadURL(targetUrl);
               }
-              
+
               // 重要：更新窗口的初始URL为新的安全顶级域名，避免"返回主页"时再次触发重定向
               if (win._shortcutManager && targetUrl && targetUrl.startsWith('https://')) {
                 win._shortcutManager.initialUrl = targetUrl;
@@ -176,12 +178,12 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
               } else {
                 fallbackUrl = `https://${APP_CONFIG.MAIN_DOMAIN}/`;
               }
-              
+
               // 检查窗口是否仍然有效
               if (view && view.webContents && !view.webContents.isDestroyed()) {
                 view.webContents.loadURL(fallbackUrl);
               }
-              
+
               // 重要：更新窗口的初始URL为新的安全域名
               if (win._shortcutManager && fallbackUrl && fallbackUrl.startsWith('https://')) {
                 win._shortcutManager.initialUrl = fallbackUrl;
@@ -198,16 +200,17 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
 
 // 优化的新窗口创建函数
 function openNewWindow(url) {
-  console.log('创建快速新窗口:', url);
-  
+  const windowWidth = 1400;
+  const windowHeight = 900;
+  const centerPosition = calculateCenteredPosition(windowWidth, windowHeight);
   // 根据系统主题设置新窗口背景色
   const backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
-  
+
   const win = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    show: false, // 先不显示
-    center: true, // 确保新窗口也居中
+    width: windowWidth,
+    height: windowHeight,
+    x: centerPosition.x,
+    y: centerPosition.y,
     backgroundColor: backgroundColor, // 设置与主题匹配的背景色
     webPreferences: {
       nodeIntegration: false,
@@ -220,22 +223,17 @@ function openNewWindow(url) {
       enableWebSQL: false
     }
   });
-  
-  console.log('新窗口背景色设置为:', backgroundColor, '(暗色主题:', nativeTheme.shouldUseDarkColors, ')');
-  
-  // 立即显示窗口，不等待任何加载事件
+
   setTimeout(() => {
     if (win && !win.isDestroyed()) {
       win.show();
       console.log('新窗口立即显示（50ms后）');
     }
-  }, 50);
-  
-  win.loadURL('data:text/html,<html><body style="margin:0;padding:0;background:#ffffff;"></body></html>'); // 空页面，内容由BrowserView处理
-  
+  }, 0);
+
   // 为新窗口创建简单的内容视图管理器模拟
   const newWindowContentViewManager = {
-    contentView: null, // 稍后会设置
+    contentView: null,
     getWebContents: () => newWindowContentViewManager.contentView?.webContents || win.webContents,
     updateNavigationState: () => {
       // 新窗口的导航状态更新
@@ -251,7 +249,6 @@ function openNewWindow(url) {
       }
     },
     setBounds: (bounds) => {
-      // 设置内容视图位置
       if (newWindowContentViewManager.contentView) {
         newWindowContentViewManager.contentView.setBounds(bounds);
       }
@@ -260,13 +257,13 @@ function openNewWindow(url) {
       return newWindowContentViewManager.contentView;
     }
   };
-  
+
   // 为新窗口创建快捷键管理器
   const newWindowShortcutManager = new ShortcutManager(newWindowContentViewManager, url, win, false);
   newWindowShortcutManager.initialUrl = url;
   newWindowShortcutManager.homeUrl = url;
   win._shortcutManager = newWindowShortcutManager;
-  
+
   // 设置新窗口导航监听器以自动更新按钮状态
   const setupNavigationListeners = (contentView, toolbarManager) => {
     if (contentView && contentView.webContents && toolbarManager) {
@@ -281,18 +278,18 @@ function openNewWindow(url) {
           console.log('新窗口按钮状态更新失败（已忽略）:', error.message);
         }
       };
-      
+
       // 监听内容视图的导航事件
       const webContents = contentView.webContents;
       webContents.on('did-navigate', updateButtonStates);
       webContents.on('did-navigate-in-page', updateButtonStates);
       webContents.on('did-finish-load', updateButtonStates);
-      
+
       // 延迟执行初始状态更新
       setTimeout(updateButtonStates, 100);
     }
   };
-  
+
   // 为新窗口创建工具栏管理器
   try {
     const newWindowToolbarManager = new ToolbarManager(win, (action) => {
@@ -302,14 +299,14 @@ function openNewWindow(url) {
     }, null);
     win._toolbarManager = newWindowToolbarManager;
     console.log('新窗口工具栏管理器创建完成');
-    
+
     // 创建工具栏视图
     newWindowToolbarManager.createToolbarView();
     console.log('新窗口工具栏视图创建完成');
   } catch (error) {
     console.warn('新窗口工具栏创建失败，但不影响核心功能:', error);
   }
-  
+
   // 为新窗口创建布局管理器和内容视图
   try {
     // 创建内容视图并添加到窗口
@@ -325,56 +322,56 @@ function openNewWindow(url) {
         enableWebSQL: false
       }
     });
-    
+
     win.addBrowserView(contentView);
     newWindowContentViewManager.contentView = contentView;
-    
+
     // 设置自定义 User-Agent
     const defaultUserAgent = contentView.webContents.getUserAgent();
-  const { getAppVersion } = require('./utils/versionHelper');
-  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
-  contentView.webContents.setUserAgent(customUserAgent);
-    
+    const { getAppVersion } = require('./utils/versionHelper');
+    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
+    contentView.webContents.setUserAgent(customUserAgent);
+
     // 加载URL到内容视图
     contentView.webContents.loadURL(url);
-    
+
     // 应用重定向拦截器到新窗口的内容视图
     applyRedirectInterceptor(contentView, win, false);
-    
+
     // 设置新窗口内容视图的导航拦截器
     contentView.webContents.setWindowOpenHandler(({ url: newUrl }) => {
       const domain = require('./utils/urlHelper').getHostname(newUrl);
-      
+
       // 检查是否是特定的外部链接，但只在关于界面中允许
       // 这里我们不检查GitHub，因为新窗口不应该是关于界面
-      
+
       // 如果是主域名，允许在当前窗口打开
       if (domain === APP_CONFIG.MAIN_DOMAIN) {
         return { action: 'allow' };
       }
-      
+
       // 如果在白名单中，在新窗口中打开
       if (isWhiteDomain(newUrl, APP_CONFIG)) {
         openNewWindow(newUrl);
         return { action: 'deny' };
       }
-      
+
       // 非白名单域名，显示拦截对话框
       showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
       return { action: 'deny' };
     });
-    
+
     // 新窗口内容视图导航拦截
     contentView.webContents.on('will-navigate', (event, newUrl) => {
       const domain = require('./utils/urlHelper').getHostname(newUrl);
-      
+
       // GitHub链接一律拦截，不允许在新窗口中打开外部浏览器
       if (domain.includes('github.com')) {
         event.preventDefault();
         showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
         return;
       }
-      
+
       // 白名单：页面内点击立即弹新窗口
       if (isWhiteDomain(newUrl, APP_CONFIG)) {
         event.preventDefault();
@@ -389,14 +386,14 @@ function openNewWindow(url) {
       }
       // 主域名和白名单允许跳转
     });
-    
+
     // 在内容视图创建后设置导航监听器
     setupNavigationListeners(contentView, win._toolbarManager);
     console.log('新窗口导航监听器设置完成');
-    
+
     const newWindowLayoutManager = new LayoutManager(win, win._toolbarManager, newWindowContentViewManager);
     win._layoutManager = newWindowLayoutManager;
-    
+
     // 设置布局
     newWindowLayoutManager.layoutViews();
     newWindowLayoutManager.setupResizeListener();
@@ -404,7 +401,7 @@ function openNewWindow(url) {
   } catch (error) {
     console.warn('新窗口布局管理器创建失败:', error);
   }
-  
+
   // 为新窗口注册快捷键
   try {
     console.log('注册新窗口快捷键...');
@@ -413,7 +410,7 @@ function openNewWindow(url) {
   } catch (error) {
     console.warn('新窗口快捷键注册失败，但不影响核心功能:', error);
   }
-  
+
   // 事件处理
   win.on('closed', () => {
     // 清理快捷键管理器
@@ -431,7 +428,7 @@ function openNewWindow(url) {
     }
     console.log('新窗口已关闭');
   });
-  
+
   return win;
 }
 
@@ -440,16 +437,17 @@ function openNewWindow(url) {
  */
 function createMainWindow() {
   try {
-    // 稳定但优化的窗口配置
-    console.log('创建稳定优化主窗口...');
-    
-    // 根据系统主题设置背景色
+    const windowWidth = 1400;
+    const windowHeight = 900;
+    const centerPosition = calculateCenteredPosition(windowWidth, windowHeight);
+
     const backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
-    
+
     mainWindow = new BrowserWindow({
-      width: 1400,
-      height: 900,
-      center: true, // 确保窗口居中
+      width: windowWidth,
+      height: windowHeight,
+      x: centerPosition.x,
+      y: centerPosition.y,
       backgroundColor: backgroundColor,
       webPreferences: {
         nodeIntegration: false,
@@ -461,21 +459,21 @@ function createMainWindow() {
         enableWebSQL: false // 禁用WebSQL
       }
     });
-    
+
     // 由于主窗口不加载内容，使用setTimeout延迟显示，让BrowserView先准备
     setTimeout(() => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.show();
         mainWindow.focus();
         console.log('主窗口显示完成');
-        
+
         // 立即初始化核心业务逻辑（工具栏等UI组件）
         console.log('立即初始化核心UI组件...');
         try {
           initializeManagers();
           createViews();
           setupLayout();
-          
+
           // 只在 macOS 系统下创建菜单管理器
           if (process.platform === 'darwin') {
             macMenuManager = new MacMenuManager(mainWindow);
@@ -490,23 +488,17 @@ function createMainWindow() {
         }
       }
     }, 0);
-    
-    // 超时显示机制
+
     setTimeout(() => {
       if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
         console.log('超时强制显示窗口');
         mainWindow.show();
       }
     }, 5000);
-    
-    // 基本事件处理
+
     mainWindow.on('closed', () => {
       mainWindow = null;
     });
-    
-    console.log('稳定优化主窗口创建完成');
-    
-    // 注意：不再提前返回，而是等待业务逻辑在ready-to-show中初始化
   } catch (error) {
     console.error('主窗口创建失败:', error);
     throw error;
@@ -552,7 +544,7 @@ function disableDevTools() {
 function initializeManagers() {
   try {
     console.log('初始化管理器...');
-    
+
     // 创建内容视图管理器
     contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
     console.log('内容视图管理器创建完成');
@@ -571,7 +563,7 @@ function initializeManagers() {
           shortcutManager.handleToolbarAction(action);
         }
       }, null);
-      
+
       // 连接工具栏管理器和内容视图管理器
       contentViewManager.setToolbarManager(toolbarManager);
       console.log('工具栏管理器创建完成');
@@ -582,13 +574,13 @@ function initializeManagers() {
     // 创建布局管理器
     layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
     console.log('布局管理器创建完成');
-    
+
     // 设置主窗口的管理器引用，供菜单使用
     mainWindow._contentViewManager = contentViewManager;
     mainWindow._toolbarManager = toolbarManager;
     mainWindow._shortcutManager = shortcutManager;
     mainWindow._layoutManager = layoutManager;
-    
+
     console.log('所有管理器初始化完成');
   } catch (error) {
     console.error('初始化管理器失败:', error);
@@ -602,7 +594,7 @@ function initializeManagers() {
 function createViews() {
   try {
     console.log('快速创建视图...');
-    
+
     // 优先创建工具栏视图，确保立即显示
     if (toolbarManager) {
       try {
@@ -613,7 +605,7 @@ function createViews() {
         console.warn('工具栏视图创建失败，但不影响核心功能:', error);
       }
     }
-    
+
     // 创建内容视图
     console.log('创建内容视图...');
     contentViewManager.createContentView();
@@ -654,12 +646,12 @@ function setupMainWindowInterceptors() {
           mainWindow.setTitle(title);
         }
       });
-      
+
       // 添加外部链接处理 - 遵循白名单逻辑
       contentView.webContents.on('new-window', (event, url) => {
         event.preventDefault();
         const domain = require('./utils/urlHelper').getHostname(url);
-        
+
         // 检查是否是关于界面的GitHub链接
         if (domain.includes('github.com')) {
           // 只有在关于界面中才允许打开GitHub链接
@@ -672,23 +664,23 @@ function setupMainWindowInterceptors() {
             return;
           }
         }
-        
+
         // 如果是主域名或白名单域名，在新窗口中打开
         if (domain === APP_CONFIG.MAIN_DOMAIN || isWhiteDomain(url, APP_CONFIG)) {
           openNewWindow(url);
           return;
         }
-        
+
         // 其他域名显示拦截提示
         if (mainWindow && !mainWindow.isDestroyed()) {
           showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
         }
       });
-      
+
       // 主窗口 will-navigate 拦截
       contentView.webContents.on('will-navigate', (event, url) => {
         const domain = require('./utils/urlHelper').getHostname(url);
-        
+
         // 检查是否是GitHub链接
         if (domain.includes('github.com')) {
           event.preventDefault();
@@ -701,7 +693,7 @@ function setupMainWindowInterceptors() {
           }
           return;
         }
-        
+
         // 白名单：页面内点击立即弹新窗口
         if (isWhiteDomain(url, APP_CONFIG)) {
           event.preventDefault();
@@ -723,7 +715,7 @@ function setupMainWindowInterceptors() {
         // 其它场景一律拦截但不弹窗（如 SPA 跳转等）
         event.preventDefault();
       });
-      
+
       // 主窗口 will-redirect 拦截，非法重定向弹窗
       contentView.webContents.on('will-redirect', (event, url) => {
         const domain = require('./utils/urlHelper').getHostname(url);
@@ -736,11 +728,11 @@ function setupMainWindowInterceptors() {
         }
         // 主域名和白名单允许跳转
       });
-      
+
       // 主窗口 setWindowOpenHandler 拦截
       contentView.webContents.setWindowOpenHandler(({ url }) => {
         const domain = require('./utils/urlHelper').getHostname(url);
-        
+
         // 检查是否是GitHub链接
         if (domain.includes('github.com')) {
           // 只有在关于界面中才允许打开GitHub链接
@@ -752,18 +744,18 @@ function setupMainWindowInterceptors() {
           }
           return { action: 'deny' };
         }
-        
+
         // 如果是主域名，允许打开
         if (domain === APP_CONFIG.MAIN_DOMAIN) {
           return { action: 'allow' };
         }
-        
+
         // 如果在白名单中，在新窗口中打开
         if (isWhiteDomain(url, APP_CONFIG)) {
           openNewWindow(url);
           return { action: 'deny' };
         }
-        
+
         // 非白名单域名，显示拦截对话框
         if (mainWindow && !mainWindow.isDestroyed()) {
           showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
@@ -780,7 +772,7 @@ function setupMainWindowInterceptors() {
 function setupLayout() {
   try {
     console.log('立即设置布局...');
-    
+
     if (layoutManager) {
       // 立即执行布局计算，确保工具栏位置正确
       layoutManager.layoutViews();
@@ -789,7 +781,7 @@ function setupLayout() {
     } else {
       console.warn('布局管理器不存在，跳过布局设置');
     }
-    
+
     // 注册快捷键（非 macOS 平台需要通过 ShortcutManager 处理）
     if (shortcutManager && process.platform !== 'darwin') {
       try {
@@ -815,7 +807,7 @@ app.on('browser-window-created', (event, win) => {
     if (win !== mainWindow) {
       win.setMenu(null);
     }
-  } catch {}
+  } catch { }
 });
 
 let isRestarting = false; // 标记是否正在重启
@@ -881,13 +873,13 @@ app.on('window-all-closed', (event) => {
 // macOS 专用：处理 Dock 图标点击事件（例如 Cmd+H 隐藏后重新激活）
 app.on('activate', () => {
   console.log('应用被激活（点击 Dock 图标）');
-  
+
   // 如果正在重启，不处理激活事件
   if (isRestarting) {
     console.log('正在重启中，跳过激活事件处理');
     return;
   }
-  
+
   // 如果主窗口存在但被隐藏，则显示它
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (!mainWindow.isVisible()) {
