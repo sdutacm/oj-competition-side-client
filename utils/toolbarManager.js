@@ -1588,7 +1588,7 @@ class ToolbarManager {
     
     const updateWindow = new BrowserWindow({
       width: 420,
-      height: 350,
+      height: 380,
       frame: false,
       resizable: false,
       center: true,
@@ -1743,7 +1743,7 @@ class ToolbarManager {
 
           .update-window {
             width: 420px;
-            height: 350px;
+            height: 380px;
             background: #ffffff;
             border-radius: 12px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);

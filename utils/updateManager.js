@@ -5,7 +5,7 @@ class UpdateManager {
   constructor() {
     this.currentVersion = getAppVersion();
     this.updateCheckUrl = 'https://api.github.com/repos/sdutacm/oj-competition-side-client/releases/latest';
-    this.downloadPageUrl = 'https://github.com/sdutacm/oj-competition-side-client/releases/latest';
+    this.downloadPageUrl = 'https://oj.sdutacm.cn/oj-competition-side-client/';
     this.isChecking = false;
     this.lastCheckTime = 0;
     this.checkInterval = 4 * 60 * 60 * 1000; // 4小时检查一次
@@ -266,7 +266,7 @@ class UpdateManager {
     // 启动时立即检查一次（静默）
     setTimeout(() => {
       this.checkForUpdates(false);
-    }, 10000); // 启动10秒后检查
+    }, 1000); // 启动1秒后立即检查
 
     // 定期检查
     setInterval(() => {
