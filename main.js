@@ -1,14 +1,10 @@
-const { app, BrowserWindow, BrowserView, nativeTheme, shell, nativeImage, screen } = require('electron');
-const path = require('path');
-const fs = require('fs');
+const { app, BrowserWindow, BrowserView, nativeTheme, shell } = require('electron');
 const ToolbarManager = require('./utils/toolbarManager');
 const ContentViewManager = require('./utils/contentViewManager');
 const ShortcutManager = require('./utils/shortcutManager');
 const { LayoutManager } = require('./utils/windowHelper');
-const PlatformHelper = require('./utils/platformHelper');
 const { isWhiteDomain } = require('./utils/domainHelper');
 const { showBlockedDialog } = require('./utils/dialogHelper');
-const { getAppVersion } = require('./utils/versionHelper');
 const i18n = require('./utils/i18nManager');
 const MacMenuManager = require('./utils/macMenuManager');
 const StartupManager = require('./utils/startupManager');
