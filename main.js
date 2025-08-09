@@ -505,19 +505,29 @@ function createMainWindow() {
   }
 }
 
+
 app.whenReady().then(() => {
   // 只在 macOS 系统下初始化 i18n
   if (process.platform === 'darwin') {
     console.log('macOS 系统 - 初始化 i18n');
     console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
     console.log('App ready - 测试翻译:', i18n.t('app.name'));
+    console.log("App Data Path:", app.getPath('userData'));
   } else {
     console.log('非 macOS 系统 - 跳过 i18n 初始化');
   }
 
-  // 临时绕过 StartupManager 以测试性能问题
-  console.log('启动流程完成，创建主窗口（业务逻辑将在窗口显示后初始化）');
-  createMainWindow();
+  // 恢复 StartupManager 启动动画逻辑
+  startupManager = new StartupManager();
+  if (startupManager.shouldShowStartupWindow()) {
+    // 首次启动或需要播放动画
+    startupManager.showStartupWindow(() => {
+      createMainWindow();
+    });
+  } else {
+    // 非首次启动，直接进入主窗口
+    createMainWindow();
+  }
 }).catch(error => {
   console.error('应用启动失败:', error);
 });
