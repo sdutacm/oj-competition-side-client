@@ -289,6 +289,9 @@ class ToolbarManager {
               });
             }
           }
+        } else if (message === 'UPDATE_CHECK_REQUESTED') {
+          // 处理更新检测请求
+          this.showUpdateWindow();
         }
       });
     });
@@ -1277,7 +1280,7 @@ class ToolbarManager {
    */
   createToolbarHTML() {
     // 读取本地 SVG 文件内容，增加错误处理
-    let backSVG, forwardSVG, refreshSVG, homeSVG, infoSVG, cleanSVG;
+    let backSVG, forwardSVG, refreshSVG, homeSVG, infoSVG, cleanSVG, updateSVG;
 
     try {
       const svgPath = PlatformHelper.joinPath(__dirname, '..', 'public', 'svg');
@@ -1288,6 +1291,7 @@ class ToolbarManager {
       homeSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'home.svg'), 'utf8');
       infoSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'info.svg'), 'utf8');
       cleanSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'clean.svg'), 'utf8');
+      updateSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'update.svg'), 'utf8');
     } catch (error) {
       console.error('Error loading SVG files:', error);
 
@@ -1299,6 +1303,7 @@ class ToolbarManager {
       homeSVG = defaultSVG;
       infoSVG = defaultSVG;
       cleanSVG = defaultSVG;
+      updateSVG = defaultSVG;
     }
 
     // 获取平台快捷键信息
@@ -1439,6 +1444,9 @@ class ToolbarManager {
         </div>
         <div class="toolbar-right">
           ${(!isAboutDialog && !isMainWindow) ? `<button class="toolbar-btn" data-action="info" title="系统信息 (Alt+I)">${infoSVG}</button>` : ''}
+          <button class="toolbar-btn" data-action="update" title="检查更新">
+            ${updateSVG}
+          </button>
           <button class="toolbar-btn" data-action="clean" title="系统重置">
             <svg class="icon" viewBox="0 0 1024 1024" width="32" height="32" stroke="none" stroke-width="0" fill="var(--toolbar-icon-color)">
               <path d="M502.714987 58.258904l-126.531056-54.617723a52.797131 52.797131 0 0 0-41.873587 96.855428A447.865322 447.865322 0 0 0 392.02307 946.707184a61.535967 61.535967 0 0 0 13.83649 1.820591 52.797131 52.797131 0 0 0 13.65443-103.773672 342.453118 342.453118 0 0 1-31.678278-651.771485l-8.374718 19.480321a52.615072 52.615072 0 0 0 27.855039 69.182448 51.522718 51.522718 0 0 0 20.572675 4.369418A52.797131 52.797131 0 0 0 476.498481 254.882703L530.205907 127.441352a52.979191 52.979191 0 0 0-27.49092-69.182448zM962.960326 509.765407A448.775617 448.775617 0 0 0 643.992829 68.090094a52.797131 52.797131 0 1 0-30.403866 101.042786A342.635177 342.635177 0 0 1 674.578753 801.059925a52.615072 52.615072 0 0 0-92.30395-50.612422l-71.913335 117.246043a52.433013 52.433013 0 0 0 17.295612 72.82363l117.063985 72.823629a52.797131 52.797131 0 1 0 54.617722-89.755123l-16.021198-10.013249A448.593558 448.593558 0 0 0 962.960326 509.765407z"></path>
@@ -1473,6 +1481,17 @@ class ToolbarManager {
               } catch (error) {
                 console.error('Error clearing local storage:', error);
               }
+            }
+            
+            // 处理更新检测
+            if (action === 'update') {
+              // 添加动画效果
+              btn.classList.add('animate');
+              setTimeout(() => {
+                btn.classList.remove('animate');
+              }, 600);
+              
+              console.log('UPDATE_CHECK_REQUESTED');
             }
             
             // 为导航按钮添加动画效果
@@ -1559,6 +1578,428 @@ class ToolbarManager {
    */
   getView() {
     return this.toolbarView;
+  }
+
+  /**
+   * 显示更新检测窗口
+   */
+  showUpdateWindow() {
+    const { BrowserWindow } = require('electron');
+    
+    const updateWindow = new BrowserWindow({
+      width: 420,
+      height: 350,
+      frame: false,
+      resizable: false,
+      center: true,
+      modal: true,
+      parent: this.mainWindow,
+      show: false,
+      transparent: true,
+      backgroundColor: 'rgba(0,0,0,0)',
+      skipTaskbar: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        devTools: false
+      }
+    });
+
+    // 监听控制台消息
+    updateWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+      if (message === 'UPDATE_WINDOW_CLOSE') {
+        updateWindow.close();
+      } else if (message === 'CHECK_UPDATE_CONFIRM') {
+        // 开始更新检测
+        this.performUpdateCheck(updateWindow);
+      } else if (message.startsWith('DOWNLOAD_UPDATE:')) {
+        // 处理下载更新
+        const version = message.replace('DOWNLOAD_UPDATE:', '');
+        const { shell } = require('electron');
+        shell.openExternal(`https://github.com/sdutacm/oj-competition-side-client/releases/tag/v${version}`);
+        updateWindow.close();
+      }
+    });
+
+    // 创建更新窗口HTML
+    const updateHTML = this.createUpdateWindowHTML();
+    const updateDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(updateHTML)}`;
+
+    updateWindow.loadURL(updateDataURL);
+
+    updateWindow.webContents.once('dom-ready', () => {
+      setTimeout(() => {
+        updateWindow.show();
+        updateWindow.focus();
+      }, 100);
+    });
+  }
+
+  /**
+   * 执行更新检测
+   */
+  async performUpdateCheck(updateWindow) {
+    try {
+      // 显示loading状态
+      updateWindow.webContents.executeJavaScript(`
+        document.getElementById('updateContent').innerHTML = \`
+          <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>正在检查更新...</p>
+          </div>
+        \`;
+      `);
+
+      // 使用全局的更新管理器检测更新
+      if (global.updateManager) {
+        const result = await global.updateManager.checkForUpdatesQuiet();
+        
+        if (result.error) {
+          throw new Error(result.error);
+        }
+        
+        if (result.hasUpdate) {
+          // 显示有更新信息
+          updateWindow.webContents.executeJavaScript(`
+            document.getElementById('updateContent').innerHTML = \`
+              <div class="result-container">
+                <div class="result-icon update">🎉</div>
+                <h3>发现新版本</h3>
+                <p>当前版本: ${result.currentVersion}<br>最新版本: ${result.latestVersion}</p>
+                <div class="update-buttons">
+                  <button class="update-btn secondary" onclick="console.log('UPDATE_WINDOW_CLOSE')">稍后</button>
+                  <button class="update-btn primary" onclick="console.log('DOWNLOAD_UPDATE:${result.latestVersion}')">立即下载</button>
+                </div>
+              </div>
+            \`;
+          `);
+        } else if (result.skipped) {
+          // 显示跳过版本信息
+          updateWindow.webContents.executeJavaScript(`
+            document.getElementById('updateContent').innerHTML = \`
+              <div class="result-container">
+                <div class="result-icon info">ℹ️</div>
+                <h3>版本已跳过</h3>
+                <p>当前版本: ${result.currentVersion}<br>最新版本: ${result.latestVersion}<br><br>您之前选择跳过此版本</p>
+                <button class="update-btn" onclick="console.log('UPDATE_WINDOW_CLOSE')">确定</button>
+              </div>
+            \`;
+          `);
+        } else {
+          // 显示无更新信息
+          updateWindow.webContents.executeJavaScript(`
+            document.getElementById('updateContent').innerHTML = \`
+              <div class="result-container">
+                <div class="result-icon success">✓</div>
+                <h3>已是最新版本</h3>
+                <p>当前版本: ${result.currentVersion}</p>
+                <button class="update-btn" onclick="console.log('UPDATE_WINDOW_CLOSE')">确定</button>
+              </div>
+            \`;
+          `);
+        }
+      } else {
+        throw new Error('更新管理器未初始化');
+      }
+    } catch (error) {
+      console.error('更新检测失败:', error);
+      
+      // 显示错误信息
+      updateWindow.webContents.executeJavaScript(`
+        document.getElementById('updateContent').innerHTML = \`
+          <div class="result-container">
+            <div class="result-icon error">✗</div>
+            <h3>检查更新失败</h3>
+            <p>${error.message}</p>
+            <button class="update-btn" onclick="console.log('UPDATE_WINDOW_CLOSE')">确定</button>
+          </div>
+        \`;
+      `);
+    }
+  }
+
+  /**
+   * 创建更新窗口HTML
+   */
+  createUpdateWindowHTML() {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: rgba(0, 0, 0, 0);
+            color: #333;
+            overflow: hidden;
+          }
+
+          .update-window {
+            width: 420px;
+            height: 350px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+          }
+
+          .window-header {
+            padding: 20px 20px 0 20px;
+            text-align: center;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 15px;
+          }
+
+          .window-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 5px;
+          }
+
+          .window-subtitle {
+            font-size: 14px;
+            color: #6b7280;
+          }
+
+          .update-content {
+            flex: 1;
+            padding: 20px 20px 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .initial-content {
+            text-align: center;
+          }
+
+          .update-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+          }
+
+          .update-icon svg {
+            width: 32px;
+            height: 32px;
+            stroke: white;
+            stroke-width: 2;
+          }
+
+          .update-description {
+            font-size: 14px;
+            color: #6b7280;
+            line-height: 1.5;
+            margin-bottom: 30px;
+            text-align: center;
+          }
+
+          .update-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 5px;
+          }
+
+          .update-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+
+          .update-btn.primary {
+            background: #3b82f6;
+            color: white;
+          }
+
+          .update-btn.primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+          }
+
+          .update-btn.secondary {
+            background: #f3f4f6;
+            color: #6b7280;
+          }
+
+          .update-btn.secondary:hover {
+            background: #e5e7eb;
+          }
+
+          /* Loading 样式 */
+          .loading-container {
+            text-align: center;
+            padding: 10px 0;
+          }
+
+          .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 25px;
+          }
+
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+
+          .loading-container p {
+            font-size: 14px;
+            color: #6b7280;
+          }
+
+          /* 结果样式 */
+          .result-container {
+            text-align: center;
+            padding: 5px 0;
+          }
+
+          .result-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 32px;
+            font-weight: bold;
+          }
+
+          .result-icon.success {
+            background: #10b981;
+            color: white;
+          }
+
+          .result-icon.error {
+            background: #ef4444;
+            color: white;
+          }
+
+          .result-icon.update {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+          }
+
+          .result-icon.info {
+            background: #f59e0b;
+            color: white;
+          }
+
+          .result-container h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #1f2937;
+          }
+
+          .result-container p {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 25px;
+            line-height: 1.4;
+          }
+
+          /* 暗色主题 */
+          @media (prefers-color-scheme: dark) {
+            .update-window {
+              background: #1f2937;
+              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            }
+
+            .window-header {
+              border-bottom-color: #374151;
+            }
+
+            .window-title {
+              color: #f9fafb;
+            }
+
+            .window-subtitle {
+              color: #9ca3af;
+            }
+
+            .update-description {
+              color: #9ca3af;
+            }
+
+            .update-btn.secondary {
+              background: #374151;
+              color: #d1d5db;
+            }
+
+            .update-btn.secondary:hover {
+              background: #4b5563;
+            }
+
+            .loading-container p {
+              color: #9ca3af;
+            }
+
+            .result-container h3 {
+              color: #f9fafb;
+            }
+
+            .result-container p {
+              color: #9ca3af;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="update-window">
+          <div class="window-header">
+            <div class="window-title">检查更新</div>
+            <div class="window-subtitle">Check for Updates</div>
+          </div>
+          <div class="update-content" id="updateContent">
+            <div class="initial-content">
+              <div class="update-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.12 0 4.07.74 5.61 1.98L17 6"/>
+                  <path d="m17 6 3-3v6h-6"/>
+                  <path d="M12 8v4l2 2"/>
+                </svg>
+              </div>
+              <div class="update-description">
+                检查是否有新版本可用，确保您使用的是最新功能和安全修复。
+              </div>
+              <div class="update-buttons">
+                <button class="update-btn secondary" onclick="console.log('UPDATE_WINDOW_CLOSE')">
+                  取消
+                </button>
+                <button class="update-btn primary" onclick="console.log('CHECK_UPDATE_CONFIRM')">
+                  检查更新
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
   }
 }
 

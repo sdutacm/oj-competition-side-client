@@ -8,6 +8,7 @@ const { showBlockedDialog } = require('./utils/dialogHelper');
 const i18n = require('./utils/i18nManager');
 const MacMenuManager = require('./utils/macMenuManager');
 const StartupManager = require('./utils/startupManager');
+const UpdateManager = require('./utils/updateManager');
 const { calculateCenteredPosition } = require('./utils/screenCenterPosition');
 
 let mainWindow = null;
@@ -17,6 +18,7 @@ let shortcutManager = null;
 let layoutManager = null;
 let macMenuManager = null;
 let startupManager = null;
+let updateManager = null;
 
 // 退出确认状态
 let isQuittingConfirmed = false;
@@ -598,14 +600,32 @@ app.whenReady().then(() => {
 
   // 恢复 StartupManager 启动动画逻辑
   startupManager = new StartupManager();
+  
+  // 初始化更新管理器
+  updateManager = new UpdateManager();
+  global.updateManager = updateManager; // 设置为全局变量供其他模块使用
+  console.log('更新管理器初始化完成');
+  
   if (startupManager.shouldShowStartupWindow()) {
     // 首次启动或需要播放动画
     startupManager.showStartupWindow(() => {
       createMainWindow();
+      // 在主窗口创建完成后启动更新检查
+      setTimeout(() => {
+        if (updateManager) {
+          updateManager.startPeriodicCheck();
+        }
+      }, 30000); // 30秒后开始更新检查，让应用先稳定运行
     });
   } else {
     // 非首次启动，直接进入主窗口
     createMainWindow();
+    // 在主窗口创建完成后启动更新检查
+    setTimeout(() => {
+      if (updateManager) {
+        updateManager.startPeriodicCheck();
+      }
+    }, 5000); // 5秒后开始更新检查
   }
 }).catch(error => {
   console.error('应用启动失败:', error);
