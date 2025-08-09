@@ -43,18 +43,35 @@ class ContentViewManager {
                   scroll-margin: 0 !important;
                 }
                 
-                /* 优化滚动性能 */
-                * {
-                  -webkit-transform: translateZ(0);
-                  -webkit-backface-visibility: hidden;
-                  -webkit-perspective: 1000;
+                /* 确保所有固定定位元素正常工作 - 覆盖所有可能的干扰 */
+                *[style*="position:fixed"], *[style*="position: fixed"] {
+                  position: fixed !important;
+                  -webkit-transform: none !important;
+                  transform: none !important;
+                  will-change: auto !important;
+                  -webkit-backface-visibility: visible !important;
+                  backface-visibility: visible !important;
                 }
                 
-                /* 强制硬件加速特定元素 */
-                body, main, .container, .content, div[class*="container"], div[class*="scroll"], div[id*="scroll"] {
-                  -webkit-transform: translate3d(0,0,0) !important;
-                  transform: translate3d(0,0,0) !important;
-                  will-change: transform !important;
+                /* 通过计算样式检查的固定定位元素 */
+                nav, header, .navbar, .header, .top-bar, .fixed-top, .sticky-top {
+                  -webkit-transform: none !important;
+                  transform: none !important;
+                  will-change: auto !important;
+                }
+                
+                /* 强制 ant-layout-header 使用工具栏背景色 */
+                .ant-layout-header {
+                  background-color: #fcfcfc !important;
+                  background: #fcfcfc !important;
+                }
+                
+                /* 暗色模式下的背景色 */
+                @media (prefers-color-scheme: dark) {
+                  .ant-layout-header {
+                    background-color: #1f1f1f !important;
+                    background: #1f1f1f !important;
+                  }
                 }
 
                 /* 只禁用可能严重影响性能的 filter 和 backdrop-filter */

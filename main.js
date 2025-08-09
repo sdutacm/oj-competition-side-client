@@ -331,6 +331,13 @@ function openNewWindow(url) {
     // 加载URL到内容视图
     contentView.webContents.loadURL(url);
 
+    // 新窗口标题同步 - 跟随网页标题
+    contentView.webContents.on('page-title-updated', (event, title) => {
+      if (win && !win.isDestroyed()) {
+        win.setTitle(title);
+      }
+    });
+
     // 应用重定向拦截器到新窗口的内容视图
     applyRedirectInterceptor(contentView, win, false);
 
