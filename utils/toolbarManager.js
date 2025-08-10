@@ -21,7 +21,7 @@ class ToolbarManager {
         // 第一次运行程序
         return true;
       }
-      
+
       const state = JSON.parse(fs.readFileSync(this.startupStateFile, 'utf8'));
       return state.showStartupOnNextLaunch === true;
     } catch (error) {
@@ -95,9 +95,9 @@ class ToolbarManager {
     // 设置自定义 User-Agent 并加载内容
     const webContents = this.toolbarView.webContents;
     const defaultUserAgent = webContents.getUserAgent();
-  const { getAppVersion } = require('./versionHelper');
-  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
-  webContents.setUserAgent(customUserAgent);
+    const { getAppVersion } = require('./versionHelper');
+    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
+    webContents.setUserAgent(customUserAgent);
 
     // 禁用工具栏视图的开发者工具相关功能
     this.disableDevToolsForToolbar();
@@ -238,7 +238,7 @@ class ToolbarManager {
                 if (this.startupManager) {
                   // 使用传入的 startupManager 实例
                   this.startupManager.markShowStartupOnNextLaunch();
-                  
+
                   // 所有平台统一处理：先显示启动窗口，再关闭其他窗口，确保应用程序连续性
                   // 先创建并显示启动窗口
                   const startupWin = this.startupManager.showStartupWindow(() => {
@@ -247,7 +247,7 @@ class ToolbarManager {
                       app.emit('reopen-main-window');
                     }
                   });
-                  
+
                   // 等待启动窗口显示后再关闭其他窗口
                   startupWin.once('show', () => {
                     // 延迟关闭，确保启动窗口已完全显示，避免闪烁
@@ -263,7 +263,7 @@ class ToolbarManager {
                 } else {
                   // 兼容性逻辑：如果没有传入 startupManager，使用本地方法
                   this.markShowStartupOnNextLaunch();
-                  
+
                   // 所有平台统一处理
                   // 先创建并显示启动窗口
                   const startupWin = this.showStartupWindow(() => {
@@ -272,7 +272,7 @@ class ToolbarManager {
                       app.emit('reopen-main-window');
                     }
                   });
-                  
+
                   // 等待启动窗口显示后再关闭其他窗口
                   startupWin.once('show', () => {
                     // 延迟关闭，确保启动窗口已完全显示，避免闪烁
@@ -1590,7 +1590,7 @@ class ToolbarManager {
    */
   showUpdateWindow() {
     const { BrowserWindow } = require('electron');
-    
+
     const updateWindow = new BrowserWindow({
       width: 420,
       height: 380,
@@ -1659,11 +1659,11 @@ class ToolbarManager {
       // 使用全局的更新管理器检测更新
       if (global.updateManager) {
         const result = await global.updateManager.checkForUpdatesQuiet();
-        
+
         if (result.error) {
           throw new Error(result.error);
         }
-        
+
         if (result.hasUpdate) {
           // 显示有更新信息
           updateWindow.webContents.executeJavaScript(`
@@ -1709,7 +1709,7 @@ class ToolbarManager {
       }
     } catch (error) {
       console.error('更新检测失败:', error);
-      
+
       // 显示错误信息
       updateWindow.webContents.executeJavaScript(`
         document.getElementById('updateContent').innerHTML = \`
@@ -1985,11 +1985,7 @@ class ToolbarManager {
           <div class="update-content" id="updateContent">
             <div class="initial-content">
               <div class="update-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.12 0 4.07.74 5.61 1.98L17 6"/>
-                  <path d="m17 6 3-3v6h-6"/>
-                  <path d="M12 8v4l2 2"/>
-                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 -960 960 960"  fill="#fff"><path d="M480-120q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-480q0-75 28.5-140.5t77-114q48.5-48.5 114-77T480-840q82 0 155.5 35T760-706v-94h80v240H600v-80h110q-41-56-101-88t-129-32q-117 0-198.5 81.5T200-480q0 117 81.5 198.5T480-200q105 0 183.5-68T756-440h82q-15 137-117.5 228.5T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z"/></svg>
               </div>
               <div class="update-description">
                 检查是否有新版本可用，确保您使用的是最新功能和安全修复。
