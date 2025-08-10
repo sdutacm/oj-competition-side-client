@@ -1,4 +1,4 @@
-const { BrowserView } = require('electron');
+const { BrowserView, nativeTheme } = require('electron');
 const { getHostname } = require('./urlHelper');
 const { showBlockedDialog } = require('./dialogHelper');
 const { checkDomainAllowed } = require('./domainHelper');
@@ -100,13 +100,28 @@ class ContentViewManager {
 
     // 只允许加载白名单主域名
     const hostname = getHostname(url);
-    if (!checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).allowed) {
-      console.log('[拦截] 首次加载，弹窗提示', hostname);
-      showBlockedDialog(targetWindow, hostname, checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).reason, 'default');
-      // 不跳转首页，内容区停留在原页面
-    } else {
-      contentView.webContents.loadURL(url);
-    }
+    // 先加载一个与主题匹配的本地占位页，避免远程页面首次绘制前的白屏闪烁
+    const isDark = nativeTheme.shouldUseDarkColors;
+    const placeholderBG = isDark ? '#1f1f1f' : '#ffffff';
+    const placeholderFG = isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)';
+    const placeholderHTML = encodeURIComponent(`<!DOCTYPE html><html><head><meta charset='utf-8'><style>html,body{margin:0;padding:0;height:100%;width:100%;background:${placeholderBG};color:${placeholderFG};font:14px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased;}</style></head><body><div style="letter-spacing:.5px;">正在加载…</div></body></html>`);
+    contentView.webContents.loadURL(`data:text/html;charset=utf-8,${placeholderHTML}`);
+
+    // 验证域名后很快切入真实页面（下一事件循环），占位几乎无感但可避免白闪
+    setTimeout(() => {
+      try {
+        if (!checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).allowed) {
+          console.log('[拦截] 首次加载，弹窗提示', hostname);
+          showBlockedDialog(targetWindow, hostname, checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).reason, 'default');
+          return; // 不加载非法域名
+        }
+        if (contentView && contentView.webContents && !contentView.webContents.isDestroyed()) {
+          contentView.webContents.loadURL(url);
+        }
+      } catch (e) {
+        console.warn('占位后加载真实页面失败:', e.message);
+      }
+    }, 5);
 
     // 注入CSS - 页面首次加载时注入
     this.injectPerfCSS(contentView);

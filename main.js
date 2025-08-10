@@ -225,6 +225,7 @@ function openNewWindow(url) {
     x: centerPosition.x,
     y: centerPosition.y,
     backgroundColor: backgroundColor, // 设置与主题匹配的背景色
+    show: true, // 直接显示，避免感知延迟
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -248,12 +249,7 @@ function openNewWindow(url) {
     }
   });
 
-  setTimeout(() => {
-    if (win && !win.isDestroyed()) {
-      win.show();
-      console.log('新窗口立即显示（50ms后）');
-    }
-  }, 0);
+  // 立即显示无需再额外 setTimeout
 
   // 为新窗口创建简单的内容视图管理器模拟
   const newWindowContentViewManager = {
@@ -480,6 +476,7 @@ function createMainWindow() {
       x: centerPosition.x,
       y: centerPosition.y,
       backgroundColor: backgroundColor,
+      show: true, // 立即显示
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -490,42 +487,27 @@ function createMainWindow() {
         enableWebSQL: false // 禁用WebSQL
       }
     });
+    // 直接初始化核心 UI，使用 setImmediate 让首帧尽快绘制，减少白屏时间
+    setImmediate(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      mainWindow.focus();
+      console.log('主窗口显示完成 (即时)');
+      console.log('立即初始化核心UI组件...');
+      try {
+        initializeManagers();
+        createViews();
+        setupLayout();
 
-    // 由于主窗口不加载内容，使用setTimeout延迟显示，让BrowserView先准备
-    setTimeout(() => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.show();
-        mainWindow.focus();
-        console.log('主窗口显示完成');
-
-        // 立即初始化核心业务逻辑（工具栏等UI组件）
-        console.log('立即初始化核心UI组件...');
-        try {
-          initializeManagers();
-          createViews();
-          setupLayout();
-
-          // 只在 macOS 系统下创建菜单管理器
-          if (process.platform === 'darwin') {
-            macMenuManager = new MacMenuManager(mainWindow);
-          } else {
-            // Windows 和 Linux 平台通过 ShortcutManager 处理快捷键
-            // 快捷键已经在 ShortcutManager 中注册，无需额外的菜单管理器
-            console.log('非 macOS 系统，快捷键通过 ShortcutManager 处理');
-          }
-          console.log('核心UI组件初始化完成');
-        } catch (error) {
-          console.error('核心UI组件初始化失败:', error);
+        if (process.platform === 'darwin') {
+          macMenuManager = new MacMenuManager(mainWindow);
+        } else {
+          console.log('非 macOS 系统，快捷键通过 ShortcutManager 处理');
         }
+        console.log('核心UI组件初始化完成');
+      } catch (error) {
+        console.error('核心UI组件初始化失败:', error);
       }
-    }, 0);
-
-    setTimeout(() => {
-      if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
-        console.log('超时强制显示窗口');
-        mainWindow.show();
-      }
-    }, 5000);
+    });
 
     mainWindow.on('close', (event) => {
       // 如果正在重启过程中，直接允许关闭，不显示确认对话框
