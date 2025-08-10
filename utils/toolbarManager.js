@@ -18,7 +18,6 @@ class ToolbarManager {
   shouldShowStartupWindow() {
     try {
       if (!fs.existsSync(this.startupStateFile)) {
-        // 第一次运行程序
         return true;
       }
 
@@ -26,7 +25,6 @@ class ToolbarManager {
       return state.showStartupOnNextLaunch === true;
     } catch (error) {
       console.error('Error reading startup state:', error);
-      // 出错时默认显示启动窗口
       return true;
     }
   }
@@ -584,10 +582,11 @@ class ToolbarManager {
       width: 100%;
       font-family: "Segoe UI", "Helvetica Neue", sans-serif;
       background: transparent; /* 确保透明背景，避免闪烁 */
-      border-radius: 16px;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-      outline: gray 3px solid;
+  border-radius: 16px; /* 仅内部内容圆角，外部完全透明 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* Windows 下去掉 outline，防止透明窗口外出现矩形背景 */
+  outline: none !important;
       margin: 0;
       padding: 0;
       box-shadow: none; /* 移除任何阴影 */
@@ -1590,19 +1589,31 @@ class ToolbarManager {
    */
   showUpdateWindow() {
     const { BrowserWindow } = require('electron');
-
+    
+    // 获取当前窗口作为父窗口
+    const currentWindow = BrowserWindow.getFocusedWindow() || this.mainWindow;
+    
+    // 检测平台以应用不同的窗口设置
+    const isMac = process.platform === 'darwin';
+    
     const updateWindow = new BrowserWindow({
       width: 420,
       height: 380,
-      frame: false,
+      frame: false, // 完全无框
       resizable: false,
       center: true,
-      modal: true,
-      parent: this.mainWindow,
-      show: false,
-      transparent: true,
-      backgroundColor: 'rgba(0,0,0,0)',
-      skipTaskbar: true,
+      modal: true, // 设为模态，阻止父窗口交互，自动在父窗口之上
+      parent: currentWindow,
+      show: false, // 重要：先不显示，等内容完全加载后再显示
+      transparent: true, // 所有平台都启用透明
+      backgroundColor: 'rgba(0,0,0,0)', // 所有平台都使用完全透明背景
+      skipTaskbar: false, // 允许在任务栏显示
+      focusable: true,
+      level: 'modal-panel', // 设置窗口层级为模态面板层级
+      titleBarStyle: isMac ? 'hidden' : undefined, // Mac使用hidden而不是customButtonsOnHover
+      trafficLightPosition: undefined, // 移除交通灯位置设置，避免闪烁
+      hasShadow: !isMac, // Mac上禁用阴影，其他系统启用
+      thickFrame: false, // 禁用厚边框
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -1633,11 +1644,27 @@ class ToolbarManager {
 
     updateWindow.loadURL(updateDataURL);
 
+    // 监听对话框DOM准备就绪
     updateWindow.webContents.once('dom-ready', () => {
+      // 确保CSS完全加载后再显示窗口，避免闪烁
       setTimeout(() => {
+        // 确保所有平台窗口完全透明且无边框
+        updateWindow.setVisibleOnAllWorkspaces(false); // 不在所有工作区显示
+        // 强制设置窗口完全透明背景
+        updateWindow.setBackgroundColor('rgba(0,0,0,0)');
+        // Mac系统额外处理
+        if (isMac) {
+          // 移除窗口阴影和边框
+          try {
+            updateWindow.setHasShadow(false);
+          } catch (e) {
+            // 静默处理可能的API错误
+          }
+        }
+
         updateWindow.show();
         updateWindow.focus();
-      }, 100);
+      }, 100); // 延迟100ms确保CSS完全应用
     });
   }
 
@@ -1728,88 +1755,253 @@ class ToolbarManager {
    * 创建更新窗口HTML
    */
   createUpdateWindowHTML() {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>检查更新</title>
+  <style>
+    /* 预加载样式，确保窗口显示前就有正确的透明背景 */
+    html, body {
+      background: transparent !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      outline: none !important;
+      overflow: hidden !important;
+      box-shadow: none !important;
+    }
+    
+    /* 防止body和html出现白色边框，但允许对话框内容有边框 */
+    html, body {
+      border-color: transparent !important;
+      outline-color: transparent !important;
+    }
+  </style>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
 
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: rgba(0, 0, 0, 0);
-            color: #333;
-            overflow: hidden;
-          }
+    html, body {
+      height: 100%;
+      width: 100%;
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+      background: transparent;
+  border-radius: 16px; /* 圆角容器 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* 去除会破坏透明圆角效果的灰色外轮廓 */
+  outline: none !important;
+      margin: 0;
+      padding: 0;
+      box-shadow: none;
+    }
 
-          .update-window {
-            width: 420px;
-            height: 380px;
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-          }
+    /* Mac系统特殊处理 */
+    @supports (-webkit-backdrop-filter: blur(10px)) {
+      html, body {
+        background: transparent;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+      }
+    }
 
-          .window-header {
-            padding: 20px 20px 0 20px;
-            text-align: center;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 15px;
-          }
+    html::-webkit-scrollbar, 
+    body::-webkit-scrollbar {
+      display: none;
+    }
 
-          .window-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 5px;
-          }
+module.exports = ToolbarManager;
+    }
 
-          .window-subtitle {
-            font-size: 14px;
-            color: #6b7280;
-          }
+    .result-icon.update {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: white;
+    }
 
-          .update-content {
-            flex: 1;
-            padding: 20px 20px 30px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-          }
+    .result-icon.info {
+      background: #f59e0b;
+      color: white;
+    }
 
-          .initial-content {
-            text-align: center;
-          }
+    .result-container h3 {
+      font-size: 16px;
+      margin-bottom: 10px;
+      color: #1f2937;
+    }
 
-          .update-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-          }
+    .result-container p {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 25px;
+      line-height: 1.4;
+    }
 
-          .update-icon svg {
-            width: 32px;
-            height: 32px;
-            stroke: white;
-            stroke-width: 2;
-          }
+    /* 暗色主题 */
+    @media (prefers-color-scheme: dark) {
+      .update-window {
+        background: #1f2937;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      }
 
-          .update-description {
-            font-size: 14px;
+      .window-header {
+        border-bottom-color: #374151;
+      }
+
+      .window-title {
+        color: #f9fafb;
+      }
+
+      .window-subtitle {
+        color: #9ca3af;
+      }
+
+      .update-description {
+        color: #9ca3af;
+      }
+
+      .update-btn.secondary {
+        background: #374151;
+        color: #d1d5db;
+      }
+
+      .update-btn.secondary:hover {
+        background: #4b5563;
+      }
+
+      .loading-container p {
+        color: #9ca3af;
+      }
+
+      .result-container h3 {
+        color: #f9fafb;
+      }
+
+      .result-container p {
+        color: #9ca3af;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="update-window">
+    <div class="window-header">
+      <div>
+        <div class="window-title">检查更新</div>
+        <div class="window-subtitle">Check for Updates</div>
+      </div>
+    </div>
+    <div class="update-content" id="updateContent">
+      <div class="initial-content">
+        <div class="update-icon">
+          <svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 -960 960 960"  fill="#fff"><path d="M480-120q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-480q0-75 28.5-140.5t77-114q48.5-48.5 114-77T480-840q82 0 155.5 35T760-706v-94h80v240H600v-80h110q-41-56-101-88t-129-32q-117 0-198.5 81.5T200-480q0 117 81.5 198.5T480-200q105 0 183.5-68T756-440h82q-15 137-117.5 228.5T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z"/></svg>
+        </div>
+        <div class="update-description">
+          检查是否有新版本可用，确保您使用的是最新功能和安全修复。
+        </div>
+        <div class="update-buttons">
+          <button class="update-btn secondary" onclick="console.log('UPDATE_WINDOW_CLOSE')">
+            取消
+          </button>
+          <button class="update-btn primary" onclick="console.log('CHECK_UPDATE_CONFIRM')">
+            检查更新
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 页面加载完成后设置焦点
+    document.addEventListener('DOMContentLoaded', () => {
+      // Mac系统调试信息
+      console.log('Update window loaded on platform:', navigator.platform);
+      
+      // Mac系统特殊处理：移除可能的边框和确保样式正确
+      if (navigator.platform.includes('Mac')) {
+        // 确保整个文档没有边框
+        document.documentElement.style.cssText += \`
+          border: none !important;
+          outline: none !important;
+          background: transparent !important;
+          -webkit-appearance: none !important;
+        \`;
+        
+        document.body.style.cssText += \`
+          border: none !important;
+          outline: none !important;
+          background: transparent !important;
+          -webkit-appearance: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        \`;
+        
+        // 动态检测系统主题并应用相应的毛玻璃背景
+        const updateWindow = document.querySelector('.update-window');
+        if (updateWindow) {
+          const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          
+          if (isDarkMode) {
+            // 暗色主题毛玻璃效果 - 使用工具栏暗色背景色
+            updateWindow.style.cssText += \`
+              background: rgba(31, 31, 31, 0.95) !important;
+              -webkit-backdrop-filter: blur(20px) !important;
+              backdrop-filter: blur(20px) !important;
+              border: none !important;
+              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+            \`;
+          } else {
+            // 浅色主题毛玻璃效果 - 使用工具栏浅色背景色
+            updateWindow.style.cssText += \`
+              background: rgba(252, 252, 252, 0.95) !important;
+              -webkit-backdrop-filter: blur(20px) !important;
+              backdrop-filter: blur(20px) !important;
+              border: none !important;
+              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+            \`;
+          }
+          
+          // 监听主题变化
+          if (window.matchMedia) {
+            const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            darkModeQuery.addListener((e) => {
+              if (e.matches) {
+                // 切换到暗色主题 - 使用工具栏暗色背景色
+                updateWindow.style.cssText += \`
+                  background: rgba(31, 31, 31, 0.95) !important;
+                  border: none !important;
+                  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+                \`;
+              } else {
+                // 切换到浅色主题 - 使用工具栏浅色背景色
+                updateWindow.style.cssText += \`
+                  background: rgba(252, 252, 252, 0.95) !important;
+                  border: none !important;
+                  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+                \`;
+              }
+            });
+          }
+        }
+        
+        console.log('Applied Mac-specific styling with dynamic theme support');
+      }
+    });
+  </script>
+</body>
+</html>\`;
+  }
+}
+
+module.exports = ToolbarManager;
             color: #6b7280;
             line-height: 1.5;
             margin-bottom: 30px;
