@@ -1371,6 +1371,8 @@ class ToolbarManager {
             position: relative;
             transition: background 0.3s ease;
             -webkit-app-region: no-drag; /* 确保按钮不会拖动窗口 */
+            /* 确保 fill 使用 currentColor 的 SVG (如 update.svg) 跟随主题 */
+            color: var(--toolbar-icon-color);
           }
 
           .toolbar-btn:hover {
