@@ -683,6 +683,7 @@ class ToolbarManager {
     .dialog-header {
       display: flex;
       align-items: center;
+      justify-content: center;
       margin-bottom: 14px;
       padding-bottom: 10px;
       flex-shrink: 0;
@@ -716,6 +717,9 @@ class ToolbarManager {
     }
 
     .dialog-message {
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: var(--text-primary);
       font-size: 15px;
       line-height: 1.3;
@@ -767,7 +771,8 @@ class ToolbarManager {
     .dialog-buttons {
       display: flex;
       gap: 16px;
-      justify-content: flex-end;
+      justify-content: center;
+      align-items: center;
       padding-top: 12px;
       flex-shrink: 0;
     }
@@ -1616,7 +1621,8 @@ class ToolbarManager {
         // 处理下载更新
         const version = message.replace('DOWNLOAD_UPDATE:', '');
         const { shell } = require('electron');
-        shell.openExternal(`https://github.com/sdutacm/oj-competition-side-client/releases/tag/v${version}`);
+        // 使用统一的下载页面地址
+        shell.openExternal('https://oj.sdutacm.cn/oj-competition-side-client/');
         updateWindow.close();
       }
     });
@@ -1814,6 +1820,8 @@ class ToolbarManager {
             display: flex;
             gap: 12px;
             margin-top: 5px;
+            justify-content: center;
+            align-items: center;
           }
 
           .update-btn {
