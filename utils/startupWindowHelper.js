@@ -66,7 +66,8 @@ function getStartupHtml() {
  * @returns {BrowserWindow}
  */
 function createStartupWindow(htmlContent, options = {}) {
-    if (!htmlContent) htmlContent = getStartupHtml();
+  const isWindows = process.platform === 'win32';
+  if (!htmlContent) htmlContent = getStartupHtml(isWindows);
     const width = options.width || 1000;
     const height = options.height || 600;
     const centeredPosition = calculateCenteredPosition(width, height);
