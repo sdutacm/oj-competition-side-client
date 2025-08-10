@@ -539,41 +539,48 @@ class ToolbarManager {
       user-select: none;
     }
 
+  /* 与更新弹窗统一的基础主题变量（纯色卡片） */
     :root {
-      --bg-primary: linear-gradient(135deg, #fdfdfd, #f8fafc); 
-      --bg-secondary: #f8fafc;
+      --bg-primary: #fcfcfc;
+      --bg-secondary: #f3f4f6;
       --text-primary: #1e293b;
       --text-secondary: #64748b;
-      --text-danger: #ff2e2ed0;
-      --border-color: transparent; /* 改为透明，避免白色边框 */
-      --shadow-color: rgba(0, 0, 0, 0.1);
-      --danger-bg: rgba(255, 213, 213, 0.8);
-      --danger-border: rgba(239, 68, 68, 0.3);
+      --text-danger: #dc2626;
+      --border-color: rgba(140,140,140,0.2);
+      --shadow-color: rgba(0,0,0,0.08);
+      --danger-bg: rgba(254, 226, 226, 0.65);
+      --danger-border: rgba(239, 68, 68, 0.35);
       --confirm-bg: #dc2626;
       --confirm-hover: #b91c1c;
       --confirm-disabled: #9ca3af;
       --cancel-bg: #6b7280;
       --cancel-hover: #4b5563;
-      --box-shadow: 0 8px 32px rgba(117, 117, 117, 0.23);
+  --box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  --surface-bg: #fcfcfc; /* 与更新弹窗统一的卡片背景 */
+  --border-ring: rgba(140,140,140,0.35);
+  --card-border: rgba(0,0,0,0.08); /* 新增：内容区域细边框（亮色） */
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg-primary: linear-gradient(135deg, #292d31ff, #26282dff);
-        --bg-secondary: #0f172a;
+        --bg-primary: #1f2937; /* 与更新弹窗暗色背景统一 */
+        --bg-secondary: #111827;
         --text-primary: #f1f5f9;
         --text-secondary: #94a3b8;
         --text-danger: #ef4444;
-        --border-color: transparent; /* 改为透明，避免白色边框 */
-        --shadow-color: rgba(0, 0, 0, 0.3);
-        --danger-bg: rgba(158, 31, 31, 0.67);
-        --danger-border: rgba(239, 68, 68, 0.3);
+        --border-color: rgba(156,163,175,0.25);
+        --shadow-color: rgba(0,0,0,0.4);
+        --danger-bg: rgba(127, 29, 29, 0.55);
+        --danger-border: rgba(239, 68, 68, 0.4);
         --confirm-bg: #dc2626;
         --confirm-hover: #b91c1c;
         --confirm-disabled: #6b7280;
         --cancel-bg: #475569;
         --cancel-hover: #334155;
-        --box-shadow: 0 0 16px rgba(62, 62, 62, 0.7);
+  --box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  --surface-bg: #1f2937; /* 与更新弹窗暗色卡片 */
+  --border-ring: rgba(156,163,175,0.45);
+  --card-border: rgba(255,255,255,0.10); /* 新增：内容区域细边框（暗色） */
       }
     }
 
@@ -620,6 +627,8 @@ class ToolbarManager {
       overflow: hidden;
       scrollbar-width: none;
       -ms-overflow-style: none;
+      /* 去除外层边框，统一内部卡片式表现 */
+      border: none;
     }
 
     .dialog-container::-webkit-scrollbar {
@@ -627,40 +636,40 @@ class ToolbarManager {
     }
 
     .dialog-content {
-      background: var(--bg-primary);
-      border-radius: 16px;
-      border: 2px solid rgba(140, 140, 140, 0.2) !important; /* 强制显示灰色边框 */
-      box-shadow: 0 25px 50px -12px var(--shadow-color);
+      position: relative;
+  /* 使用主题变量而不是硬编码颜色，确保暗色生效 */
+  background: var(--bg-primary);
+      border-radius: 12px; /* 与更新弹窗半径一致 */
+  border: 1px solid var(--card-border) !important; /* 统一细边框 */
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2); /* 与更新弹窗一致 */
       padding: 24px;
-      width: calc(100% - 2px); /* 稍微缩小，避免边缘问题 */
-      height: calc(100% - 2px); /* 稍微缩小，避免边缘问题 */
-      margin: 1px; /* 添加小边距，防止边缘切割 */
+      width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
       animation: dialogAppear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
       overflow: hidden;
       scrollbar-width: none;
       -ms-overflow-style: none;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
     }
 
     /* Mac系统特殊处理 - 使用毛玻璃效果 */
     @supports (-webkit-backdrop-filter: blur(10px)) {
       .dialog-content {
-        background: rgba(252, 252, 252, 0.95) !important; /* 使用工具栏背景色的半透明版本 */
-        -webkit-backdrop-filter: blur(20px) !important;
-        backdrop-filter: blur(20px) !important;
-        border: 3px solid rgba(107, 114, 128, 0.8) !important; /* 更明显的灰色边框 */
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+        /* 仍保持纯色，避免恢复毛玻璃半透明 */
+        background: var(--bg-primary) !important;
+	border: 1px solid var(--card-border) !important; /* 保持细边框 */
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2) !important;
       }
-      
-      @media (prefers-color-scheme: dark) {
-        .dialog-content {
-          background: rgba(31, 31, 31, 0.95) !important; /* 使用工具栏暗色背景色的半透明版本 */
-          -webkit-backdrop-filter: blur(20px) !important;
-          backdrop-filter: blur(20px) !important;
-          border: 3px solid rgba(156, 163, 175, 0.8) !important; /* 暗色主题灰色边框 */
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
-        }
+    }
+
+    /* 全局暗色模式下卡片背景与阴影加深（独立于 @supports，确保生效） */
+    @media (prefers-color-scheme: dark) {
+      .dialog-content {
+        background: var(--bg-primary) !important;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
       }
     }
 
@@ -1132,55 +1141,8 @@ class ToolbarManager {
           padding: 0 !important;
         \`;
         
-        // 动态检测系统主题并应用相应的毛玻璃背景
-        const dialogContent = document.querySelector('.dialog-content');
-        if (dialogContent) {
-          const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          
-          if (isDarkMode) {
-            // 暗色主题毛玻璃效果 - 使用工具栏暗色背景色
-            dialogContent.style.cssText += \`
-              background: rgba(31, 31, 31, 0.95) !important;
-              -webkit-backdrop-filter: blur(20px) !important;
-              backdrop-filter: blur(20px) !important;
-              border: none !important;
-              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
-            \`;
-          } else {
-            // 浅色主题毛玻璃效果 - 使用工具栏浅色背景色
-            dialogContent.style.cssText += \`
-              background: rgba(252, 252, 252, 0.95) !important;
-              -webkit-backdrop-filter: blur(20px) !important;
-              backdrop-filter: blur(20px) !important;
-              border: none !important;
-              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
-            \`;
-          }
-          
-          // 监听主题变化
-          if (window.matchMedia) {
-            const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-            darkModeQuery.addListener((e) => {
-              if (e.matches) {
-                // 切换到暗色主题 - 使用工具栏暗色背景色
-                dialogContent.style.cssText += \`
-                  background: rgba(31, 31, 31, 0.95) !important;
-                  border: none !important;
-                  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
-                \`;
-              } else {
-                // 切换到浅色主题 - 使用工具栏浅色背景色
-                dialogContent.style.cssText += \`
-                  background: rgba(252, 252, 252, 0.95) !important;
-                  border: none !important;
-                  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
-                \`;
-              }
-            });
-          }
-        }
-        
-        console.log('Applied Mac-specific styling with dynamic theme support');
+  // 之前这里有一段针对 Mac 的毛玻璃与动态 border 覆盖逻辑，会破坏统一卡片式纯色+细边框方案，现已移除。
+  console.log('Mac-specific blur override removed to keep unified solid card style');
       }
       
       // 拦截所有可能的快捷键
@@ -2128,6 +2090,7 @@ module.exports = ToolbarManager;
           @media (prefers-color-scheme: dark) {
             .update-window {
               background: #1f2937;
+              border: 1px solid rgba(255,255,255,0.10);
               box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
             }
 
