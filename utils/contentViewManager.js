@@ -30,27 +30,34 @@ class ContentViewManager {
                   scroll-padding: 0 !important;
                   scroll-margin: 0 !important;
                 }
-                
-                /* 确保所有固定定位元素正常工作 - 仅针对真正的固定定位问题 */
-                .ant-layout-header {
-                  /* 只修复已知有问题的 ant-layout-header */
-                  background-color: #fcfcfc !important;
-                  background: #fcfcfc !important;
+
+                body.dark {
+                  --nav-bg-color: #1f1f1f;
                 }
-                
-                /* 仅在 ant-layout-header 确实有固定定位问题时才修复 */
+
+                body:not(.dark) {
+                  --nav-bg-color: #fff;
+                }
+
+                body.auto {
+                  --nav-bg-color: #fff;
+                    
+                  @media (prefers-color-scheme: dark) {
+                    --nav-bg-color: #1f1f1f !important;
+                  }
+                }
+
+                .ant-layout-header::before {
+                  content: "";
+                  position: absolute;
+                  inset: 0;
+                  background-color: var(--nav-bg-color);
+                  z-index: -1;
+                }
+
                 .ant-layout-header[style*="position:fixed"], 
                 .ant-layout-header[style*="position: fixed"] {
                   position: fixed !important;
-                  /* 只在必要时修复 transform，不影响其他动画 */
-                }
-                
-                /* 暗色模式下的背景色 */
-                @media (prefers-color-scheme: dark) {
-                  .ant-layout-header {
-                    background-color: #1f1f1f !important;
-                    background: #1f1f1f !important;
-                  }
                 }
 
                 /* 只禁用可能严重影响性能的 filter 和 backdrop-filter，保留其他动画能力 */
