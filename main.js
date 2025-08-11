@@ -12,6 +12,7 @@ const UpdateManager = require('./utils/updateManager');
 const { calculateCenteredPosition } = require('./utils/screenCenterPosition');
 
 let mainWindow = null;
+let splashWindow = null;
 let toolbarManager = null;
 let contentViewManager = null;
 let shortcutManager = null;
@@ -501,6 +502,23 @@ function getWindowsBackgroundColor() {
  * 创建主窗口
  */
 function createMainWindow() {
+    // 1. 创建 splash 启动页窗口
+    splashWindow = new BrowserWindow({
+      width: 400,
+      height: 300,
+      frame: false,
+      transparent: false,
+      resizable: false,
+      alwaysOnTop: true,
+      backgroundColor: '#f5f5f5',
+      show: true,
+    });
+    // 你可以自定义 splash.html 或用 data URL 方案
+    splashWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(`
+      <body style="margin:0;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">
+        <div style="font-size:2em;color:#888;">正在启动...</div>
+      </body>
+    `));
   try {
     const windowWidth = 1400;
     const windowHeight = 900;
@@ -553,10 +571,13 @@ function createMainWindow() {
       console.error('同步初始化失败:', error);
     }
     
-    // 优化：仅在内容视图加载完成后再显示窗口，彻底消除白屏
-    // 兼容 Windows 和其他平台
+    // 2. 主窗口内容加载完成后再切换显示，彻底消除白/黑屏和动画跳过
     if (contentViewManager && contentViewManager.contentView && contentViewManager.contentView.webContents) {
       contentViewManager.contentView.webContents.once('did-finish-load', () => {
+        if (splashWindow && !splashWindow.isDestroyed()) {
+          splashWindow.close();
+          splashWindow = null;
+        }
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.show();
           mainWindow.focus();
@@ -564,8 +585,11 @@ function createMainWindow() {
         }
       });
     } else {
-      // 兜底：如果没有内容视图，仍然延迟显示
       setTimeout(() => {
+        if (splashWindow && !splashWindow.isDestroyed()) {
+          splashWindow.close();
+          splashWindow = null;
+        }
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.show();
           mainWindow.focus();
