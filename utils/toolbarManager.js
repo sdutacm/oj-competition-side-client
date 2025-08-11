@@ -1764,10 +1764,39 @@ class ToolbarManager {
             box-sizing: border-box;
           }
 
+          /* 添加与系统重置弹窗一致的CSS变量 */
+          :root {
+            --bg-primary: #fcfcfc;
+            --bg-secondary: #f3f4f6;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: rgba(140,140,140,0.2);
+            --shadow-color: rgba(0,0,0,0.08);
+            --box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            --surface-bg: #fcfcfc;
+            --border-ring: rgba(140,140,140,0.35);
+            --card-border: rgba(0,0,0,0.08); /* 亮色模式下的细边框 */
+          }
+
+          @media (prefers-color-scheme: dark) {
+            :root {
+              --bg-primary: #1f2937;
+              --bg-secondary: #111827;
+              --text-primary: #f1f5f9;
+              --text-secondary: #94a3b8;
+              --border-color: rgba(156,163,175,0.25);
+              --shadow-color: rgba(0,0,0,0.4);
+              --box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+              --surface-bg: #1f2937;
+              --border-ring: rgba(156,163,175,0.45);
+              --card-border: rgba(255,255,255,0.10); /* 暗色模式下的细边框 */
+            }
+          }
+
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: transparent !important;
-            color: #333;
+            color: var(--text-primary);
             overflow: hidden;
           }
           html {
@@ -1778,10 +1807,10 @@ class ToolbarManager {
           .update-window {
             width: 420px;
             height: 380px;
-            background: #ffffff;
+            background: var(--bg-primary); /* 使用CSS变量 */
             border-radius: ${isWindows ? '0' : '16px'};
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            ${isWindows ? 'border: 1px solid #d1d5db;' : ''}
+            box-shadow: var(--box-shadow); /* 使用CSS变量 */
+            ${isWindows ? 'border: 1px solid var(--card-border);' : ''} /* 使用与系统重置一致的边框 */
             display: flex;
             flex-direction: column;
             position: relative;
@@ -1789,19 +1818,33 @@ class ToolbarManager {
             overflow: hidden;
           }
 
-          /* Windows 系统样式 - 直角和灰色边框 */
+          /* Windows 系统样式 - 使用一致的边框和阴影 */
           @media screen {
             body.windows .update-window {
               border-radius: 0;
-              border: 1px solid #d1d5db;
-              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+              border: 1px solid var(--card-border);
+              box-shadow: var(--box-shadow);
             }
+          }
+
+          /* 暗色模式下的特殊处理 */
+          @media (prefers-color-scheme: dark) {
+            .update-window {
+              background: var(--bg-primary) !important;
+              box-shadow: var(--box-shadow) !important;
+            }
+            
+            ${isWindows ? `
+              .update-window {
+                border: 1px solid #4b5563 !important; /* 与系统重置弹窗暗色边框一致 */
+              }
+            ` : ''}
           }
 
           .window-header {
             padding: 20px 20px 0 20px;
             text-align: center;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
             background: transparent;
           }
@@ -1809,13 +1852,13 @@ class ToolbarManager {
           .window-title {
             font-size: 18px;
             font-weight: 600;
-            color: #1f2937;
+            color: var(--text-primary);
             margin-bottom: 5px;
           }
 
           .window-subtitle {
             font-size: 14px;
-            color: #6b7280;
+            color: var(--text-secondary);
           }
 
           .update-content {
@@ -1852,7 +1895,7 @@ class ToolbarManager {
 
           .update-description {
             font-size: 14px;
-            color: #6b7280;
+            color: var(--text-secondary);
             line-height: 1.5;
             margin-bottom: 30px;
             text-align: center;
@@ -1887,12 +1930,12 @@ class ToolbarManager {
           }
 
           .update-btn.secondary {
-            background: #f3f4f6;
-            color: #6b7280;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
           }
 
           .update-btn.secondary:hover {
-            background: #e5e7eb;
+            background: var(--border-color);
           }
 
           /* Loading 样式 */
@@ -1904,7 +1947,7 @@ class ToolbarManager {
           .loading-spinner {
             width: 48px;
             height: 48px;
-            border: 4px solid #e5e7eb;
+            border: 4px solid var(--border-color);
             border-top: 4px solid #3b82f6;
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -1918,7 +1961,7 @@ class ToolbarManager {
 
           .loading-container p {
             font-size: 14px;
-            color: #6b7280;
+            color: var(--text-secondary);
           }
 
           /* 结果样式 */
@@ -1962,60 +2005,14 @@ class ToolbarManager {
           .result-container h3 {
             font-size: 16px;
             margin-bottom: 10px;
-            color: #1f2937;
+            color: var(--text-primary);
           }
 
           .result-container p {
             font-size: 14px;
-            color: #6b7280;
+            color: var(--text-secondary);
             margin-bottom: 25px;
             line-height: 1.4;
-          }
-
-          /* 暗色主题 */
-          @media (prefers-color-scheme: dark) {
-            .update-window {
-              background: #1f2937;
-              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-              ${isWindows ? 'border: 1px solid #4b5563; border-radius: 0;' : ''}
-            }
-
-            .window-header {
-              border-bottom-color: #374151;
-            }
-
-            .window-title {
-              color: #f9fafb;
-            }
-
-            .window-subtitle {
-              color: #9ca3af;
-            }
-
-            .update-description {
-              color: #9ca3af;
-            }
-
-            .update-btn.secondary {
-              background: #374151;
-              color: #d1d5db;
-            }
-
-            .update-btn.secondary:hover {
-              background: #4b5563;
-            }
-
-            .loading-container p {
-              color: #9ca3af;
-            }
-
-            .result-container h3 {
-              color: #f9fafb;
-            }
-
-            .result-container p {
-              color: #9ca3af;
-            }
           }
         </style>
       </head>
