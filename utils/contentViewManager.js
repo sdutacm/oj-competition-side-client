@@ -76,30 +76,36 @@ class ContentViewManager {
   }
 
   /**
+   * Windows系统提前检测系统主题背景色（与main.js保持一致）
+   */
+  getWindowsBackgroundColor() {
+    const { nativeTheme } = require('electron');
+    
+    if (process.platform !== 'win32') {
+      return nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
+    }
+    
+    // Windows系统：在BrowserView创建前就检测主题，避免创建时的白屏
+    try {
+      const isDarkTheme = nativeTheme.shouldUseDarkColors;
+      console.log('Windows BrowserView主题检测结果:', isDarkTheme ? '暗色' : '亮色');
+      return isDarkTheme ? '#1f1f1f' : '#ffffff';
+    } catch (error) {
+      console.log('Windows BrowserView主题检测失败，强制使用暗色背景:', error);
+      return '#1f1f1f';
+    }
+  }
+
+  /**
    * 创建内容视图（支持主窗口和新窗口）
    * @param {BrowserWindow} targetWindow
    * @param {string} url
    * @param {boolean} allowToolbarOverlap 是否允许内容区覆盖工具栏，默认 false
    */
   createContentView(targetWindow = this.mainWindow, url = this.config.HOME_URL, allowToolbarOverlap = false) {
-    // Windows 系统的暗色主题检测优化
-    const { nativeTheme } = require('electron');
-    let backgroundColor = '#ffffff'; // 默认亮色主题
-    
-    if (process.platform === 'win32') {
-      // Windows 系统：更保守的暗色主题检测，优先使用暗色背景避免白屏闪烁
-      try {
-        const isDarkTheme = nativeTheme.shouldUseDarkColors;
-        backgroundColor = isDarkTheme ? '#1f1f1f' : '#ffffff';
-      } catch (error) {
-        // 如果检测失败，在Windows上默认使用暗色背景（减少白屏概率）
-        backgroundColor = '#1f1f1f';
-        console.log('Windows ContentView主题检测失败，使用默认暗色背景:', error);
-      }
-    } else {
-      // macOS 和 Linux：正常的主题检测
-      backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
-    }
+    // 使用统一的背景色检测函数
+    const backgroundColor = this.getWindowsBackgroundColor();
+    console.log('创建BrowserView使用背景色:', backgroundColor);
     
     const contentView = new BrowserView({
       webPreferences: {
@@ -121,22 +127,18 @@ class ContentViewManager {
     // 只允许加载白名单主域名
     const hostname = getHostname(url);
     // 先加载一个与主题匹配的本地占位页，避免远程页面首次绘制前的白屏闪烁
-    // Windows 系统使用更深的背景色减少闪烁
-    let placeholderBG = '#ffffff';
-    let isDarkMode = false; // 添加变量定义
+    // 使用统一的背景色检测
+    const placeholderBG = this.getWindowsBackgroundColor();
+    let isDarkMode = false;
     
-    if (process.platform === 'win32') {
-      try {
-        isDarkMode = nativeTheme.shouldUseDarkColors;
-        placeholderBG = isDarkMode ? '#1f1f1f' : '#ffffff';
-      } catch (error) {
-        isDarkMode = true; // Windows默认假设为暗色模式
-        placeholderBG = '#1f1f1f'; // Windows默认使用暗色
-      }
-    } else {
+    try {
+      const { nativeTheme } = require('electron');
       isDarkMode = nativeTheme.shouldUseDarkColors;
-      placeholderBG = isDarkMode ? '#1f1f1f' : '#ffffff';
+    } catch (error) {
+      // Windows系统检测失败时假设为暗色模式
+      isDarkMode = process.platform === 'win32';
     }
+    
     const placeholderFG = isDarkMode ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)';
     const placeholderHTML = encodeURIComponent(`<!DOCTYPE html><html><head><meta charset='utf-8'><style>html,body{margin:0;padding:0;height:100%;width:100%;background:${placeholderBG};color:${placeholderFG};font:14px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased;}</style></head><body><div style="letter-spacing:.5px;">正在加载…</div></body></html>`);
     contentView.webContents.loadURL(`data:text/html;charset=utf-8,${placeholderHTML}`);

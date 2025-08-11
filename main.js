@@ -217,22 +217,9 @@ function openNewWindow(url) {
   const windowHeight = 900;
   const centerPosition = calculateCenteredPosition(windowWidth, windowHeight);
   
-  // Windows 系统的暗色主题检测优化
-  let backgroundColor = '#ffffff'; // 默认亮色主题
-  if (process.platform === 'win32') {
-    // Windows 系统：更保守的暗色主题检测，优先使用暗色背景避免白屏闪烁
-    try {
-      const isDarkTheme = nativeTheme.shouldUseDarkColors;
-      backgroundColor = isDarkTheme ? '#1f1f1f' : '#ffffff';
-    } catch (error) {
-      // 如果检测失败，在Windows上默认使用暗色背景（减少白屏概率）
-      backgroundColor = '#1f1f1f';
-      console.log('Windows新窗口主题检测失败，使用默认暗色背景:', error);
-    }
-  } else {
-    // macOS 和 Linux：正常的主题检测
-    backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
-  }
+  // 使用统一的背景色检测函数
+  const backgroundColor = getWindowsBackgroundColor();
+  console.log('创建新窗口使用背景色:', backgroundColor);
 
   const win = new BrowserWindow({
     width: windowWidth,
@@ -241,11 +228,13 @@ function openNewWindow(url) {
     y: centerPosition.y,
     backgroundColor: backgroundColor, // 设置与主题匹配的背景色
     show: false, // 先不显示，等内容加载完成后再显示
-    // Windows 系统特殊优化
+    // Windows 系统特殊优化 - 防止创建时白屏
     ...(process.platform === 'win32' && {
       thickFrame: true, // Windows 系统使用厚边框提高渲染性能
       skipTaskbar: false,
       titleBarOverlay: false, // 禁用标题栏覆盖避免闪烁
+      paintWhenInitiallyHidden: false, // 隐藏时不绘制，避免白屏
+      enableLargerThanScreen: false, // 禁用超大屏幕避免渲染问题
     }),
     webPreferences: {
       nodeIntegration: false,
@@ -491,6 +480,27 @@ function openNewWindow(url) {
 }
 
 /**
+ * Windows系统提前检测系统主题背景色
+ */
+function getWindowsBackgroundColor() {
+  if (process.platform !== 'win32') {
+    return nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
+  }
+  
+  // Windows系统：在窗口创建前就检测主题，避免创建时的白屏
+  try {
+    // 强制同步检测系统主题
+    const isDarkTheme = nativeTheme.shouldUseDarkColors;
+    console.log('Windows系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
+    return isDarkTheme ? '#1f1f1f' : '#ffffff';
+  } catch (error) {
+    console.log('Windows主题检测失败，强制使用暗色背景:', error);
+    // Windows系统检测失败时强制使用暗色，减少白屏概率
+    return '#1f1f1f';
+  }
+}
+
+/**
  * 创建主窗口
  */
 function createMainWindow() {
@@ -499,23 +509,9 @@ function createMainWindow() {
     const windowHeight = 900;
     const centerPosition = calculateCenteredPosition(windowWidth, windowHeight);
 
-    // Windows 系统的暗色主题检测优化
-    let backgroundColor = '#ffffff'; // 默认亮色主题
-    if (process.platform === 'win32') {
-      // Windows 系统：更保守的暗色主题检测，优先使用暗色背景避免白屏闪烁
-      try {
-        // 检查系统注册表或环境变量来确定主题
-        const isDarkTheme = nativeTheme.shouldUseDarkColors;
-        backgroundColor = isDarkTheme ? '#1f1f1f' : '#ffffff'; // 使用更深的背景色减少闪烁
-      } catch (error) {
-        // 如果检测失败，在Windows上默认使用暗色背景（减少白屏概率）
-        backgroundColor = '#1f1f1f';
-        console.log('Windows主题检测失败，使用默认暗色背景:', error);
-      }
-    } else {
-      // macOS 和 Linux：正常的主题检测
-      backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
-    }
+    // 提前获取背景色，确保窗口创建时立即应用
+    const backgroundColor = getWindowsBackgroundColor();
+    console.log('创建主窗口使用背景色:', backgroundColor);
 
     mainWindow = new BrowserWindow({
       width: windowWidth,
@@ -524,11 +520,13 @@ function createMainWindow() {
       y: centerPosition.y,
       backgroundColor: backgroundColor,
       show: false, // 先不显示，等内容加载完成后再显示
-      // Windows 系统特殊优化
+      // Windows 系统特殊优化 - 防止创建时白屏
       ...(process.platform === 'win32' && {
         thickFrame: true, // Windows 系统使用厚边框提高渲染性能
         skipTaskbar: false,
         titleBarOverlay: false, // 禁用标题栏覆盖避免闪烁
+        paintWhenInitiallyHidden: false, // 隐藏时不绘制，避免白屏
+        enableLargerThanScreen: false, // 禁用超大屏幕避免渲染问题
       }),
       webPreferences: {
         nodeIntegration: false,
@@ -540,6 +538,19 @@ function createMainWindow() {
         enableWebSQL: false // 禁用WebSQL
       }
     });
+    
+    // Windows 系统：窗口创建后立即强制设置背景色，防止任何白屏闪烁
+    if (process.platform === 'win32') {
+      try {
+        // 创建后立即设置背景色，不等待任何异步操作
+        const immediateBgColor = getWindowsBackgroundColor();
+        mainWindow.setBackgroundColor(immediateBgColor);
+        console.log('Windows窗口创建后立即设置背景色:', immediateBgColor);
+      } catch (error) {
+        console.log('Windows窗口创建后立即设置背景色失败:', error);
+      }
+    }
+    
     // 等待内容加载完成后再显示窗口，避免白屏
     setImmediate(() => {
       if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -561,17 +572,28 @@ function createMainWindow() {
         const showDelay = process.platform === 'win32' ? 200 : 100;
         setTimeout(() => {
           if (mainWindow && !mainWindow.isDestroyed()) {
-            // Windows 系统：在显示窗口前再次确认背景色
+            // Windows 系统：在显示窗口前再次强制设置背景色，确保无白屏
             if (process.platform === 'win32') {
               try {
-                const currentDarkMode = nativeTheme.shouldUseDarkColors;
-                const correctBgColor = currentDarkMode ? '#1f1f1f' : '#ffffff';
-                mainWindow.setBackgroundColor(correctBgColor);
+                const currentBgColor = getWindowsBackgroundColor();
+                mainWindow.setBackgroundColor(currentBgColor);
+                console.log('Windows窗口显示前强制设置背景色:', currentBgColor);
+                
+                // 额外等待一帧确保背景色已应用
+                setImmediate(() => {
+                  if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.show();
+                    mainWindow.focus();
+                    console.log('主窗口显示完成 (Windows优化后)');
+                  }
+                });
+                return; // Windows系统走特殊流程
               } catch (error) {
-                console.log('Windows背景色更新失败:', error);
+                console.log('Windows背景色强制设置失败:', error);
               }
             }
             
+            // 非Windows系统的正常流程
             mainWindow.show();
             mainWindow.focus();
             console.log('主窗口显示完成 (内容加载后)');
@@ -662,8 +684,8 @@ app.whenReady().then(() => {
   if (process.platform === 'win32') {
     nativeTheme.on('updated', () => {
       try {
-        const isDarkMode = nativeTheme.shouldUseDarkColors;
-        const newBgColor = isDarkMode ? '#1f1f1f' : '#ffffff';
+        // 使用统一的背景色检测函数
+        const newBgColor = getWindowsBackgroundColor();
         
         console.log('Windows系统主题变化检测到，更新背景色:', newBgColor);
         
