@@ -203,29 +203,29 @@ class ContentViewManager {
       y = 48;
       h = height - 48;
     }
-    contentView.setBounds({ x: 0, y, width, height: h });
-    contentView.setAutoResize({ width: true, height: true });
+  // contentView.setBounds({ x: 0, y, width, height: h });
+  // contentView.setAutoResize({ width: true, height: true });
 
     // 新建内容视图自动获得焦点，确保快捷键生效
     // 关键：弹窗/子窗口必须获得系统焦点，否则 before-input-event 不会触发
     // 但主窗口在main.js中已经显示，这里只处理新窗口
-    if (targetWindow && targetWindow !== this.mainWindow) {
-      try {
-        targetWindow.show();
-        targetWindow.focus();
-      } catch { }
-    }
-    if (contentView.webContents && contentView.webContents.focus) {
-      setTimeout(() => {
-        try { contentView.webContents.focus(); } catch { }
-      }, 0);
-    }
+  // if (targetWindow && targetWindow !== this.mainWindow) {
+  //   try {
+  //     targetWindow.show();
+  //     targetWindow.focus();
+  //   } catch { }
+  // }
+  // if (contentView.webContents && contentView.webContents.focus) {
+  //   setTimeout(() => {
+  //     try { contentView.webContents.focus(); } catch { }
+  //   }, 0);
+  // }
 
     // 所有窗口都彻底隐藏菜单栏，避免 accelerator 干扰
-    try {
-      targetWindow.setMenuBarVisibility(false);
-      targetWindow.setMenu(null);
-    } catch { }
+  // try {
+  //   targetWindow.setMenuBarVisibility(false);
+  //   targetWindow.setMenu(null);
+  // } catch { }
 
     return contentView;
   }
