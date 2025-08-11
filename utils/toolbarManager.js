@@ -1836,7 +1836,7 @@ class ToolbarManager {
             
             ${isWindows ? `
               .update-window {
-                border: 1px solid #4b5563 !important; /* 与系统重置弹窗暗色边框一致 */
+                border: 1px solid var(--card-border) !important; /* 与系统重置弹窗暗色边框一致 */
               }
             ` : ''}
           }
