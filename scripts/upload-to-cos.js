@@ -189,18 +189,34 @@ if (!fs.existsSync(downloadsDir)) {
         console.log(`\n🎉 All ${files.length} files uploaded successfully to COS!`);
         console.log(`📂 Remote path: oj-competition-side-client/release/${tagName}/`);
         
-        // 上传index.json
-        const indexFile = path.join(downloadsDir, 'index.json');
-        if (fs.existsSync(indexFile)) {
+        // 上传完整的 release-index.json
+        const releaseIndexFile = path.join(downloadsDir, 'release-index.json');
+        if (fs.existsSync(releaseIndexFile)) {
             try {
-                const indexSize = fs.statSync(indexFile).size;
-                const indexKey = `oj-competition-side-client/release/${tagName}/index.json`;
-                console.log(`📋 Uploading index.json (${formatFileSize(indexSize)})...`);
+                const indexSize = fs.statSync(releaseIndexFile).size;
+                const indexKey = `oj-competition-side-client/release/${tagName}/release-index.json`;
+                console.log(`📋 Uploading release-index.json (${formatFileSize(indexSize)})...`);
                 
-                await uploadFile(indexFile, indexKey);
-                console.log('✅ Successfully uploaded index.json');
+                await uploadFile(releaseIndexFile, indexKey);
+                console.log('✅ Successfully uploaded release-index.json');
             } catch (error) {
-                console.error(`❌ Failed to upload index.json: ${error.message}`);
+                console.error(`❌ Failed to upload release-index.json: ${error.message}`);
+            }
+        }
+        
+        // 上传简单的版本索引文件给更新检测使用
+        const versionIndexFile = path.join(downloadsDir, 'release', 'index.json');
+        if (fs.existsSync(versionIndexFile)) {
+            try {
+                const indexSize = fs.statSync(versionIndexFile).size;
+                const indexKey = `oj-competition-side-client/release/index.json`;
+                console.log(`📋 Uploading version index for update detection (${formatFileSize(indexSize)})...`);
+                
+                await uploadFile(versionIndexFile, indexKey);
+                console.log('✅ Successfully uploaded version index to release/index.json');
+                console.log(`🔗 Update detection URL: ${domain || `https://${bucket}.cos.${region}.myqcloud.com`}/oj-competition-side-client/release/index.json`);
+            } catch (error) {
+                console.error(`❌ Failed to upload version index: ${error.message}`);
             }
         }
     } else {
