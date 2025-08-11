@@ -524,7 +524,7 @@ function createMainWindow() {
       x: centerPosition.x,
       y: centerPosition.y,
       backgroundColor: backgroundColor,
-      show: true, // 创建时立即显示，减少渲染管线切换
+      show: false, // 先不显示，等内容加载完成后再 show
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -543,12 +543,24 @@ function createMainWindow() {
       console.log('内容视图管理器同步创建完成');
       
       // 立即同步创建内容视图并开始加载
-  // 临时测试：加载本地 test-bg.html，排查白屏问题
-  const path = require('path');
-  const url = require('url');
-  const testBgPath = url.pathToFileURL(path.join(__dirname, 'public', 'test-bg.html')).toString();
-  contentViewManager.createContentView(undefined, testBgPath);
+      // 临时测试：加载本地 test-bg.html，排查白屏问题
+      const path = require('path');
+      const url = require('url');
+      const testBgPath = url.pathToFileURL(path.join(__dirname, 'public', 'test-bg.html')).toString();
+      contentViewManager.createContentView(undefined, testBgPath);
       console.log('内容视图同步创建完成，页面已开始加载');
+
+      // did-finish-load 后再 show，彻底排查首屏闪烁
+      const contentView = contentViewManager.getView && contentViewManager.getView();
+      if (contentView && contentView.webContents) {
+        contentView.webContents.once('did-finish-load', () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.show();
+            mainWindow.focus();
+            console.log('主窗口内容加载完成后显示');
+          }
+        });
+      }
       
       // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
       const contentBounds = mainWindow.getContentBounds();
