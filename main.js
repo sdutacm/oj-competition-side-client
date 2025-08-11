@@ -12,7 +12,6 @@ const UpdateManager = require('./utils/updateManager');
 const { calculateCenteredPosition } = require('./utils/screenCenterPosition');
 
 let mainWindow = null;
-let splashWindow = null;
 let toolbarManager = null;
 let contentViewManager = null;
 let shortcutManager = null;
@@ -502,23 +501,6 @@ function getWindowsBackgroundColor() {
  * 创建主窗口
  */
 function createMainWindow() {
-    // 1. 创建 splash 启动页窗口
-    splashWindow = new BrowserWindow({
-      width: 400,
-      height: 300,
-      frame: false,
-      transparent: false,
-      resizable: false,
-      alwaysOnTop: true,
-      backgroundColor: '#f5f5f5',
-      show: true,
-    });
-    // 你可以自定义 splash.html 或用 data URL 方案
-    splashWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(`
-      <body style="margin:0;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">
-        <div style="font-size:2em;color:#888;">正在启动...</div>
-      </body>
-    `));
   try {
     const windowWidth = 1400;
     const windowHeight = 900;
@@ -534,7 +516,7 @@ function createMainWindow() {
       x: centerPosition.x,
       y: centerPosition.y,
       backgroundColor: backgroundColor,
-      show: false, // 先不显示，等内容准备好
+      show: true, // 创建时立即显示，减少渲染管线切换
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -571,32 +553,8 @@ function createMainWindow() {
       console.error('同步初始化失败:', error);
     }
     
-    // 2. 主窗口内容加载完成后再切换显示，彻底消除白/黑屏和动画跳过
-    if (contentViewManager && contentViewManager.contentView && contentViewManager.contentView.webContents) {
-      contentViewManager.contentView.webContents.once('did-finish-load', () => {
-        if (splashWindow && !splashWindow.isDestroyed()) {
-          splashWindow.close();
-          splashWindow = null;
-        }
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-          mainWindow.focus();
-          console.log('主窗口内容加载完成后显示，避免白屏闪烁');
-        }
-      });
-    } else {
-      setTimeout(() => {
-        if (splashWindow && !splashWindow.isDestroyed()) {
-          splashWindow.close();
-          splashWindow = null;
-        }
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-          mainWindow.focus();
-          console.log('主窗口无内容视图，延迟显示');
-        }
-      }, 200);
-    }
+  // 主窗口直接创建并显示，无 splash
+    // 主窗口直接创建并显示，无 splash
     
     // 窗口显示后立即初始化其他组件，减少白屏期间的操作
     setImmediate(() => {
