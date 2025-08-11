@@ -251,6 +251,14 @@ function openNewWindow(url) {
   });
 
   // 立即显示无需再额外 setTimeout
+  // ====== 临时注释掉 show/focus/setBounds 相关操作，便于定位页面加载后闪烁问题 ======
+  // setTimeout(() => {
+  //   if (win && !win.isDestroyed()) {
+  //     win.show();
+  //     win.focus();
+  //     console.log('新窗口显示完成 (内容加载后)');
+  //   }
+  // }, 100); // 统一延迟时间，确保内容加载完成
 
   // 为新窗口创建简单的内容视图管理器模拟
   const newWindowContentViewManager = {
