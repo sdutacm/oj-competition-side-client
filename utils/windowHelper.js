@@ -231,25 +231,13 @@ function disableDevToolsForBrowserView(view) {
  * @returns {string} 工具栏HTML字符串
  */
 function createToolbarHTMLForNewWindow() {
-  // 读取SVG图标
-  const svgDir = path.join(__dirname, '../public/svg');
+  // 使用默认的 Unicode 符号图标，避免同步文件读取阻塞主线程
+  const backSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/></svg>';
+  const forwardSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>';
+  const refreshSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>';
+  const homeSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>';
 
-  let backSvg, forwardSvg, refreshSvg, homeSvg;
-
-  try {
-    backSvg = fs.readFileSync(path.join(svgDir, 'back.svg'), 'utf8');
-    forwardSvg = fs.readFileSync(path.join(svgDir, 'forward.svg'), 'utf8');
-    refreshSvg = fs.readFileSync(path.join(svgDir, 'refresh.svg'), 'utf8');
-    homeSvg = fs.readFileSync(path.join(svgDir, 'home.svg'), 'utf8');
-  } catch (error) {
-    console.error('读取SVG图标失败:', error);
-    // 如果读取失败，使用默认的 SVG 图标
-    const defaultSVG = '<svg width="20" height="20" viewBox="0 0 16 16" stroke="currentColor" fill="none"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM5.354 4.646L4.646 5.354 7.293 8l-2.647 2.646.708.708L8 8.707l2.646 2.647.708-.708L8.707 8l2.647-2.646-.708-.708L8 7.293 5.354 4.646z"/></svg>';
-    backSvg = defaultSVG;
-    forwardSvg = defaultSVG;
-    refreshSvg = defaultSVG;
-    homeSvg = defaultSVG;
-  }
+  console.log('使用内联SVG图标，避免文件读取阻塞');
 
   return `
     <!DOCTYPE html>

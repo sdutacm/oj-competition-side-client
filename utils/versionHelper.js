@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
+// 版本号缓存，避免重复读取package.json文件
+let versionCache = null;
+
 /**
  * 获取应用版本号
  * 从 package.json 文件中读取版本号，如果读取失败则返回默认版本号
@@ -8,6 +11,11 @@ const path = require('path');
  * @returns {string} 版本号
  */
 function getAppVersion(defaultVersion) {
+  // 如果已有缓存，直接返回，避免重复文件读取
+  if (versionCache !== null) {
+    return versionCache;
+  }
+
   try {
     // 从当前文件向上查找 package.json
     const packageJsonPath = path.join(__dirname, '../package.json');
@@ -16,10 +24,11 @@ function getAppVersion(defaultVersion) {
     if (!fs.existsSync(packageJsonPath)) {
       const fallback = defaultVersion || '1.0.0';
       console.warn('package.json 文件不存在，使用默认版本号:', fallback);
+      versionCache = fallback; // 缓存默认版本
       return fallback;
     }
     
-    // 读取并解析 package.json
+    // 读取并解析 package.json（只读取一次）
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
     
     // 获取版本号，如果不存在则使用默认值
@@ -27,9 +36,12 @@ function getAppVersion(defaultVersion) {
     if (!version) {
       const fallback = defaultVersion || '0.0.0';
       console.warn('package.json 中未找到版本号，使用默认版本号:', fallback);
+      versionCache = fallback; // 缓存默认版本
       return fallback;
     }
     
+    // 缓存版本号，避免后续重复读取
+    versionCache = version;
     console.log('成功读取应用版本号:', version);
     return version;
   } catch (error) {

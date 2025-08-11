@@ -1,8 +1,71 @@
 const { BrowserView } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { app } = require('electron');
+const { app, nativeTheme } = require('electron');
 const PlatformHelper = require('./platformHelper');
+
+// SVG图标缓存，避免重复读取文件
+let svgIconCache = null;
+
+/**
+ * 异步加载SVG图标，只加载一次并缓存
+ */
+async function loadSVGIcons() {
+  if (svgIconCache) {
+    return svgIconCache;
+  }
+
+  try {
+    const svgPath = PlatformHelper.joinPath(__dirname, '..', 'public', 'svg');
+    
+    // 并行异步读取所有SVG文件
+    const [backSVG, forwardSVG, refreshSVG, homeSVG, infoSVG, cleanSVG, updateSVG] = await Promise.all([
+      fs.promises.readFile(PlatformHelper.joinPath(svgPath, 'back.svg'), 'utf8'),
+      fs.promises.readFile(PlatformHelper.joinPath(svgPath, 'forward.svg'), 'utf8'), 
+      fs.promises.readFile(PlatformHelper.joinPath(svgPath, 'refresh.svg'), 'utf8'),
+      fs.promises.readFile(PlatformHelper.joinPath(svgPath, 'home.svg'), 'utf8'),
+      fs.promises.readFile(PlatformHelper.joinPath(svgPath, 'info.svg'), 'utf8'),
+      fs.promises.readFile(PlatformHelper.joinPath(svgPath, 'clean.svg'), 'utf8'),
+      fs.promises.readFile(PlatformHelper.joinPath(svgPath, 'update.svg'), 'utf8')
+    ]);
+
+    svgIconCache = { backSVG, forwardSVG, refreshSVG, homeSVG, infoSVG, cleanSVG, updateSVG };
+    console.log('SVG图标异步加载完成');
+    return svgIconCache;
+  } catch (error) {
+    console.error('Error loading SVG files:', error);
+    
+    // 提供默认的 SVG 图标
+    const defaultSVG = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM5.354 4.646L4.646 5.354 7.293 8l-2.647 2.646.708.708L8 8.707l2.646 2.647.708-.708L8.707 8l2.647-2.646-.708-.708L8 7.293 5.354 4.646z"/></svg>';
+    
+    svgIconCache = {
+      backSVG: defaultSVG,
+      forwardSVG: defaultSVG,
+      refreshSVG: defaultSVG,
+      homeSVG: defaultSVG,
+      infoSVG: defaultSVG,
+      cleanSVG: defaultSVG,
+      updateSVG: defaultSVG
+    };
+    
+    return svgIconCache;
+  }
+}
+
+/**
+ * 获取工具栏背景色
+ */
+function getToolbarBackgroundColor() {
+  try {
+    const isDarkTheme = nativeTheme.shouldUseDarkColors;
+    // 工具栏使用与主题匹配的背景色
+    return isDarkTheme ? '#1f1f1f' : '#fcfcfc';
+  } catch (error) {
+    console.log('工具栏主题检测失败，使用默认背景色:', error);
+    return '#fcfcfc'; // 默认浅色
+  }
+}
+
 class ToolbarManager {
   constructor(mainWindow, onActionCallback, startupManager = null) {
     this.mainWindow = mainWindow;
@@ -77,9 +140,13 @@ class ToolbarManager {
   }
 
   /**
-   * 创建工具栏视图
+   * 异步创建工具栏视图
    */
-  createToolbarView() {
+  async createToolbarView() {
+    // 获取工具栏背景色，避免创建时的白屏闪烁
+    const toolbarBgColor = getToolbarBackgroundColor();
+    console.log('创建工具栏视图使用背景色:', toolbarBgColor);
+    
     this.toolbarView = new BrowserView({
       webPreferences: {
         nodeIntegration: false,
@@ -88,7 +155,15 @@ class ToolbarManager {
       }
     });
 
-    this.mainWindow.setBrowserView(this.toolbarView);
+    // 立即设置工具栏BrowserView的背景色，防止白屏闪烁
+    try {
+      this.toolbarView.setBackgroundColor(toolbarBgColor);
+    } catch (error) {
+      console.log('设置工具栏背景色失败:', error);
+    }
+
+    this.mainWindow.addBrowserView(this.toolbarView);
+    console.log('工具栏BrowserView已添加到窗口（不覆盖内容视图）');
 
     // 设置自定义 User-Agent 并加载内容
     const webContents = this.toolbarView.webContents;
@@ -100,11 +175,18 @@ class ToolbarManager {
     // 禁用工具栏视图的开发者工具相关功能
     this.disableDevToolsForToolbar();
 
-    // 创建工具栏 HTML 内容
-    const toolbarHTML = this.createToolbarHTML();
-    const toolbarDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(toolbarHTML)}`;
-
-    webContents.loadURL(toolbarDataURL);
+    // 异步创建工具栏 HTML 内容
+    try {
+      const toolbarHTML = await this.createToolbarHTML();
+      const toolbarDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(toolbarHTML)}`;
+      webContents.loadURL(toolbarDataURL);
+    } catch (error) {
+      console.error('创建工具栏HTML失败:', error);
+      // 使用简单的备用工具栏
+      const fallbackHTML = this.createFallbackToolbarHTML();
+      const fallbackDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(fallbackHTML)}`;
+      webContents.loadURL(fallbackDataURL);
+    }
 
     // 工具栏按钮点击事件处理
     webContents.on('dom-ready', () => {
@@ -295,6 +377,57 @@ class ToolbarManager {
     });
 
     return this.toolbarView;
+  }
+
+  /**
+   * 创建简单的备用工具栏HTML（无SVG图标）
+   */
+  createFallbackToolbarHTML() {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            width: 100%; height: 48px; 
+            background: var(--toolbar-bg, #fcfcfc); 
+            display: flex; align-items: center; justify-content: space-between; 
+            padding: 0 12px; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+          }
+          .toolbar-left, .toolbar-right { display: flex; gap: 8px; }
+          .toolbar-btn { 
+            width: 40px; height: 40px; border: none; background: transparent; 
+            border-radius: 8px; cursor: pointer; display: flex; align-items: center; 
+            justify-content: center; font-size: 14px; font-weight: bold;
+          }
+          @media (prefers-color-scheme: dark) {
+            body { background: #1f1f1f; color: #e6edf3; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="toolbar-left">
+          <button class="toolbar-btn" data-action="back">←</button>
+          <button class="toolbar-btn" data-action="forward">→</button>
+          <button class="toolbar-btn" data-action="refresh">⟳</button>
+          <button class="toolbar-btn" data-action="home">⌂</button>
+        </div>
+        <div class="toolbar-right">
+          <button class="toolbar-btn" data-action="clean">⌧</button>
+          <button class="toolbar-btn" data-action="info">ℹ</button>
+          <button class="toolbar-btn" data-action="update">↻</button>
+        </div>
+        <script>
+          document.addEventListener('click', (e) => {
+            if (e.target.dataset.action) {
+              console.log('TOOLBAR_ACTION:' + e.target.dataset.action);
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `;
   }
 
   /**
@@ -1267,35 +1400,12 @@ class ToolbarManager {
   }
 
   /**
-   * 创建工具栏 HTML 内容
+   * 异步创建工具栏 HTML 内容
    */
-  createToolbarHTML() {
-    // 读取本地 SVG 文件内容，增加错误处理
-    let backSVG, forwardSVG, refreshSVG, homeSVG, infoSVG, cleanSVG, updateSVG;
-
-    try {
-      const svgPath = PlatformHelper.joinPath(__dirname, '..', 'public', 'svg');
-
-      backSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'back.svg'), 'utf8');
-      forwardSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'forward.svg'), 'utf8');
-      refreshSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'refresh.svg'), 'utf8');
-      homeSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'home.svg'), 'utf8');
-      infoSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'info.svg'), 'utf8');
-      cleanSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'clean.svg'), 'utf8');
-      updateSVG = fs.readFileSync(PlatformHelper.joinPath(svgPath, 'update.svg'), 'utf8');
-    } catch (error) {
-      console.error('Error loading SVG files:', error);
-
-      // 提供默认的 SVG 图标
-      const defaultSVG = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM5.354 4.646L4.646 5.354 7.293 8l-2.647 2.646.708.708L8 8.707l2.646 2.647.708-.708L8.707 8l2.647-2.646-.708-.708L8 7.293 5.354 4.646z"/></svg>';
-      backSVG = defaultSVG;
-      forwardSVG = defaultSVG;
-      refreshSVG = defaultSVG;
-      homeSVG = defaultSVG;
-      infoSVG = defaultSVG;
-      cleanSVG = defaultSVG;
-      updateSVG = defaultSVG;
-    }
+  async createToolbarHTML() {
+    // 异步加载 SVG 图标
+    const icons = await loadSVGIcons();
+    const { backSVG, forwardSVG, refreshSVG, homeSVG, infoSVG, cleanSVG, updateSVG } = icons;
 
     // 获取平台快捷键信息
     const shortcuts = PlatformHelper.getNavigationShortcuts();

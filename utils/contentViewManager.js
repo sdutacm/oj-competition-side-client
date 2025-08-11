@@ -21,6 +21,7 @@ class ContentViewManager {
  */
   injectPerfCSS(contentView) {
     if (!contentView || !contentView.webContents) return;
+    
     contentView.webContents.insertCSS(`
                 /* 优化滚动性能，但保留网页原有的动画和过渡效果 */
                 * {
@@ -31,6 +32,7 @@ class ContentViewManager {
                   scroll-margin: 0 !important;
                 }
 
+                /* 保留主题相关的CSS变量 */
                 body.dark {
                   --nav-bg-color: #1f1f1f;
                 }
@@ -81,22 +83,21 @@ class ContentViewManager {
   getWindowsBackgroundColor() {
     const { nativeTheme } = require('electron');
     
-    if (process.platform !== 'win32') {
-      return nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
+    // Windows系统特殊处理，使用中性灰色避免与页面主题冲突
+    if (process.platform === 'win32') {
+      try {
+        const isDarkTheme = nativeTheme.shouldUseDarkColors;
+        console.log('Windows BrowserView主题检测结果:', isDarkTheme ? '暗色' : '亮色');
+        // Windows上使用中性灰色，减少与页面背景的对比度差异
+        return '#f0f0f0'; // 非常浅的灰色，接近白色但不会造成强烈对比
+      } catch (error) {
+        console.log('Windows BrowserView主题检测失败，使用中性背景:', error);
+        return '#f0f0f0';
+      }
     }
     
-    // Windows系统：强制使用深色背景，彻底避免白屏
-    // 即使在亮色主题下也使用浅灰色而非纯白色，减少刺眼的白屏闪烁
-    try {
-      const isDarkTheme = nativeTheme.shouldUseDarkColors;
-      console.log('Windows BrowserView主题检测结果:', isDarkTheme ? '暗色' : '亮色');
-      // 暗色主题使用更深的背景色，亮色主题使用浅灰色（避免刺眼的纯白）
-      return isDarkTheme ? '#1a1a1a' : '#f5f5f5';
-    } catch (error) {
-      console.log('Windows BrowserView主题检测失败，强制使用深色背景:', error);
-      // Windows系统检测失败时强制使用深色，彻底避免白屏
-      return '#1a1a1a';
-    }
+    // 其他系统使用原有逻辑
+    return nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
   }
 
   /**
@@ -114,12 +115,27 @@ class ContentViewManager {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        nativeWindowOpen: true,
-        // devTools: false, // 不禁用开发者工具，确保系统命令可用
-        backgroundColor: backgroundColor // 使用主题适配的背景色
+        webSecurity: true,
+        backgroundColor: backgroundColor, // 保留背景色避免白屏
+        // 移除其他配置，使用Electron默认Chrome行为
       }
     });
     targetWindow.addBrowserView(contentView);
+    console.log('BrowserView已添加到窗口');
+
+    // Windows系统特殊处理：立即设置BrowserView背景色并强制刷新
+    if (process.platform === 'win32') {
+      try {
+        contentView.setBackgroundColor(backgroundColor);
+        // Windows特殊处理：设置额外的显示属性
+        if (contentView.webContents) {
+          contentView.webContents.setBackgroundThrottling(false);
+        }
+        console.log('Windows系统：BrowserView背景色和显示属性设置完成');
+      } catch (error) {
+        console.log('Windows系统：BrowserView背景色设置失败:', error);
+      }
+    }
 
     // 设置自定义 User-Agent
     const webContents = contentView.webContents;
@@ -127,53 +143,45 @@ class ContentViewManager {
     const customUserAgent = getCustomUserAgent(defaultUserAgent);
     webContents.setUserAgent(customUserAgent);
 
+    // 移除性能配置，使用默认行为
+    
     // 只允许加载白名单主域名
     const hostname = getHostname(url);
-    // 先加载一个与主题匹配的本地占位页，避免远程页面首次绘制前的白屏闪烁
-    // 使用统一的背景色检测
-    const placeholderBG = this.getWindowsBackgroundColor();
-    let isDarkMode = false;
     
-    try {
-      const { nativeTheme } = require('electron');
-      isDarkMode = nativeTheme.shouldUseDarkColors;
-    } catch (error) {
-      // Windows系统检测失败时假设为暗色模式
-      isDarkMode = process.platform === 'win32';
+    // 验证域名是否允许加载
+    if (!checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).allowed) {
+      console.log('[拦截] 首次加载，弹窗提示', hostname);
+      showBlockedDialog(targetWindow, hostname, checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).reason, 'default');
+      return contentView; // 返回空的contentView，不加载非法域名
     }
-    
-    const placeholderFG = isDarkMode ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)';
-    const placeholderHTML = encodeURIComponent(`<!DOCTYPE html><html><head><meta charset='utf-8'><style>html,body{margin:0;padding:0;height:100%;width:100%;background:${placeholderBG};color:${placeholderFG};font:14px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased;}</style></head><body><div style="letter-spacing:.5px;">正在加载…</div></body></html>`);
-    contentView.webContents.loadURL(`data:text/html;charset=utf-8,${placeholderHTML}`);
 
-    // 验证域名后很快切入真实页面（下一事件循环），占位几乎无感但可避免白闪
-    // Windows系统：立即加载避免白屏，其他系统稍作延迟
-    const loadDelay = process.platform === 'win32' ? 0 : 10;
-    setTimeout(() => {
-      try {
-        if (!checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).allowed) {
-          console.log('[拦截] 首次加载，弹窗提示', hostname);
-          showBlockedDialog(targetWindow, hostname, checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).reason, 'default');
-          return; // 不加载非法域名
-        }
-        if (contentView && contentView.webContents && !contentView.webContents.isDestroyed()) {
-          contentView.webContents.loadURL(url);
-          if (process.platform === 'win32') {
-            console.log('Windows系统立即加载内容，避免白屏延迟');
-          }
-        }
-      } catch (e) {
-        console.warn('占位后加载真实页面失败:', e.message);
+    // 直接加载真实页面，不做额外的性能操作
+    try {
+      
+      // 简单直接加载，使用默认浏览器行为
+      contentView.webContents.loadURL(url);
+      console.log('直接加载真实页面:', url);
+      
+      // Windows特殊处理：监听第一次DOM准备就绪，确保有初始内容
+      if (process.platform === 'win32' && targetWindow === this.mainWindow) {
+        contentView.webContents.once('dom-ready', () => {
+          console.log('Windows系统：DOM准备就绪，页面有基础内容');
+        });
       }
-    }, loadDelay); // 使用变量控制延迟
-
-    // 注入CSS - 页面首次加载时注入
-    this.injectPerfCSS(contentView);
-
-    // 页面每次完成加载时都注入CSS，防止刷新时丢失
-    contentView.webContents.on('did-finish-load', () => {
-      this.injectPerfCSS(contentView);
-    });
+      
+      // 页面加载完成后注入性能优化CSS（仅首次）
+      let cssInjected = false;
+      contentView.webContents.on('did-finish-load', () => {
+        if (!cssInjected) {
+          this.injectPerfCSS(contentView);
+          cssInjected = true;
+          console.log('页面加载完成并注入CSS');
+        }
+      });
+      
+    } catch (e) {
+      console.warn('加载页面失败:', e.message);
+    }
 
     // 禁用内容视图的开发者工具相关功能和快捷键，仅拦截开发者工具快捷键
     this.disableDevToolsForContentView(contentView);
@@ -195,8 +203,13 @@ class ContentViewManager {
     const [width, height] = targetWindow.getContentSize();
     let y = 0;
     let h = height;
-    if (!allowToolbarOverlap && this.toolbarManager && this.toolbarManager.toolbarView) {
-      // 工具栏高度 48px
+    // 主窗口默认为工具栏预留空间，新窗口根据参数决定
+    if (!allowToolbarOverlap && targetWindow === this.mainWindow) {
+      // 主窗口总是为工具栏预留空间
+      y = 48;
+      h = height - 48;
+    } else if (!allowToolbarOverlap && this.toolbarManager && this.toolbarManager.toolbarView) {
+      // 新窗口只有在工具栏存在时才预留空间
       y = 48;
       h = height - 48;
     }
@@ -205,7 +218,8 @@ class ContentViewManager {
 
     // 新建内容视图自动获得焦点，确保快捷键生效
     // 关键：弹窗/子窗口必须获得系统焦点，否则 before-input-event 不会触发
-    if (targetWindow) {
+    // 但主窗口在main.js中已经显示，这里只处理新窗口
+    if (targetWindow && targetWindow !== this.mainWindow) {
       try {
         targetWindow.show();
         targetWindow.focus();
@@ -371,6 +385,7 @@ class ContentViewManager {
       this.updateNavigationState();
     });
     webContents.on('did-start-loading', () => {
+      console.log('页面开始加载...');
       this.updateNavigationState();
     });
     webContents.on('did-stop-loading', () => {
@@ -570,6 +585,9 @@ class ContentViewManager {
   setBounds(bounds) {
     if (this.contentView) {
       this.contentView.setBounds(bounds);
+      console.log('内容视图bounds设置:', bounds);
+    } else {
+      console.warn('setBounds调用时contentView不存在');
     }
   }
 

@@ -227,15 +227,6 @@ function openNewWindow(url) {
     x: centerPosition.x,
     y: centerPosition.y,
     backgroundColor: backgroundColor, // 设置与主题匹配的背景色
-    show: false, // 先不显示，等内容加载完成后再显示
-    // Windows 系统特殊优化 - 防止创建时白屏
-    ...(process.platform === 'win32' && {
-      thickFrame: true, // Windows 系统使用厚边框提高渲染性能
-      skipTaskbar: false,
-      titleBarOverlay: false, // 禁用标题栏覆盖避免闪烁
-      paintWhenInitiallyHidden: false, // 隐藏时不绘制，避免白屏
-      enableLargerThanScreen: false, // 禁用超大屏幕避免渲染问题
-    }),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -350,11 +341,7 @@ function openNewWindow(url) {
         contextIsolation: true,
         webSecurity: true,
         sandbox: false,
-        backgroundThrottling: false,
-        spellcheck: false,
-        webgl: false,
-        enableWebSQL: false,
-        backgroundColor: browserViewBgColor // 设置BrowserView背景色
+        backgroundColor: browserViewBgColor
       }
     });
 
@@ -366,8 +353,6 @@ function openNewWindow(url) {
     const { getAppVersion } = require('./utils/versionHelper');
     const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
     contentView.webContents.setUserAgent(customUserAgent);
-
-    // URL加载将在后面根据平台策略进行
 
     // 新窗口标题同步 - 跟随网页标题
     contentView.webContents.on('page-title-updated', (event, title) => {
@@ -452,52 +437,19 @@ function openNewWindow(url) {
     console.warn('新窗口快捷键注册失败，但不影响核心功能:', error);
   }
 
-  // Windows系统：立即显示窗口避免白屏，其他系统等待内容加载
-  if (process.platform === 'win32') {
-    // Windows系统立即显示，避免任何延迟导致的白屏
-    if (win && !win.isDestroyed()) {
-      // 再次确保背景色正确
-      const finalBgColor = getWindowsBackgroundColor();
-      win.setBackgroundColor(finalBgColor);
-      
-      // Windows特殊优化：强制渲染一帧后再显示
-      win.webContents.once('did-finish-load', () => {
-        if (win && !win.isDestroyed()) {
-          win.show();
-          win.focus();
-          console.log('Windows新窗口显示完成 (首帧渲染后)');
-        }
-      });
-      
-      // 备用显示机制：如果500ms后仍未显示则强制显示
-      setTimeout(() => {
-        if (win && !win.isDestroyed() && !win.isVisible()) {
-          win.show();
-          win.focus();
-          console.log('Windows新窗口强制显示 (备用机制)');
-        }
-      }, 500);
-      
-      // 加载内容
-      if (newWindowContentViewManager.contentView && !newWindowContentViewManager.contentView.webContents.isDestroyed()) {
-        newWindowContentViewManager.contentView.webContents.loadURL(url);
-      }
-    }
-  } else {
-    // 非Windows系统：等待内容加载完成后再显示窗口
-    // 先加载URL
-    if (newWindowContentViewManager.contentView && !newWindowContentViewManager.contentView.webContents.isDestroyed()) {
-      newWindowContentViewManager.contentView.webContents.loadURL(url);
-    }
-    
-    setTimeout(() => {
-      if (win && !win.isDestroyed()) {
-        win.show();
-        win.focus();
-        console.log('新窗口显示完成 (内容加载后)');
-      }
-    }, 50); // 新窗口延迟较短，因为内容相对简单
+  // 等待内容加载完成后再显示窗口
+  // 先加载URL
+  if (newWindowContentViewManager.contentView && !newWindowContentViewManager.contentView.webContents.isDestroyed()) {
+    newWindowContentViewManager.contentView.webContents.loadURL(url);
   }
+  
+  setTimeout(() => {
+    if (win && !win.isDestroyed()) {
+      win.show();
+      win.focus();
+      console.log('新窗口显示完成 (内容加载后)');
+    }
+  }, 100); // 统一延迟时间，确保内容加载完成
 
   // 事件处理
   win.on('closed', () => {
@@ -524,21 +476,25 @@ function openNewWindow(url) {
  * Windows系统提前检测系统主题背景色
  */
 function getWindowsBackgroundColor() {
-  if (process.platform !== 'win32') {
-    return nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
-  }
-  
-  // Windows系统：强制使用深色背景，彻底避免白屏
-  // 即使在亮色主题下也使用浅灰色而非纯白色，减少刺眼的白屏闪烁
   try {
     const isDarkTheme = nativeTheme.shouldUseDarkColors;
-    console.log('Windows系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
-    // 暗色主题使用更深的背景色，亮色主题使用浅灰色（避免刺眼的纯白）
-    return isDarkTheme ? '#1a1a1a' : '#f5f5f5';
+    console.log('系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
+    
+    // Windows系统特殊处理，使用中性灰色避免与页面主题冲突
+    if (process.platform === 'win32') {
+      // Windows上使用中性灰色，减少与页面背景的对比度差异
+      return '#f0f0f0'; // 非常浅的灰色，接近白色但不会造成强烈对比
+    }
+    
+    // 其他系统使用原有逻辑，避免纯白色
+    return isDarkTheme ? '#2d2d2d' : '#f5f5f5';
   } catch (error) {
-    console.log('Windows主题检测失败，强制使用深色背景:', error);
-    // Windows系统检测失败时强制使用深色，彻底避免白屏
-    return '#1a1a1a';
+    console.log('主题检测失败，使用默认背景色:', error);
+    // Windows系统检测失败时使用中性背景
+    if (process.platform === 'win32') {
+      return '#f0f0f0';
+    }
+    return '#f5f5f5';
   }
 }
 
@@ -561,85 +517,63 @@ function createMainWindow() {
       x: centerPosition.x,
       y: centerPosition.y,
       backgroundColor: backgroundColor,
-      show: false, // 先不显示，等内容加载完成后再显示
-      // Windows 系统特殊优化 - 防止创建时白屏
-      ...(process.platform === 'win32' && {
-        thickFrame: true, // Windows 系统使用厚边框提高渲染性能
-        skipTaskbar: false,
-        titleBarOverlay: false, // 禁用标题栏覆盖避免闪烁
-        paintWhenInitiallyHidden: false, // 隐藏时不绘制，避免白屏
-        enableLargerThanScreen: false, // 禁用超大屏幕避免渲染问题
-      }),
+      show: false, // 先不显示，等内容准备好
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
         webSecurity: true,
         sandbox: false,
-        backgroundThrottling: false, // 禁用后台节流
-        spellcheck: false, // 禁用拼写检查
-        enableWebSQL: false // 禁用WebSQL
       }
     });
     
-    // Windows 系统：窗口创建后立即强制设置背景色，防止任何白屏闪烁
-    if (process.platform === 'win32') {
-      try {
-        // 创建后立即设置背景色，不等待任何异步操作
-        const immediateBgColor = getWindowsBackgroundColor();
-        mainWindow.setBackgroundColor(immediateBgColor);
-        console.log('Windows窗口创建后立即设置背景色:', immediateBgColor);
-      } catch (error) {
-        console.log('Windows窗口创建后立即设置背景色失败:', error);
-      }
+    // ===== 立即同步初始化，确保真正的立即加载 =====
+    console.log('窗口创建完成，开始同步初始化...');
+    
+    try {
+      // 立即同步创建内容视图管理器
+      contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
+      mainWindow._contentViewManager = contentViewManager;
+      console.log('内容视图管理器同步创建完成');
+      
+      // 立即同步创建内容视图并开始加载
+      contentViewManager.createContentView();
+      console.log('内容视图同步创建完成，页面已开始加载');
+      
+      // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
+      const contentBounds = mainWindow.getContentBounds();
+      const toolbarHeight = 48; // 工具栏高度
+      contentViewManager.setBounds({
+        x: 0,
+        y: toolbarHeight, // 直接为工具栏预留空间
+        width: contentBounds.width,
+        height: contentBounds.height - toolbarHeight
+      });
+      console.log('内容视图直接设置为工具栏下方，避免后续调整闪烁');
+      
+    } catch (error) {
+      console.error('同步初始化失败:', error);
     }
     
-    // 等待内容加载完成后再显示窗口，避免白屏
+    // Windows特殊处理：延迟显示窗口以确保BrowserView完全准备就绪
+    if (process.platform === 'win32') {
+      // Windows系统需要更长的准备时间来避免白屏
+      setTimeout(() => {
+        mainWindow.show();
+        mainWindow.focus();
+        console.log('Windows窗口延迟显示，减少白屏闪烁');
+      }, 100); // Windows需要更多时间让BrowserView准备就绪
+    } else {
+      // 其他系统立即显示
+      mainWindow.show();
+      mainWindow.focus();
+      console.log('窗口显示，页面正在加载中...');
+    }
+    
+    // 窗口显示后立即初始化其他组件，减少白屏期间的操作
     setImmediate(() => {
-      if (!mainWindow || mainWindow.isDestroyed()) return;
-      console.log('开始初始化核心UI组件...');
-      try {
-        initializeManagers();
-        createViews();
-        setupLayout();
-
-        if (process.platform === 'darwin') {
-          macMenuManager = new MacMenuManager(mainWindow);
-        } else {
-          console.log('非 macOS 系统，快捷键通过 ShortcutManager 处理');
-        }
-        console.log('核心UI组件初始化完成');
-        
-        // Windows系统：立即显示避免白屏，其他系统等待内容加载
-        if (process.platform === 'win32') {
-          // Windows系统采用更精确的显示时机控制
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            // 最后一次确保背景色正确
-            const finalBgColor = getWindowsBackgroundColor();
-            mainWindow.setBackgroundColor(finalBgColor);
-            
-            // 立即显示窗口，背景色已确保正确
-            mainWindow.show();
-            mainWindow.focus();
-            console.log('Windows主窗口立即显示 (避免白屏)');
-          }
-        } else {
-          // 非Windows系统：等待内容加载完成后再显示窗口
-          setTimeout(() => {
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.show();
-              mainWindow.focus();
-              console.log('主窗口显示完成 (内容加载后)');
-            }
-          }, 100);
-        }
-        
-      } catch (error) {
-        console.error('核心UI组件初始化失败:', error);
-        // 即使出错也要显示窗口，避免应用无响应
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-        }
-      }
+      initializeOtherComponentsAsync().catch(error => {
+        console.warn('异步组件初始化失败:', error);
+      });
     });
 
     mainWindow.on('close', (event) => {
@@ -791,7 +725,281 @@ function disableDevTools() {
 }
 
 /**
- * 初始化所有管理器
+ * 异步初始化其他非关键组件（不影响页面加载）
+ */
+function initializeOtherComponentsAsync() {
+  return new Promise((resolve, reject) => {
+    try {
+      console.log('开始异步初始化其他组件...');
+      
+      // 创建快捷键管理器
+      shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, mainWindow, true);
+      shortcutManager.initialUrl = APP_CONFIG.HOME_URL;
+      shortcutManager.homeUrl = APP_CONFIG.HOME_URL;
+      console.log('快捷键管理器创建完成');
+
+      // 创建工具栏管理器
+      toolbarManager = new ToolbarManager(mainWindow, (action) => {
+        if (shortcutManager) {
+          shortcutManager.handleToolbarAction(action);
+        }
+      }, null);
+      contentViewManager.setToolbarManager(toolbarManager);
+      console.log('工具栏管理器创建完成');
+
+      // 创建布局管理器
+      layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
+      console.log('布局管理器创建完成');
+
+      // 设置管理器引用
+      mainWindow._toolbarManager = toolbarManager;
+      mainWindow._shortcutManager = shortcutManager;
+      mainWindow._layoutManager = layoutManager;
+
+      // 异步创建工具栏视图
+      if (toolbarManager) {
+        toolbarManager.createToolbarView().then(() => {
+          console.log('工具栏视图创建完成');
+          
+          // 立即设置工具栏bounds
+          const contentBounds = mainWindow.getContentBounds();
+          toolbarManager.setBounds({
+            x: 0,
+            y: 0,
+            width: contentBounds.width,
+            height: 48 // 工具栏高度
+          });
+          console.log('工具栏bounds设置完成，工具栏应该可见');
+        }).catch((error) => {
+          console.warn('工具栏视图创建失败:', error);
+        });
+      }
+
+      // 设置拦截器
+      setupMainWindowInterceptors();
+
+      // 注册快捷键（非阻塞）
+      if (shortcutManager && process.platform !== 'darwin') {
+        setTimeout(() => {
+          try {
+            shortcutManager.registerShortcuts();
+            console.log('快捷键注册完成');
+          } catch (error) {
+            console.warn('快捷键注册失败:', error);
+          }
+        }, 100);
+      }
+
+      // 创建菜单（非阻塞）
+      if (process.platform === 'darwin') {
+        setTimeout(() => {
+          try {
+            macMenuManager = new MacMenuManager(mainWindow);
+            console.log('macOS菜单创建完成');
+          } catch (error) {
+            console.warn('macOS菜单创建失败:', error);
+          }
+        }, 100);
+      }
+
+      console.log('其他组件异步初始化完成');
+      resolve();
+    } catch (error) {
+      console.error('异步初始化其他组件失败:', error);
+      reject(error);
+    }
+  });
+}
+
+/**
+ * 第一阶段：初始化基础管理器（最小必要组件）
+ */
+function initializeBasicManagers() {
+  try {
+    console.log('创建最小必要管理器...');
+
+    // 仅创建内容视图管理器，其他延后
+    contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
+    console.log('内容视图管理器创建完成');
+
+    // 设置主窗口的管理器引用
+    mainWindow._contentViewManager = contentViewManager;
+
+    console.log('基础管理器初始化完成');
+  } catch (error) {
+    console.error('初始化基础管理器失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 第二阶段：异步初始化视图和其他组件
+ */
+function initializeViewsAsync() {
+  return new Promise((resolve, reject) => {
+    try {
+      console.log('第二阶段：异步创建完整组件...');
+      
+      // 异步创建其他管理器
+      setImmediate(() => {
+        try {
+          // 创建快捷键管理器
+          shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, mainWindow, true);
+          shortcutManager.initialUrl = APP_CONFIG.HOME_URL;
+          shortcutManager.homeUrl = APP_CONFIG.HOME_URL;
+          console.log('快捷键管理器创建完成');
+
+          // 下一个tick创建工具栏
+          setImmediate(() => {
+            createToolbarAsync(resolve, reject);
+          });
+        } catch (error) {
+          console.warn('快捷键管理器创建失败:', error);
+          setImmediate(() => {
+            createToolbarAsync(resolve, reject);
+          });
+        }
+      });
+      
+    } catch (error) {
+      console.error('异步初始化失败:', error);
+      reject(error);
+    }
+  });
+}
+
+/**
+ * 异步创建工具栏和布局
+ */
+function createToolbarAsync(resolve, reject) {
+  try {
+    // 创建工具栏管理器
+    toolbarManager = new ToolbarManager(mainWindow, (action) => {
+      if (shortcutManager) {
+        shortcutManager.handleToolbarAction(action);
+      }
+    }, null);
+
+    contentViewManager.setToolbarManager(toolbarManager);
+    console.log('工具栏管理器创建完成');
+
+    // 下一个tick创建布局
+    setImmediate(() => {
+      createLayoutAsync(resolve, reject);
+    });
+  } catch (error) {
+    console.warn('工具栏管理器创建失败:', error);
+    setImmediate(() => {
+      createLayoutAsync(resolve, reject);
+    });
+  }
+}
+
+/**
+ * 异步创建布局和视图
+ */
+function createLayoutAsync(resolve, reject) {
+  try {
+    // 创建布局管理器
+    layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
+    console.log('布局管理器创建完成');
+
+    // 设置管理器引用
+    mainWindow._toolbarManager = toolbarManager;
+    mainWindow._shortcutManager = shortcutManager;
+    mainWindow._layoutManager = layoutManager;
+
+    // 下一个tick创建视图
+    setImmediate(() => {
+      createViewsAsync(resolve, reject);
+    });
+  } catch (error) {
+    console.warn('布局管理器创建失败:', error);
+    setImmediate(() => {
+      createViewsAsync(resolve, reject);
+    });
+  }
+}
+
+/**
+ * 异步创建视图（除了内容视图，只创建工具栏等）
+ */
+function createViewsAsync(resolve, reject) {
+  try {
+    console.log('异步创建工具栏视图...');
+
+    // 异步创建工具栏视图
+    if (toolbarManager) {
+      toolbarManager.createToolbarView().then(() => {
+        console.log('工具栏视图创建完成');
+        // 工具栏创建完成后立即重新布局，确保内容视图位置正确
+        if (layoutManager) {
+          layoutManager.layoutViews();
+          console.log('工具栏创建后重新布局完成');
+        }
+      }).catch((error) => {
+        console.warn('工具栏视图创建失败:', error);
+      });
+    }
+
+    // 设置布局和其他配置
+    setImmediate(() => {
+      finishInitialization();
+      // 视图创建完成，通知可以显示窗口
+      if (resolve) resolve();
+    });
+  } catch (error) {
+    console.warn('异步创建视图失败:', error);
+    setImmediate(() => {
+      finishInitialization();
+      if (reject) reject(error);
+    });
+  }
+}
+
+/**
+ * 完成初始化
+ */
+function finishInitialization() {
+  try {
+    // 设置布局
+    setupLayout();
+
+    // 设置拦截器
+    setupMainWindowInterceptors();
+
+    // 注册快捷键（非阻塞）
+    if (shortcutManager && process.platform !== 'darwin') {
+      setTimeout(() => {
+        try {
+          shortcutManager.registerShortcuts();
+          console.log('快捷键注册完成');
+        } catch (error) {
+          console.warn('快捷键注册失败:', error);
+        }
+      }, 100);
+    }
+
+    // 创建菜单（非阻塞）
+    if (process.platform === 'darwin') {
+      setTimeout(() => {
+        try {
+          macMenuManager = new MacMenuManager(mainWindow);
+          console.log('macOS菜单创建完成');
+        } catch (error) {
+          console.warn('macOS菜单创建失败:', error);
+        }
+      }, 100);
+    }
+
+    console.log('所有组件异步初始化完成');
+  } catch (error) {
+    console.error('完成初始化失败:', error);
+  }
+}
+
+/**
+ * 初始化所有管理器（旧版本，保留以防回滚）
  */
 function initializeManagers() {
   try {
