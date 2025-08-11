@@ -88,10 +88,11 @@ class UpdateManager {
         response.on('end', () => {
           try {
             const data = JSON.parse(responseData);
-            const latestVersion = data.version;
+            // 兼容 CDN 上可能的字段名拼写错误
+            const latestVersion = data.version || data.versioin;
             
             if (!latestVersion) {
-              reject(new Error('无法从响应中获取版本信息，期望的字段：version'));
+              reject(new Error('无法从响应中获取版本信息，期望的字段：version 或 versioin'));
               return;
             }
             
