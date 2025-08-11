@@ -225,7 +225,7 @@ function openNewWindow(url) {
     x: centerPosition.x,
     y: centerPosition.y,
     backgroundColor: backgroundColor, // 设置与主题匹配的背景色
-    show: true, // 直接显示，避免感知延迟
+    show: false, // 先不显示，等内容加载完成后再显示
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -339,7 +339,8 @@ function openNewWindow(url) {
         backgroundThrottling: false,
         spellcheck: false,
         webgl: false,
-        enableWebSQL: false
+        enableWebSQL: false,
+        backgroundColor: backgroundColor // 使用与窗口相同的主题背景色
       }
     });
 
@@ -438,6 +439,15 @@ function openNewWindow(url) {
     console.warn('新窗口快捷键注册失败，但不影响核心功能:', error);
   }
 
+  // 所有内容加载完成后再显示新窗口，避免白屏
+  setTimeout(() => {
+    if (win && !win.isDestroyed()) {
+      win.show();
+      win.focus();
+      console.log('新窗口显示完成 (内容加载后)');
+    }
+  }, 50); // 新窗口延迟较短，因为内容相对简单
+
   // 事件处理
   win.on('closed', () => {
     // 清理快捷键管理器
@@ -476,7 +486,7 @@ function createMainWindow() {
       x: centerPosition.x,
       y: centerPosition.y,
       backgroundColor: backgroundColor,
-      show: true, // 立即显示
+      show: false, // 先不显示，等内容加载完成后再显示
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -487,12 +497,10 @@ function createMainWindow() {
         enableWebSQL: false // 禁用WebSQL
       }
     });
-    // 直接初始化核心 UI，使用 setImmediate 让首帧尽快绘制，减少白屏时间
+    // 等待内容加载完成后再显示窗口，避免白屏
     setImmediate(() => {
       if (!mainWindow || mainWindow.isDestroyed()) return;
-      mainWindow.focus();
-      console.log('主窗口显示完成 (即时)');
-      console.log('立即初始化核心UI组件...');
+      console.log('开始初始化核心UI组件...');
       try {
         initializeManagers();
         createViews();
@@ -504,8 +512,22 @@ function createMainWindow() {
           console.log('非 macOS 系统，快捷键通过 ShortcutManager 处理');
         }
         console.log('核心UI组件初始化完成');
+        
+        // 所有内容加载完成后再显示窗口，避免白屏
+        setTimeout(() => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.show();
+            mainWindow.focus();
+            console.log('主窗口显示完成 (内容加载后)');
+          }
+        }, 100); // 给一点时间让渲染完成
+        
       } catch (error) {
         console.error('核心UI组件初始化失败:', error);
+        // 即使出错也要显示窗口，避免应用无响应
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show();
+        }
       }
     });
 

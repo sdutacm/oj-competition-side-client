@@ -82,12 +82,17 @@ class ContentViewManager {
    * @param {boolean} allowToolbarOverlap 是否允许内容区覆盖工具栏，默认 false
    */
   createContentView(targetWindow = this.mainWindow, url = this.config.HOME_URL, allowToolbarOverlap = false) {
+    // 根据系统主题设置背景色
+    const { nativeTheme } = require('electron');
+    const backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
+    
     const contentView = new BrowserView({
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
         nativeWindowOpen: true,
         // devTools: false, // 不禁用开发者工具，确保系统命令可用
+        backgroundColor: backgroundColor // 使用主题适配的背景色
       }
     });
     targetWindow.addBrowserView(contentView);
