@@ -19,9 +19,9 @@ class UpdateManager {
   async checkForUpdates(showNoUpdateDialog = false) {
     const now = Date.now();
     
-    // 防止短时间内重复检查
-    if (this.isChecking || (now - this.lastCheckTime < 60000)) {
-      console.log('更新检查正在进行中或刚刚检查过，跳过');
+    // 防止短时间内重复检查，增加最小间隔
+    if (this.isChecking || (now - this.lastCheckTime < 120000)) {
+      console.log('更新检查正在进行中或刚刚检查过，跳过 (最小间隔2分钟)');
       return false;
     }
 
@@ -31,14 +31,16 @@ class UpdateManager {
     try {
       console.log('开始检查更新，当前版本:', this.currentVersion);
       
+      // 使用更短的超时时间，避免长时间阻塞
       const latestVersion = await this.fetchLatestVersion();
       const hasUpdate = this.compareVersions(latestVersion, this.currentVersion) > 0;
       
       console.log('最新版本:', latestVersion, '有更新:', hasUpdate);
       
       if (hasUpdate) {
-        // 检查这个版本是否被用户跳过
-        if (this.isVersionSkipped(latestVersion) && !showNoUpdateDialog) {
+        // 检查这个版本是否被用户跳过（异步）
+        const isSkipped = await this.isVersionSkipped(latestVersion);
+        if (isSkipped && !showNoUpdateDialog) {
           console.log('版本', latestVersion, '已被用户跳过，不显示更新提示');
           return false;
         }
@@ -68,7 +70,7 @@ class UpdateManager {
       const request = net.request({
         method: 'GET',
         url: this.updateCheckUrl,
-        timeout: 10000
+        timeout: 5000 // 减少超时时间到5秒，避免长时间阻塞
       });
 
       let responseData = '';
@@ -107,7 +109,7 @@ class UpdateManager {
       });
 
       request.on('timeout', () => {
-        reject(new Error('请求超时，请检查网络连接'));
+        reject(new Error('请求超时（5秒），请检查网络连接'));
       });
 
       request.end();
@@ -161,7 +163,7 @@ class UpdateManager {
         this.openDownloadPage();
         break;
       case 2: // 跳过此版本
-        this.skipVersion(latestVersion);
+        await this.skipVersion(latestVersion);
         break;
       // case 0: 稍后提醒 - 不做任何操作
     }
@@ -206,13 +208,13 @@ class UpdateManager {
   }
 
   /**
-   * 跳过指定版本
+   * 跳过指定版本（异步版本）
    * @param {string} version 
    */
-  skipVersion(version) {
+  async skipVersion(version) {
     const { app } = require('electron');
     const path = require('path');
-    const fs = require('fs');
+    const fs = require('fs').promises;
     
     try {
       // 将跳过的版本保存到应用数据目录
@@ -220,12 +222,18 @@ class UpdateManager {
       const configPath = path.join(userDataPath, 'update-config.json');
       
       let config = {};
-      if (fs.existsSync(configPath)) {
-        config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      try {
+        const existingConfigData = await fs.readFile(configPath, 'utf8');
+        config = JSON.parse(existingConfigData);
+      } catch (fileError) {
+        // 文件不存在，使用空配置
+        if (fileError.code !== 'ENOENT') {
+          throw fileError;
+        }
       }
       
       config.skippedVersion = version;
-      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2));
       
       console.log('用户选择跳过版本:', version);
     } catch (error) {
@@ -234,25 +242,30 @@ class UpdateManager {
   }
 
   /**
-   * 检查版本是否被跳过
+   * 检查版本是否被跳过（异步版本）
    * @param {string} version 
-   * @returns {boolean}
+   * @returns {Promise<boolean>}
    */
-  isVersionSkipped(version) {
+  async isVersionSkipped(version) {
     const { app } = require('electron');
     const path = require('path');
-    const fs = require('fs');
+    const fs = require('fs').promises;
     
     try {
       const userDataPath = app.getPath('userData');
       const configPath = path.join(userDataPath, 'update-config.json');
       
-      if (!fs.existsSync(configPath)) {
-        return false;
+      try {
+        const configData = await fs.readFile(configPath, 'utf8');
+        const config = JSON.parse(configData);
+        return config.skippedVersion === version;
+      } catch (fileError) {
+        // 文件不存在或读取失败，认为没有跳过版本
+        if (fileError.code === 'ENOENT') {
+          return false;
+        }
+        throw fileError;
       }
-      
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      return config.skippedVersion === version;
     } catch (error) {
       console.error('检查跳过版本设置失败:', error);
       return false;
@@ -263,17 +276,18 @@ class UpdateManager {
    * 启动定时检查
    */
   startPeriodicCheck() {
-    // 启动时立即检查一次（静默）
+    // 延迟更久才进行首次检查，避免影响启动性能
     setTimeout(() => {
+      console.log('执行首次更新检查');
       this.checkForUpdates(false);
-    }, 1000); // 启动1秒后立即检查
+    }, 5000); // 启动5秒后才检查，避免影响主窗口加载
 
     // 定期检查
     setInterval(() => {
       this.checkForUpdates(false);
     }, this.checkInterval);
     
-    console.log('已启动定期更新检查，间隔:', this.checkInterval / 1000 / 60, '分钟');
+    console.log('已启动定期更新检查，首次检查延迟5秒，间隔:', this.checkInterval / 1000 / 60, '分钟');
   }
 
   /**
@@ -302,9 +316,12 @@ class UpdateManager {
       
       console.log('最新版本:', latestVersion, '有更新:', hasUpdate);
       
-      if (hasUpdate && this.isVersionSkipped(latestVersion)) {
-        console.log('版本', latestVersion, '已被用户跳过');
-        return { hasUpdate: false, latestVersion, skipped: true };
+      if (hasUpdate) {
+        const isSkipped = await this.isVersionSkipped(latestVersion);
+        if (isSkipped) {
+          console.log('版本', latestVersion, '已被用户跳过');
+          return { hasUpdate: false, latestVersion, skipped: true };
+        }
       }
       
       return { 

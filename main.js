@@ -592,22 +592,24 @@ app.whenReady().then(() => {
     // 首次启动或需要播放动画
     startupManager.showStartupWindow(() => {
       createMainWindow();
-      // 在主窗口创建完成后立即启动更新检查
+      // 延迟更新检查，优先保证主窗口界面稳定加载
       setTimeout(() => {
         if (updateManager) {
+          console.log('启动更新检查 (首次启动)');
           updateManager.startPeriodicCheck();
         }
-      }, 3000); // 3秒后开始更新检查，给应用界面一点时间稳定
+      }, 10000); // 10秒后开始更新检查，优先保证界面流畅
     });
   } else {
     // 非首次启动，直接进入主窗口
     createMainWindow();
-    // 在主窗口创建完成后立即启动更新检查
+    // 延迟更新检查，优先保证主窗口界面稳定加载
     setTimeout(() => {
       if (updateManager) {
+        console.log('启动更新检查 (正常启动)');
         updateManager.startPeriodicCheck();
       }
-    }, 2000); // 2秒后开始更新检查
+    }, 8000); // 8秒后开始更新检查，优先保证界面流畅
   }
 }).catch(error => {
   console.error('应用启动失败:', error);
