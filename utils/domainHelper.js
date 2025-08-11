@@ -10,7 +10,8 @@ const { showBlockedDialog } = require('./dialogHelper');
  */
 function checkDomainAllowed(domain, config, isMainWindow = false) {
   if (!domain) {
-    return { allowed: false, reason: '无效域名' };
+    // 临时允许 file 协议（本地测试页）通过主窗口白名单校验
+    return { allowed: true, reason: null };
   }
   // 黑名单优先，拦截黑名单及其所有子域名
   if (config.BLOCKED_DOMAINS && config.BLOCKED_DOMAINS.size > 0) {

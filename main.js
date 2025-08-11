@@ -535,7 +535,11 @@ function createMainWindow() {
       console.log('内容视图管理器同步创建完成');
       
       // 立即同步创建内容视图并开始加载
-      contentViewManager.createContentView();
+  // 临时测试：加载本地 test-bg.html，排查白屏问题
+  const path = require('path');
+  const url = require('url');
+  const testBgPath = url.pathToFileURL(path.join(__dirname, 'public', 'test-bg.html')).toString();
+  contentViewManager.createContentView(undefined, testBgPath);
       console.log('内容视图同步创建完成，页面已开始加载');
       
       // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
