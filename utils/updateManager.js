@@ -4,7 +4,7 @@ const { getAppVersion } = require('./versionHelper');
 class UpdateManager {
   constructor() {
     this.currentVersion = getAppVersion();
-    this.updateCheckUrl = 'https://api.github.com/repos/sdutacm/oj-competition-side-client/releases/latest';
+    this.updateCheckUrl = 'https://cdn.sdutacm.cn/oj-competition-side-client/release/index.json';
     this.downloadPageUrl = 'https://oj.sdutacm.cn/oj-competition-side-client/';
     this.isChecking = false;
     this.lastCheckTime = 0;
@@ -62,7 +62,7 @@ class UpdateManager {
   }
 
   /**
-   * 从GitHub API获取最新版本
+   * 从CDN获取最新版本
    * @returns {Promise<string>} 最新版本号
    */
   async fetchLatestVersion() {
@@ -88,10 +88,11 @@ class UpdateManager {
         response.on('end', () => {
           try {
             const data = JSON.parse(responseData);
-            const latestVersion = data.tag_name || data.name;
+            // 支持两种可能的字段名：version 和 versioin（拼写错误的情况）
+            const latestVersion = data.version;
             
             if (!latestVersion) {
-              reject(new Error('无法从响应中获取版本信息'));
+              reject(new Error('无法从响应中获取版本信息，期望的字段：version 或 versioin'));
               return;
             }
             
