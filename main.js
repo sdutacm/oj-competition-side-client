@@ -547,16 +547,9 @@ function createMainWindow() {
       mainWindow._contentViewManager = contentViewManager;
       console.log('内容视图管理器同步创建完成');
       
-      // 立即同步创建内容视图并开始加载
-      // 临时测试：加载本地 test-bg.html，排查白屏问题
-      const path = require('path');
-      const url = require('url');
-      const testBgPath = url.pathToFileURL(path.join(__dirname, 'public', 'test-bg.html')).toString();
-      contentViewManager.createContentView(undefined, testBgPath, {
-        backgroundColor: '#f5f5f5',
-        transparent: false
-      });
-      console.log('内容视图同步创建完成，页面已开始加载');
+  // 立即同步创建内容视图并开始加载
+  contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
+  console.log('内容视图同步创建完成，页面已开始加载');
 
       // did-finish-load 后再 show，彻底排查首屏闪烁
       const contentView = contentViewManager.getView && contentViewManager.getView();
