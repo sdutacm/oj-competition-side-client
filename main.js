@@ -523,13 +523,15 @@ function createMainWindow() {
       height: windowHeight,
       x: centerPosition.x,
       y: centerPosition.y,
-      backgroundColor: backgroundColor,
+      backgroundColor: '#f5f5f5', // 强制与网页一致，彻底避免黑屏
       show: false, // 先不显示，等内容加载完成后再 show
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
         webSecurity: true,
         sandbox: false,
+        backgroundColor: '#f5f5f5', // BrowserView 也强制背景色
+        transparent: false // 禁止透明，避免黑底
       }
     });
     
@@ -547,7 +549,10 @@ function createMainWindow() {
       const path = require('path');
       const url = require('url');
       const testBgPath = url.pathToFileURL(path.join(__dirname, 'public', 'test-bg.html')).toString();
-      contentViewManager.createContentView(undefined, testBgPath);
+      contentViewManager.createContentView(undefined, testBgPath, {
+        backgroundColor: '#f5f5f5',
+        transparent: false
+      });
       console.log('内容视图同步创建完成，页面已开始加载');
 
       // did-finish-load 后再 show，彻底排查首屏闪烁
