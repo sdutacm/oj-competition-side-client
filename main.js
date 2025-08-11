@@ -7,12 +7,14 @@ const ContentViewManager = require('./utils/contentViewManager');
 const ShortcutManager = require('./utils/shortcutManager');
 const { LayoutManager } = require('./utils/windowHelper');
 const { isWhiteDomain } = require('./utils/domainHelper');
-const { showBlockedDialog } = require('./utils/dialogHelper');
+const { showBlockedDialog, showBlockedDialogWithDebounce } = require('./utils/dialogHelper');
 const i18n = require('./utils/i18nManager');
 const MacMenuManager = require('./utils/macMenuManager');
 const StartupManager = require('./utils/startupManager');
 const UpdateManager = require('./utils/updateManager');
+
 const { calculateCenteredPosition } = require('./utils/screenCenterPosition');
+const { getAppVersion } = require('./utils/versionHelper');
 
 let mainWindow = null;
 let toolbarManager = null;
@@ -361,8 +363,7 @@ function openNewWindow(url) {
 
     // 设置自定义 User-Agent
     const defaultUserAgent = contentView.webContents.getUserAgent();
-    const { getAppVersion } = require('./utils/versionHelper');
-    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
+  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
     contentView.webContents.setUserAgent(customUserAgent);
 
     // 新窗口标题同步 - 跟随网页标题
@@ -1374,21 +1375,6 @@ app.on('will-quit', () => {
   }
 });
 
-// 防抖弹窗相关
-let lastBlockedUrl = '';
-let lastBlockedType = '';
-let lastBlockedTime = 0;
-function showBlockedDialogWithDebounce(win, url, message, type = 'default') {
-  const now = Date.now();
-  // type: 'default' 主窗口拦截，'redirect' 新窗口重定向拦截
-  if (url === lastBlockedUrl && type === lastBlockedType && now - lastBlockedTime < 1000) {
-    return;
-  }
-  lastBlockedUrl = url;
-  lastBlockedType = type;
-  lastBlockedTime = now;
-  showBlockedDialog(win, url, message, type);
-}
 
 // 只在重启时阻止自动退出，正常关闭时允许退出
 app.on('window-all-closed', (event) => {

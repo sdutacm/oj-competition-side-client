@@ -1253,8 +1253,24 @@ function showInfoDialog(parentWindow) {
   return infoWindow;
 }
 
+// 防抖弹窗，防止同一窗口/类型短时间重复弹窗
+let lastBlockedUrl = '';
+let lastBlockedType = '';
+let lastBlockedTime = 0;
+function showBlockedDialogWithDebounce(win, url, message, type = 'default') {
+  const now = Date.now();
+  if (url === lastBlockedUrl && type === lastBlockedType && now - lastBlockedTime < 1000) {
+    return;
+  }
+  lastBlockedUrl = url;
+  lastBlockedType = type;
+  lastBlockedTime = now;
+  showBlockedDialog(win, url, message, type);
+}
+
 module.exports = {
   showBlockedDialog,
+  showBlockedDialogWithDebounce,
   showInfoDialog,
   isAboutWindow
 };
