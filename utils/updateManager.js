@@ -320,7 +320,12 @@ class UpdateManager {
         const isSkipped = await this.isVersionSkipped(latestVersion);
         if (isSkipped) {
           console.log('版本', latestVersion, '已被用户跳过');
-          return { hasUpdate: false, latestVersion, skipped: true };
+          return { 
+            hasUpdate: false, 
+            latestVersion, 
+            currentVersion: this.currentVersion, // 添加缺失的 currentVersion
+            skipped: true 
+          };
         }
       }
       

@@ -1592,7 +1592,7 @@ class ToolbarManager {
     
     const updateWindow = new BrowserWindow({
       width: 420,
-      height: 380,
+      height: 420,
       frame: false, // 完全无框
       resizable: false,
       center: true,
@@ -1806,7 +1806,7 @@ class ToolbarManager {
 
           .update-window {
             width: 420px;
-            height: 380px;
+            height: 420px;
             background: var(--bg-primary); /* 使用CSS变量 */
             border-radius: ${isWindows ? '0' : '16px'};
             box-shadow: var(--box-shadow); /* 使用CSS变量 */
