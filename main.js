@@ -1,4 +1,7 @@
 const { app, BrowserWindow, BrowserView, nativeTheme, shell } = require('electron');
+
+// 禁用硬件加速，排查 GPU/驱动/渲染管线导致的黑白屏闪烁
+app.disableHardwareAcceleration();
 const ToolbarManager = require('./utils/toolbarManager');
 const ContentViewManager = require('./utils/contentViewManager');
 const ShortcutManager = require('./utils/shortcutManager');
