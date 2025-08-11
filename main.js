@@ -480,10 +480,9 @@ function getWindowsBackgroundColor() {
     const isDarkTheme = nativeTheme.shouldUseDarkColors;
     console.log('系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
     
-    // Windows系统特殊处理，使用中性灰色避免与页面主题冲突
+    // Windows系统特殊处理，背景色与网页首屏保持一致，彻底消除闪烁
     if (process.platform === 'win32') {
-      // Windows上使用中性灰色，减少与页面背景的对比度差异
-      return '#f0f0f0'; // 非常浅的灰色，接近白色但不会造成强烈对比
+      return '#f5f5f5'; // 与网页首屏背景色一致
     }
     
     // 其他系统使用原有逻辑，避免纯白色
