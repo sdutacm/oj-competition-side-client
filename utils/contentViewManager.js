@@ -160,10 +160,17 @@ class ContentViewManager {
       }
       
       // 页面加载完成后每次都注入性能优化CSS，保证刷新/新建窗口/导航都生效
-      contentView.webContents.on('did-finish-load', () => {
-        this.injectPerfCSS(contentView);
-        console.log('页面加载完成并注入CSS');
-      });
+        contentView.webContents.on('did-finish-load', () => {
+          this.injectPerfCSS(contentView);
+          console.log('页面加载完成并注入CSS');
+        });
+        // 主窗口内容视图的 dom-ready 也注入一次，增强注入时机
+        if (targetWindow === this.mainWindow) {
+          contentView.webContents.on('dom-ready', () => {
+            this.injectPerfCSS(contentView);
+            console.log('主窗口 dom-ready 注入CSS');
+          });
+        }
       
     } catch (e) {
       console.warn('加载页面失败:', e.message);
