@@ -554,25 +554,11 @@ function createMainWindow() {
       console.error('同步初始化失败:', error);
     }
     
-    // 优化：仅在内容视图加载完成后再显示窗口，彻底消除白屏
-    // 兼容 Windows 和其他平台
-    if (contentViewManager && contentViewManager.contentView && contentViewManager.contentView.webContents) {
-      contentViewManager.contentView.webContents.once('did-finish-load', () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-          mainWindow.focus();
-          console.log('主窗口内容加载完成后显示，避免白屏闪烁');
-        }
-      });
-    } else {
-      // 兜底：如果没有内容视图，仍然延迟显示
-      setTimeout(() => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-          mainWindow.focus();
-          console.log('主窗口无内容视图，延迟显示');
-        }
-      }, 200);
+    // 立即显示主窗口，保证网页动画在可见状态下播放
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+      console.log('主窗口创建后立即显示，保证动画可见');
     }
     
     // 窗口显示后立即初始化其他组件，减少白屏期间的操作
