@@ -159,14 +159,10 @@ class ContentViewManager {
         });
       }
       
-      // 页面加载完成后注入性能优化CSS（仅首次）
-      let cssInjected = false;
+      // 页面加载完成后每次都注入性能优化CSS，保证刷新/新建窗口/导航都生效
       contentView.webContents.on('did-finish-load', () => {
-        if (!cssInjected) {
-          this.injectPerfCSS(contentView);
-          cssInjected = true;
-          console.log('页面加载完成并注入CSS');
-        }
+        this.injectPerfCSS(contentView);
+        console.log('页面加载完成并注入CSS');
       });
       
     } catch (e) {
