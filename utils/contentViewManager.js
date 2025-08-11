@@ -82,9 +82,24 @@ class ContentViewManager {
    * @param {boolean} allowToolbarOverlap 是否允许内容区覆盖工具栏，默认 false
    */
   createContentView(targetWindow = this.mainWindow, url = this.config.HOME_URL, allowToolbarOverlap = false) {
-    // 根据系统主题设置背景色
+    // Windows 系统的暗色主题检测优化
     const { nativeTheme } = require('electron');
-    const backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
+    let backgroundColor = '#ffffff'; // 默认亮色主题
+    
+    if (process.platform === 'win32') {
+      // Windows 系统：更保守的暗色主题检测，优先使用暗色背景避免白屏闪烁
+      try {
+        const isDarkTheme = nativeTheme.shouldUseDarkColors;
+        backgroundColor = isDarkTheme ? '#1f1f1f' : '#ffffff';
+      } catch (error) {
+        // 如果检测失败，在Windows上默认使用暗色背景（减少白屏概率）
+        backgroundColor = '#1f1f1f';
+        console.log('Windows ContentView主题检测失败，使用默认暗色背景:', error);
+      }
+    } else {
+      // macOS 和 Linux：正常的主题检测
+      backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
+    }
     
     const contentView = new BrowserView({
       webPreferences: {
@@ -106,9 +121,23 @@ class ContentViewManager {
     // 只允许加载白名单主域名
     const hostname = getHostname(url);
     // 先加载一个与主题匹配的本地占位页，避免远程页面首次绘制前的白屏闪烁
-    const isDark = nativeTheme.shouldUseDarkColors;
-    const placeholderBG = isDark ? '#1f1f1f' : '#ffffff';
-    const placeholderFG = isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)';
+    // Windows 系统使用更深的背景色减少闪烁
+    let placeholderBG = '#ffffff';
+    let isDarkMode = false; // 添加变量定义
+    
+    if (process.platform === 'win32') {
+      try {
+        isDarkMode = nativeTheme.shouldUseDarkColors;
+        placeholderBG = isDarkMode ? '#1f1f1f' : '#ffffff';
+      } catch (error) {
+        isDarkMode = true; // Windows默认假设为暗色模式
+        placeholderBG = '#1f1f1f'; // Windows默认使用暗色
+      }
+    } else {
+      isDarkMode = nativeTheme.shouldUseDarkColors;
+      placeholderBG = isDarkMode ? '#1f1f1f' : '#ffffff';
+    }
+    const placeholderFG = isDarkMode ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)';
     const placeholderHTML = encodeURIComponent(`<!DOCTYPE html><html><head><meta charset='utf-8'><style>html,body{margin:0;padding:0;height:100%;width:100%;background:${placeholderBG};color:${placeholderFG};font:14px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased;}</style></head><body><div style="letter-spacing:.5px;">正在加载…</div></body></html>`);
     contentView.webContents.loadURL(`data:text/html;charset=utf-8,${placeholderHTML}`);
 

@@ -216,8 +216,23 @@ function openNewWindow(url) {
   const windowWidth = 1400;
   const windowHeight = 900;
   const centerPosition = calculateCenteredPosition(windowWidth, windowHeight);
-  // 根据系统主题设置新窗口背景色
-  const backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
+  
+  // Windows 系统的暗色主题检测优化
+  let backgroundColor = '#ffffff'; // 默认亮色主题
+  if (process.platform === 'win32') {
+    // Windows 系统：更保守的暗色主题检测，优先使用暗色背景避免白屏闪烁
+    try {
+      const isDarkTheme = nativeTheme.shouldUseDarkColors;
+      backgroundColor = isDarkTheme ? '#1f1f1f' : '#ffffff';
+    } catch (error) {
+      // 如果检测失败，在Windows上默认使用暗色背景（减少白屏概率）
+      backgroundColor = '#1f1f1f';
+      console.log('Windows新窗口主题检测失败，使用默认暗色背景:', error);
+    }
+  } else {
+    // macOS 和 Linux：正常的主题检测
+    backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
+  }
 
   const win = new BrowserWindow({
     width: windowWidth,
@@ -226,6 +241,12 @@ function openNewWindow(url) {
     y: centerPosition.y,
     backgroundColor: backgroundColor, // 设置与主题匹配的背景色
     show: false, // 先不显示，等内容加载完成后再显示
+    // Windows 系统特殊优化
+    ...(process.platform === 'win32' && {
+      thickFrame: true, // Windows 系统使用厚边框提高渲染性能
+      skipTaskbar: false,
+      titleBarOverlay: false, // 禁用标题栏覆盖避免闪烁
+    }),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -478,7 +499,23 @@ function createMainWindow() {
     const windowHeight = 900;
     const centerPosition = calculateCenteredPosition(windowWidth, windowHeight);
 
-    const backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
+    // Windows 系统的暗色主题检测优化
+    let backgroundColor = '#ffffff'; // 默认亮色主题
+    if (process.platform === 'win32') {
+      // Windows 系统：更保守的暗色主题检测，优先使用暗色背景避免白屏闪烁
+      try {
+        // 检查系统注册表或环境变量来确定主题
+        const isDarkTheme = nativeTheme.shouldUseDarkColors;
+        backgroundColor = isDarkTheme ? '#1f1f1f' : '#ffffff'; // 使用更深的背景色减少闪烁
+      } catch (error) {
+        // 如果检测失败，在Windows上默认使用暗色背景（减少白屏概率）
+        backgroundColor = '#1f1f1f';
+        console.log('Windows主题检测失败，使用默认暗色背景:', error);
+      }
+    } else {
+      // macOS 和 Linux：正常的主题检测
+      backgroundColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
+    }
 
     mainWindow = new BrowserWindow({
       width: windowWidth,
@@ -487,6 +524,12 @@ function createMainWindow() {
       y: centerPosition.y,
       backgroundColor: backgroundColor,
       show: false, // 先不显示，等内容加载完成后再显示
+      // Windows 系统特殊优化
+      ...(process.platform === 'win32' && {
+        thickFrame: true, // Windows 系统使用厚边框提高渲染性能
+        skipTaskbar: false,
+        titleBarOverlay: false, // 禁用标题栏覆盖避免闪烁
+      }),
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -514,13 +557,26 @@ function createMainWindow() {
         console.log('核心UI组件初始化完成');
         
         // 所有内容加载完成后再显示窗口，避免白屏
+        // Windows 系统需要更长的延迟来避免白屏闪烁
+        const showDelay = process.platform === 'win32' ? 200 : 100;
         setTimeout(() => {
           if (mainWindow && !mainWindow.isDestroyed()) {
+            // Windows 系统：在显示窗口前再次确认背景色
+            if (process.platform === 'win32') {
+              try {
+                const currentDarkMode = nativeTheme.shouldUseDarkColors;
+                const correctBgColor = currentDarkMode ? '#1f1f1f' : '#ffffff';
+                mainWindow.setBackgroundColor(correctBgColor);
+              } catch (error) {
+                console.log('Windows背景色更新失败:', error);
+              }
+            }
+            
             mainWindow.show();
             mainWindow.focus();
             console.log('主窗口显示完成 (内容加载后)');
           }
-        }, 100); // 给一点时间让渲染完成
+        }, showDelay); // Windows使用更长延迟
         
       } catch (error) {
         console.error('核心UI组件初始化失败:', error);
@@ -600,6 +656,32 @@ app.whenReady().then(() => {
     console.log("App Data Path:", app.getPath('userData'));
   } else {
     console.log('非 macOS 系统 - 跳过 i18n 初始化');
+  }
+
+  // Windows 系统主题变化监听器 - 动态更新背景色减少白屏
+  if (process.platform === 'win32') {
+    nativeTheme.on('updated', () => {
+      try {
+        const isDarkMode = nativeTheme.shouldUseDarkColors;
+        const newBgColor = isDarkMode ? '#1f1f1f' : '#ffffff';
+        
+        console.log('Windows系统主题变化检测到，更新背景色:', newBgColor);
+        
+        // 更新主窗口背景色
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setBackgroundColor(newBgColor);
+        }
+        
+        // 更新所有子窗口背景色
+        allWindows.forEach(win => {
+          if (win && !win.isDestroyed()) {
+            win.setBackgroundColor(newBgColor);
+          }
+        });
+      } catch (error) {
+        console.error('Windows主题变化处理失败:', error);
+      }
+    });
   }
 
   // 恢复 StartupManager 启动动画逻辑
