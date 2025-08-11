@@ -1,6 +1,7 @@
 const { dialog, BrowserWindow, shell } = require('electron');
 const path = require('path');
 const { getChineseFormattedVersion, getAppVersion } = require('./versionHelper');
+const PlatformHelper = require('./platformHelper');
 
 /**
  * 显示域名拦截对话框
@@ -145,6 +146,9 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
 
   // 创建 HTML 内容
   function createDialogHTML(faviconBase64 = '') {
+    // 检测是否为Windows系统
+    const isWindows = PlatformHelper.isWindows();
+    
     const logoImg = faviconBase64 ? 
       `<img src="data:image/x-icon;base64,${faviconBase64}" alt="Logo" class="dialog-icon">` :
       '<div class="dialog-icon-fallback">⚠️</div>';
@@ -208,7 +212,7 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          border-radius: 8px; /* 添加圆角 */
+          border-radius: ${isWindows ? '0' : '8px'}; /* Windows系统使用直角 */
           box-shadow: 0 10px 30px var(--shadow-color); /* 添加阴影 */
           border: 1px solid var(--border-color); /* 添加边框 */
           user-select: none; /* 禁止选中 */

@@ -507,6 +507,9 @@ class ToolbarManager {
    * 获取确认对话框HTML内容
    */
   getConfirmDialogHTML() {
+    // 检测是否为Windows系统
+    const isWindows = PlatformHelper.isWindows();
+    
     return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -589,7 +592,7 @@ class ToolbarManager {
       width: 100%;
       font-family: "Segoe UI", "Helvetica Neue", sans-serif;
       background: transparent; /* 确保透明背景，避免闪烁 */
-  border-radius: 16px; /* 仅内部内容圆角，外部完全透明 */
+  border-radius: ${isWindows ? '0' : '16px'}; /* Windows系统使用直角 */
   scrollbar-width: none;
   -ms-overflow-style: none;
   /* Windows 下去掉 outline，防止透明窗口外出现矩形背景 */
@@ -623,11 +626,10 @@ class ToolbarManager {
       align-items: center;
       justify-content: center;
       padding: 0;
-      border-radius: 16px;
+      border-radius: ${isWindows ? '0' : '16px'}; /* Windows系统使用直角 */
       overflow: hidden;
       scrollbar-width: none;
       -ms-overflow-style: none;
-      /* 去除外层边框，统一内部卡片式表现 */
       border: none;
     }
 
@@ -639,8 +641,9 @@ class ToolbarManager {
       position: relative;
   /* 使用主题变量而不是硬编码颜色，确保暗色生效 */
   background: var(--bg-primary);
-      border-radius: 12px; /* 与更新弹窗半径一致 */
+      border-radius: ${isWindows ? '0' : '12px'}; /* Windows系统使用直角 */
       box-shadow: 0 8px 32px rgba(0,0,0,0.2); /* 与更新弹窗一致 */
+      ${isWindows ? 'border: 1px solid var(--card-border);' : ''} /* Windows系统添加边框 */
       padding: 24px;
       width: 100%;
       height: 100%;
@@ -654,6 +657,20 @@ class ToolbarManager {
       -webkit-backdrop-filter: none !important;
     }
 
+    /* Windows 系统专用样式 */
+    ${isWindows ? `
+      html, body {
+        border-radius: 0 !important;
+      }
+      .dialog-container {
+        border-radius: 0 !important;
+      }
+      .dialog-content {
+        border-radius: 0 !important;
+        border: 1px solid var(--card-border) !important;
+      }
+    ` : ''}
+
     /* Mac系统特殊处理 - 使用毛玻璃效果 */
     @supports (-webkit-backdrop-filter: blur(10px)) {
       .dialog-content {
@@ -661,6 +678,7 @@ class ToolbarManager {
         background: var(--bg-primary) !important;
 	border: 1px solid var(--card-border) !important; /* 保持细边框 */
         box-shadow: 0 8px 32px rgba(0,0,0,0.2) !important;
+        border-radius: ${isWindows ? '0 !important' : '12px !important'}; /* Windows系统强制直角 */
       }
     }
 
@@ -669,7 +687,15 @@ class ToolbarManager {
       .dialog-content {
         background: var(--bg-primary) !important;
         box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+        border-radius: ${isWindows ? '0 !important' : '12px !important'}; /* Windows系统强制直角 */
       }
+      
+      /* Windows 暗色模式专用边框 */
+      ${isWindows ? `
+        .dialog-content {
+          border: 1px solid #4b5563 !important;
+        }
+      ` : ''}
     }
 
     .dialog-content::-webkit-scrollbar {
@@ -1559,6 +1585,11 @@ class ToolbarManager {
     // 检测平台以应用不同的窗口设置
     const isMac = process.platform === 'darwin';
     
+    // 检测系统主题
+    const { nativeTheme } = require('electron');
+    const isDarkMode = nativeTheme.shouldUseDarkColors;
+    const windowBgColor = isDarkMode ? '#1f2937' : '#ffffff';
+    
     const updateWindow = new BrowserWindow({
       width: 420,
       height: 380,
@@ -1568,8 +1599,8 @@ class ToolbarManager {
       modal: true, // 设为模态，阻止父窗口交互，自动在父窗口之上
       parent: currentWindow,
       show: false, // 重要：先不显示，等内容完全加载后再显示
-      transparent: true, // 所有平台都启用透明
-      backgroundColor: 'rgba(0,0,0,0)', // 所有平台都使用完全透明背景
+      transparent: false, // 关闭透明，避免半透明背景
+      backgroundColor: windowBgColor, // 根据系统主题设置窗口背景
       skipTaskbar: false, // 允许在任务栏显示
       focusable: true,
       level: 'modal-panel', // 设置窗口层级为模态面板层级
@@ -1611,10 +1642,10 @@ class ToolbarManager {
     updateWindow.webContents.once('dom-ready', () => {
       // 确保CSS完全加载后再显示窗口，避免闪烁
       setTimeout(() => {
-        // 确保所有平台窗口完全透明且无边框
+        // 确保窗口设置
         updateWindow.setVisibleOnAllWorkspaces(false); // 不在所有工作区显示
-        // 强制设置窗口完全透明背景
-        updateWindow.setBackgroundColor('rgba(0,0,0,0)');
+        // 根据系统主题设置窗口背景色
+        updateWindow.setBackgroundColor(windowBgColor);
         // Mac系统额外处理
         if (isMac) {
           // 移除窗口阴影和边框
@@ -1718,6 +1749,9 @@ class ToolbarManager {
    * 创建更新窗口HTML
    */
   createUpdateWindowHTML() {
+    // 检测是否为Windows系统
+    const isWindows = PlatformHelper.isWindows();
+    
     return `
       <!DOCTYPE html>
       <html>
@@ -1732,20 +1766,36 @@ class ToolbarManager {
 
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: rgba(0, 0, 0, 0);
+            background: transparent !important;
             color: #333;
             overflow: hidden;
           }
+          html {
+            background: transparent !important;
+          }
+          
 
           .update-window {
             width: 420px;
             height: 380px;
             background: #ffffff;
-            border-radius: 12px;
+            border-radius: ${isWindows ? '0' : '16px'};
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            ${isWindows ? 'border: 1px solid #d1d5db;' : ''}
             display: flex;
             flex-direction: column;
             position: relative;
+            outline: none;
+            overflow: hidden;
+          }
+
+          /* Windows 系统样式 - 直角和灰色边框 */
+          @media screen {
+            body.windows .update-window {
+              border-radius: 0;
+              border: 1px solid #d1d5db;
+              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            }
           }
 
           .window-header {
@@ -1753,6 +1803,7 @@ class ToolbarManager {
             text-align: center;
             border-bottom: 1px solid #e5e7eb;
             padding-bottom: 15px;
+            background: transparent;
           }
 
           .window-title {
@@ -1774,6 +1825,7 @@ class ToolbarManager {
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            background: transparent;
           }
 
           .initial-content {
@@ -1925,6 +1977,7 @@ class ToolbarManager {
             .update-window {
               background: #1f2937;
               box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+              ${isWindows ? 'border: 1px solid #4b5563; border-radius: 0;' : ''}
             }
 
             .window-header {
@@ -1991,6 +2044,13 @@ class ToolbarManager {
             </div>
           </div>
         </div>
+        
+        <script>
+          // 检测平台并添加相应的CSS类
+          if (navigator.userAgent.includes('Windows')) {
+            document.body.classList.add('windows');
+          }
+        </script>
       </body>
       </html>
     `;
