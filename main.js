@@ -339,6 +339,10 @@ function openNewWindow(url) {
 
   // 为新窗口创建布局管理器和内容视图
   try {
+    // Windows系统：获取统一的背景色
+    const browserViewBgColor = getWindowsBackgroundColor();
+    console.log('新窗口BrowserView使用背景色:', browserViewBgColor);
+    
     // 创建内容视图并添加到窗口
     const contentView = new BrowserView({
       webPreferences: {
@@ -350,7 +354,7 @@ function openNewWindow(url) {
         spellcheck: false,
         webgl: false,
         enableWebSQL: false,
-        backgroundColor: backgroundColor // 使用与窗口相同的主题背景色
+        backgroundColor: browserViewBgColor // 设置BrowserView背景色
       }
     });
 
@@ -363,8 +367,7 @@ function openNewWindow(url) {
     const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
     contentView.webContents.setUserAgent(customUserAgent);
 
-    // 加载URL到内容视图
-    contentView.webContents.loadURL(url);
+    // URL加载将在后面根据平台策略进行
 
     // 新窗口标题同步 - 跟随网页标题
     contentView.webContents.on('page-title-updated', (event, title) => {
@@ -449,14 +452,52 @@ function openNewWindow(url) {
     console.warn('新窗口快捷键注册失败，但不影响核心功能:', error);
   }
 
-  // 所有内容加载完成后再显示新窗口，避免白屏
-  setTimeout(() => {
+  // Windows系统：立即显示窗口避免白屏，其他系统等待内容加载
+  if (process.platform === 'win32') {
+    // Windows系统立即显示，避免任何延迟导致的白屏
     if (win && !win.isDestroyed()) {
-      win.show();
-      win.focus();
-      console.log('新窗口显示完成 (内容加载后)');
+      // 再次确保背景色正确
+      const finalBgColor = getWindowsBackgroundColor();
+      win.setBackgroundColor(finalBgColor);
+      
+      // Windows特殊优化：强制渲染一帧后再显示
+      win.webContents.once('did-finish-load', () => {
+        if (win && !win.isDestroyed()) {
+          win.show();
+          win.focus();
+          console.log('Windows新窗口显示完成 (首帧渲染后)');
+        }
+      });
+      
+      // 备用显示机制：如果500ms后仍未显示则强制显示
+      setTimeout(() => {
+        if (win && !win.isDestroyed() && !win.isVisible()) {
+          win.show();
+          win.focus();
+          console.log('Windows新窗口强制显示 (备用机制)');
+        }
+      }, 500);
+      
+      // 加载内容
+      if (newWindowContentViewManager.contentView && !newWindowContentViewManager.contentView.webContents.isDestroyed()) {
+        newWindowContentViewManager.contentView.webContents.loadURL(url);
+      }
     }
-  }, 50); // 新窗口延迟较短，因为内容相对简单
+  } else {
+    // 非Windows系统：等待内容加载完成后再显示窗口
+    // 先加载URL
+    if (newWindowContentViewManager.contentView && !newWindowContentViewManager.contentView.webContents.isDestroyed()) {
+      newWindowContentViewManager.contentView.webContents.loadURL(url);
+    }
+    
+    setTimeout(() => {
+      if (win && !win.isDestroyed()) {
+        win.show();
+        win.focus();
+        console.log('新窗口显示完成 (内容加载后)');
+      }
+    }, 50); // 新窗口延迟较短，因为内容相对简单
+  }
 
   // 事件处理
   win.on('closed', () => {
@@ -487,16 +528,17 @@ function getWindowsBackgroundColor() {
     return nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
   }
   
-  // Windows系统：在窗口创建前就检测主题，避免创建时的白屏
+  // Windows系统：强制使用深色背景，彻底避免白屏
+  // 即使在亮色主题下也使用浅灰色而非纯白色，减少刺眼的白屏闪烁
   try {
-    // 强制同步检测系统主题
     const isDarkTheme = nativeTheme.shouldUseDarkColors;
     console.log('Windows系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
-    return isDarkTheme ? '#1f1f1f' : '#ffffff';
+    // 暗色主题使用更深的背景色，亮色主题使用浅灰色（避免刺眼的纯白）
+    return isDarkTheme ? '#1a1a1a' : '#f5f5f5';
   } catch (error) {
-    console.log('Windows主题检测失败，强制使用暗色背景:', error);
-    // Windows系统检测失败时强制使用暗色，减少白屏概率
-    return '#1f1f1f';
+    console.log('Windows主题检测失败，强制使用深色背景:', error);
+    // Windows系统检测失败时强制使用深色，彻底避免白屏
+    return '#1a1a1a';
   }
 }
 
@@ -567,38 +609,29 @@ function createMainWindow() {
         }
         console.log('核心UI组件初始化完成');
         
-        // 所有内容加载完成后再显示窗口，避免白屏
-        // Windows 系统需要更长的延迟来避免白屏闪烁
-        const showDelay = process.platform === 'win32' ? 200 : 100;
-        setTimeout(() => {
+        // Windows系统：立即显示避免白屏，其他系统等待内容加载
+        if (process.platform === 'win32') {
+          // Windows系统采用更精确的显示时机控制
           if (mainWindow && !mainWindow.isDestroyed()) {
-            // Windows 系统：在显示窗口前再次强制设置背景色，确保无白屏
-            if (process.platform === 'win32') {
-              try {
-                const currentBgColor = getWindowsBackgroundColor();
-                mainWindow.setBackgroundColor(currentBgColor);
-                console.log('Windows窗口显示前强制设置背景色:', currentBgColor);
-                
-                // 额外等待一帧确保背景色已应用
-                setImmediate(() => {
-                  if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.show();
-                    mainWindow.focus();
-                    console.log('主窗口显示完成 (Windows优化后)');
-                  }
-                });
-                return; // Windows系统走特殊流程
-              } catch (error) {
-                console.log('Windows背景色强制设置失败:', error);
-              }
-            }
+            // 最后一次确保背景色正确
+            const finalBgColor = getWindowsBackgroundColor();
+            mainWindow.setBackgroundColor(finalBgColor);
             
-            // 非Windows系统的正常流程
+            // 立即显示窗口，背景色已确保正确
             mainWindow.show();
             mainWindow.focus();
-            console.log('主窗口显示完成 (内容加载后)');
+            console.log('Windows主窗口立即显示 (避免白屏)');
           }
-        }, showDelay); // Windows使用更长延迟
+        } else {
+          // 非Windows系统：等待内容加载完成后再显示窗口
+          setTimeout(() => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.show();
+              mainWindow.focus();
+              console.log('主窗口显示完成 (内容加载后)');
+            }
+          }, 100);
+        }
         
       } catch (error) {
         console.error('核心UI组件初始化失败:', error);

@@ -85,14 +85,17 @@ class ContentViewManager {
       return nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#ffffff';
     }
     
-    // Windows系统：在BrowserView创建前就检测主题，避免创建时的白屏
+    // Windows系统：强制使用深色背景，彻底避免白屏
+    // 即使在亮色主题下也使用浅灰色而非纯白色，减少刺眼的白屏闪烁
     try {
       const isDarkTheme = nativeTheme.shouldUseDarkColors;
       console.log('Windows BrowserView主题检测结果:', isDarkTheme ? '暗色' : '亮色');
-      return isDarkTheme ? '#1f1f1f' : '#ffffff';
+      // 暗色主题使用更深的背景色，亮色主题使用浅灰色（避免刺眼的纯白）
+      return isDarkTheme ? '#1a1a1a' : '#f5f5f5';
     } catch (error) {
-      console.log('Windows BrowserView主题检测失败，强制使用暗色背景:', error);
-      return '#1f1f1f';
+      console.log('Windows BrowserView主题检测失败，强制使用深色背景:', error);
+      // Windows系统检测失败时强制使用深色，彻底避免白屏
+      return '#1a1a1a';
     }
   }
 
@@ -144,6 +147,8 @@ class ContentViewManager {
     contentView.webContents.loadURL(`data:text/html;charset=utf-8,${placeholderHTML}`);
 
     // 验证域名后很快切入真实页面（下一事件循环），占位几乎无感但可避免白闪
+    // Windows系统：立即加载避免白屏，其他系统稍作延迟
+    const loadDelay = process.platform === 'win32' ? 0 : 10;
     setTimeout(() => {
       try {
         if (!checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).allowed) {
@@ -153,11 +158,14 @@ class ContentViewManager {
         }
         if (contentView && contentView.webContents && !contentView.webContents.isDestroyed()) {
           contentView.webContents.loadURL(url);
+          if (process.platform === 'win32') {
+            console.log('Windows系统立即加载内容，避免白屏延迟');
+          }
         }
       } catch (e) {
         console.warn('占位后加载真实页面失败:', e.message);
       }
-    }, 5);
+    }, loadDelay); // 使用变量控制延迟
 
     // 注入CSS - 页面首次加载时注入
     this.injectPerfCSS(contentView);
