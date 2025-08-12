@@ -572,8 +572,8 @@ function showInfoDialog(parentWindow) {
   const infoWindow = new BrowserWindow({
     width: 500,
     height: 580,
-    show: false,
-    backgroundColor: isDark ? '#23272e' : '#f5f5f5',
+    show: true, // 立即弹窗，避免白屏
+    backgroundColor: isDark ? '#23272e' : '#f5f5f5', // 跟随系统主题色
     webPreferences: {
       contextIsolation: true
     }
