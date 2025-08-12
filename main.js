@@ -552,14 +552,18 @@ function createMainWindow() {
   contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
   console.log('内容视图同步创建完成，页面已开始加载');
 
-      // ready-to-show 事件后再 show，减少黑屏时间
-      mainWindow.once('ready-to-show', () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
+      // ready-to-show 事件后再 show，减少黑屏时间，2 秒超时兜底
+      let shown = false;
+      const showMainWindow = (reason) => {
+        if (!shown && mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.show();
           mainWindow.focus();
-          console.log('主窗口 ready-to-show 后显示');
+          shown = true;
+          console.log('主窗口显示，原因:', reason);
         }
-      });
+      };
+      mainWindow.once('ready-to-show', () => showMainWindow('ready-to-show'));
+      setTimeout(() => showMainWindow('timeout'), 2000);
       
       // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
       const contentBounds = mainWindow.getContentBounds();
