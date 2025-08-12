@@ -21,7 +21,7 @@ function getStartupHtml(isWindows = false) {
                     * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; --left-vw: 7vw; --org-text-size: 3vw; --product-text-size: 6vw; --version-text-size: 2vw; }
                     :root { --bg-primary: #0d1117; --bg-secondary: #21262d; --bg-tertiary: #5b5f64; --text-primary: #f0f6fc; --text-secondary: #8b949e; --accent-color: rgba(255, 255, 255, 0.08); --shadow-color: rgba(0, 0, 0, 0.4); }
                     @media (prefers-color-scheme: light) { :root { --bg-primary: #ffffff; --bg-secondary: #eff2f5; --bg-tertiary: #87929f; --text-primary: #1f2837; --text-secondary: #475569; --accent-color: rgba(59, 130, 246, 0.15); --shadow-color: rgba(15, 23, 42, 0.2); } }
-                    html, body { height: 100%; width: 100%; font-family: "Segoe UI", "Helvetica Neue", sans-serif; color: var(--text-primary); overflow: hidden; line-height: 1.5; margin: 0; padding: 0; border: none; outline: none; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; background-color: ${isWindows ? '#21262d' : '#0d1117'}; }
+                    html, body { height: 100%; width: 100%; font-family: "Segoe UI", "Helvetica Neue", sans-serif; color: var(--text-primary); overflow: hidden; line-height: 1.5; margin: 0; padding: 0; border: none; outline: none; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
                     .container { position: relative; width: 100%; height: 100%; margin: 0; padding: var(--left-vw); display: flex; flex-direction: column; justify-content: space-between; ${containerStyle} overflow: hidden; background-size: 200% 200%; transition: background 0.3s ease; animation: gradientShift 6s ease-in-out infinite alternate;}
                     .container::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, transparent 0%, var(--accent-color) 50%, transparent 100%), radial-gradient(ellipse at center, transparent 60%, var(--accent-color) 100%); pointer-events: none; z-index: -1; transition: background 0.3s ease; ${isWindows ? 'border-radius: 0px;' : 'border-radius: 16px;'} animation: backgroundPulse 8s ease-in-out infinite alternate; }
                     @media (prefers-color-scheme: light) { .container::before { background: linear-gradient(135deg, transparent 0%, var(--accent-color) 50%, transparent 100%), radial-gradient(ellipse at center, transparent 60%, var(--accent-color) 100%); } }
@@ -101,7 +101,7 @@ function createStartupWindow(htmlContent, options = {}) {
     alwaysOnTop: true,
     show: false, // 等待内容准备好再显示
     transparent: !isWindows, // 只有Windows不使用透明，避免闪烁
-    backgroundColor: undefined, // 完全移除窗口背景色，让CSS控制
+    backgroundColor: isWindows ? '#0d1117' : undefined, // Windows设置背景色
     hasShadow: true,
     skipTaskbar: false,
     webPreferences: {

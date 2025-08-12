@@ -1,5 +1,8 @@
 const { app, BrowserWindow, BrowserView, nativeTheme, shell } = require('electron');
 
+// 禁用Windows窗口动画，解决启动窗口闪屏问题
+app.commandLine.appendSwitch('wm-window-animations-disabled');
+
 // 启动性能监控
 const startTime = Date.now();
 console.log('=== 应用启动开始 ===', new Date().toISOString());
