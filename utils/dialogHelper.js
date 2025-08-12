@@ -513,7 +513,7 @@ function showInfoDialog(parentWindow) {
   const windowConfig = {
     width: 500,
     height: 580,
-    show: false, // 先隐藏，等准备好再显示
+    show: false, // 使用 ready-to-show 事件显示
     backgroundColor: backgroundColor, // 使用匹配的背景色
     webPreferences: {
       contextIsolation: true
@@ -1120,6 +1120,29 @@ function showInfoDialog(parentWindow) {
   const finalHTML = createInfoHTML(base64Image);
   const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(finalHTML)}`;
 
+  // 使用 ready-to-show 事件来平衡加载速度和稳定性
+  infoWindow.once('ready-to-show', () => {
+    console.log('系统信息窗口准备显示');
+    
+    if (isWindows) {
+      // Windows 平台：稍微延迟以确保稳定性
+      setTimeout(() => {
+        if (!infoWindow.isDestroyed()) {
+          infoWindow.show();
+          infoWindow.focus();
+          infoWindow.moveTop();
+          console.log('Windows 平台：窗口已显示并置于最前');
+        }
+      }, 20); // 减少延迟到20ms
+    } else {
+      // 其他平台立即显示
+      infoWindow.show();
+      infoWindow.focus();
+      infoWindow.moveTop();
+      console.log('非 Windows 平台：窗口已显示并置于最前');
+    }
+  });
+
   infoWindow.loadURL(dataURL);
 
   // 监听控制台消息以处理外部链接和窗口关闭
@@ -1132,33 +1155,19 @@ function showInfoDialog(parentWindow) {
     }
   });
 
-  // 内容加载完成后确保窗口在最前面并显示
+  // 内容加载完成后进行最终的层级确保
   infoWindow.webContents.on('did-finish-load', () => {
     console.log('系统信息窗口内容加载完成');
     
-    // Windows 平台特殊处理
-    if (isWindows) {
-      console.log('Windows 平台：内容加载完成，准备显示窗口');
-      
-      // 确保窗口准备就绪后再显示
-      setTimeout(() => {
-        if (!infoWindow.isDestroyed()) {
-          infoWindow.show();
-          infoWindow.focus();
-          infoWindow.moveTop();
-          console.log('Windows 平台：窗口已显示并置于最前');
-        }
-      }, 10);
-    } else {
-      // 非 Windows 平台立即显示
-      infoWindow.show();
+    // 确保窗口在最前面（仅作为备用，主要显示已在 ready-to-show 完成）
+    if (infoWindow.isVisible()) {
       infoWindow.focus();
       infoWindow.moveTop();
-      console.log('非 Windows 平台：窗口已显示并置于最前');
+      console.log('系统信息窗口内容加载完成，确保窗口在前面');
     }
   });
 
-  // 位置微调（适用于所有平台）
+  // 位置微调（适用于所有平台）- 使用更短的延迟
   setTimeout(() => {
     try {
       if (!infoWindow.isDestroyed()) {
@@ -1186,7 +1195,7 @@ function showInfoDialog(parentWindow) {
     } catch (error) {
       console.log('系统信息窗口位置检查失败:', error);
     }
-  }, isWindows ? 100 : 50); // Windows 使用更长的延迟
+  }, 30); // 统一使用30ms延迟，平衡速度和稳定性
 
   return infoWindow;
 }
