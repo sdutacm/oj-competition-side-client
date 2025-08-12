@@ -124,8 +124,8 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
   // 隐藏菜单栏
   dialogWindow.setMenuBarVisibility(false);
 
-  // 异步获取 favicon 的 base64 编码
-  async function getFaviconBase64() {
+  // 同步获取 favicon 的 base64 编码
+  function getFaviconBase64Sync() {
     try {
       const fs = require('fs');
       const path = require('path');
@@ -388,144 +388,73 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
     </html>`;
   }
 
-  // 加载 favicon 并创建窗口
-  getFaviconBase64().then(faviconBase64 => {
-    const htmlContent = createDialogHTML(faviconBase64);
-    const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
-    dialogWindow.loadURL(dataURL);
+  // 同步加载 favicon 并创建窗口
+  const faviconBase64 = getFaviconBase64Sync();
+  const htmlContent = createDialogHTML(faviconBase64);
+  const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+  dialogWindow.loadURL(dataURL);
 
-    // 监听控制台消息
-    dialogWindow.webContents.on('console-message', (event, level, message) => {
-      console.log('Dialog console message:', message); // 调试日志
-      if (message === 'CLOSE_DIALOG') {
-        console.log('Closing dialog window'); // 调试日志
-        dialogWindow.close();
-      }
-    });
-
-    // 窗口关闭时的回调
-    dialogWindow.on('closed', () => {
-      console.log('Dialog window closed'); // 调试日志
-      if (typeof callback === 'function') callback();
-    });
-
-    // 添加 IPC 通信作为备选方案
-    dialogWindow.webContents.on('did-finish-load', () => {
-      // 注入 IPC 通信代码
-      dialogWindow.webContents.executeJavaScript(`
-        // 重新定义 closeDialog 函数使用多种方式关闭
-        function closeDialog() {
-          console.log('CLOSE_DIALOG');
-          // 尝试使用 window.close() 作为备选
-          try {
-            window.close();
-          } catch(e) {
-            console.log('window.close() failed:', e);
-          }
-        }
-        
-        // 确保按钮事件正确绑定
-        document.addEventListener('DOMContentLoaded', function() {
-          const button = document.querySelector('.dialog-button');
-          if (button) {
-            button.onclick = closeDialog;
-            button.addEventListener('click', closeDialog);
-          }
-        });
-        
-        // 如果 DOM 已经加载完成，立即执行
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', function() {
-            const button = document.querySelector('.dialog-button');
-            if (button) {
-              button.onclick = closeDialog;
-              button.addEventListener('click', closeDialog);
-            }
-          });
-        } else {
-          const button = document.querySelector('.dialog-button');
-          if (button) {
-            button.onclick = closeDialog;
-            button.addEventListener('click', closeDialog);
-          }
-        }
-      `);
-    });
-
-    dialogWindow.once('ready-to-show', () => {
-      dialogWindow.show();
-    });
-  }).catch(error => {
-    console.error('Error creating custom dialog:', error);
-    // 无图标版本
-    const htmlContent = createDialogHTML();
-    const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
-    dialogWindow.loadURL(dataURL);
-
-    // 监听控制台消息
-    dialogWindow.webContents.on('console-message', (event, level, message) => {
-      console.log('Dialog console message (fallback):', message); // 调试日志
-      if (message === 'CLOSE_DIALOG') {
-        console.log('Closing dialog window (fallback)'); // 调试日志
-        dialogWindow.close();
-      }
-    });
-
-    // 窗口关闭时的回调
-    dialogWindow.on('closed', () => {
-      console.log('Dialog window closed (fallback)'); // 调试日志
-      if (typeof callback === 'function') callback();
-    });
-
-    // 添加 IPC 通信作为备选方案
-    dialogWindow.webContents.on('did-finish-load', () => {
-      // 注入 IPC 通信代码
-      dialogWindow.webContents.executeJavaScript(`
-        // 重新定义 closeDialog 函数使用多种方式关闭
-        function closeDialog() {
-          console.log('CLOSE_DIALOG');
-          // 尝试使用 window.close() 作为备选
-          try {
-            window.close();
-          } catch(e) {
-            console.log('window.close() failed:', e);
-          }
-        }
-        
-        // 确保按钮事件正确绑定
-        document.addEventListener('DOMContentLoaded', function() {
-          const button = document.querySelector('.dialog-button');
-          if (button) {
-            button.onclick = closeDialog;
-            button.addEventListener('click', closeDialog);
-          }
-        });
-        
-        // 如果 DOM 已经加载完成，立即执行
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', function() {
-            const button = document.querySelector('.dialog-button');
-            if (button) {
-              button.onclick = closeDialog;
-              button.addEventListener('click', closeDialog);
-            }
-          });
-        } else {
-          const button = document.querySelector('.dialog-button');
-          if (button) {
-            button.onclick = closeDialog;
-            button.addEventListener('click', closeDialog);
-          }
-        }
-      `);
-    });
-
-    dialogWindow.once('ready-to-show', () => {
-      dialogWindow.show();
-    });
+  // 监听控制台消息
+  dialogWindow.webContents.on('console-message', (event, level, message) => {
+    console.log('Dialog console message:', message); // 调试日志
+    if (message === 'CLOSE_DIALOG') {
+      console.log('Closing dialog window'); // 调试日志
+      dialogWindow.close();
+    }
   });
 
-  return dialogWindow;
+  // 窗口关闭时的回调
+  dialogWindow.on('closed', () => {
+    console.log('Dialog window closed'); // 调试日志
+    if (typeof callback === 'function') callback();
+  });
+
+  // 添加 IPC 通信作为备选方案
+  dialogWindow.webContents.on('did-finish-load', () => {
+    // 注入 IPC 通信代码
+    dialogWindow.webContents.executeJavaScript(`
+      // 重新定义 closeDialog 函数使用多种方式关闭
+      function closeDialog() {
+        console.log('CLOSE_DIALOG');
+        // 尝试使用 window.close() 作为备选
+        try {
+          window.close();
+        } catch(e) {
+          console.log('window.close() failed:', e);
+        }
+      }
+      
+      // 确保按钮事件正确绑定
+      document.addEventListener('DOMContentLoaded', function() {
+        const button = document.querySelector('.dialog-button');
+        if (button) {
+          button.onclick = closeDialog;
+          button.addEventListener('click', closeDialog);
+        }
+      });
+      
+      // 如果 DOM 已经加载完成，立即执行
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          const button = document.querySelector('.dialog-button');
+          if (button) {
+            button.onclick = closeDialog;
+            button.addEventListener('click', closeDialog);
+          }
+        });
+      } else {
+        const button = document.querySelector('.dialog-button');
+        if (button) {
+          button.onclick = closeDialog;
+          button.addEventListener('click', closeDialog);
+        }
+      }
+    `);
+  });
+
+  dialogWindow.once('ready-to-show', () => {
+    dialogWindow.show();
+  });
 }
 
 // 全局变量跟踪当前打开的系统信息窗口
@@ -657,7 +586,7 @@ function showInfoDialog(parentWindow) {
   }
 
   // 异步函数获取 favicon 的 base64 编码
-  async function getBase64Image() {
+  function getBase64ImageSync() {
     try {
       const fs = require('fs');
       const path = require('path');
@@ -1126,107 +1055,55 @@ function showInfoDialog(parentWindow) {
     </html>`;
   }
 
-  // 加载图片并创建窗口
-  getBase64Image().then(base64Image => {
-    const finalHTML = createInfoHTML(base64Image);
-    const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(finalHTML)}`;
+  // 同步加载图片并创建窗口
+  const base64Image = getBase64ImageSync();
+  const finalHTML = createInfoHTML(base64Image);
+  const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(finalHTML)}`;
 
-    infoWindow.loadURL(dataURL);
+  infoWindow.loadURL(dataURL);
 
-    // 监听控制台消息以处理外部链接和窗口关闭
-    infoWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-      if (message.startsWith('OPEN_EXTERNAL_LINK:')) {
-        const url = message.replace('OPEN_EXTERNAL_LINK:', '');
-        shell.openExternal(url);
-      } else if (message === 'CLOSE_WINDOW') {
-        infoWindow.close();
-      }
-    });
+  // 监听控制台消息以处理外部链接和窗口关闭
+  infoWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    if (message.startsWith('OPEN_EXTERNAL_LINK:')) {
+      const url = message.replace('OPEN_EXTERNAL_LINK:', '');
+      shell.openExternal(url);
+    } else if (message === 'CLOSE_WINDOW') {
+      infoWindow.close();
+    }
+  });
 
-    infoWindow.once('ready-to-show', () => {
-      // Mac 系统在显示前再次确保居中
-      if (isMac) {
-        const { screen } = require('electron');
-        const primaryDisplay = screen.getPrimaryDisplay();
-        const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-        const x = Math.round((screenWidth - 500) / 2);
-        const y = Math.round((screenHeight - 580) / 2);
-        infoWindow.setPosition(x, y);
-        console.log(`Mac 系统信息窗口显示前再次居中: (${x}, ${y})`);
-        
-        // 显示后进行最终的居中检查
-        setTimeout(() => {
-          try {
-            const [currentX, currentY] = infoWindow.getPosition();
-            const idealX = Math.round((screenWidth - 500) / 2);
-            const idealY = Math.round((screenHeight - 580) / 2);
-            
-            // 如果位置偏差超过5像素，重新调整
-            if (Math.abs(currentX - idealX) > 5 || Math.abs(currentY - idealY) > 5) {
-              infoWindow.setPosition(idealX, idealY);
-              console.log(`Mac 系统信息窗口最终位置调整: 从 (${currentX}, ${currentY}) 到 (${idealX}, ${idealY})`);
-            } else {
-              console.log(`Mac 系统信息窗口位置正确: (${currentX}, ${currentY})`);
-            }
-          } catch (error) {
-            console.log('Mac系统信息窗口位置检查失败:', error);
-          }
-        }, 100);
-      }
+  infoWindow.once('ready-to-show', () => {
+    // Mac 系统在显示前再次确保居中
+    if (isMac) {
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+      const x = Math.round((screenWidth - 500) / 2);
+      const y = Math.round((screenHeight - 580) / 2);
+      infoWindow.setPosition(x, y);
+      console.log(`Mac 系统信息窗口显示前再次居中: (${x}, ${y})`);
       
-      infoWindow.show();
-    });
-  }).catch(error => {
-    console.error('Error creating info dialog:', error);
-    // 无图片版本
-    const simpleHTML = createInfoHTML();
-    const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(simpleHTML)}`;
-
-    infoWindow.loadURL(dataURL);
-
-    // 监听控制台消息以处理外部链接和窗口关闭
-    infoWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-      if (message.startsWith('OPEN_EXTERNAL_LINK:')) {
-        const url = message.replace('OPEN_EXTERNAL_LINK:', '');
-        shell.openExternal(url);
-      } else if (message === 'CLOSE_WINDOW') {
-        infoWindow.close();
-      }
-    });
-
-    infoWindow.once('ready-to-show', () => {
-      // Mac 系统在显示前再次确保居中
-      if (isMac) {
-        const { screen } = require('electron');
-        const primaryDisplay = screen.getPrimaryDisplay();
-        const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;  
-        const x = Math.round((screenWidth - 500) / 2);
-        const y = Math.round((screenHeight - 580) / 2);
-        infoWindow.setPosition(x, y);
-        console.log(`Mac 系统信息窗口(无图片版本)显示前再次居中: (${x}, ${y})`);
-        
-        // 显示后进行最终的居中检查
-        setTimeout(() => {
-          try {
-            const [currentX, currentY] = infoWindow.getPosition();
-            const idealX = Math.round((screenWidth - 500) / 2);
-            const idealY = Math.round((screenHeight - 580) / 2);
-            
-            // 如果位置偏差超过5像素，重新调整
-            if (Math.abs(currentX - idealX) > 5 || Math.abs(currentY - idealY) > 5) {
-              infoWindow.setPosition(idealX, idealY);
-              console.log(`Mac 系统信息窗口(无图片版本)最终位置调整: 从 (${currentX}, ${currentY}) 到 (${idealX}, ${idealY})`);
-            } else {
-              console.log(`Mac 系统信息窗口(无图片版本)位置正确: (${currentX}, ${currentY})`);
-            }
-          } catch (error) {
-            console.log('Mac系统信息窗口(无图片版本)位置检查失败:', error);
+      // 显示后进行最终的居中检查
+      setTimeout(() => {
+        try {
+          const [currentX, currentY] = infoWindow.getPosition();
+          const idealX = Math.round((screenWidth - 500) / 2);
+          const idealY = Math.round((screenHeight - 580) / 2);
+          
+          // 如果位置偏差超过5像素，重新调整
+          if (Math.abs(currentX - idealX) > 5 || Math.abs(currentY - idealY) > 5) {
+            infoWindow.setPosition(idealX, idealY);
+            console.log(`Mac 系统信息窗口最终位置调整: 从 (${currentX}, ${currentY}) 到 (${idealX}, ${idealY})`);
+          } else {
+            console.log(`Mac 系统信息窗口位置正确: (${currentX}, ${currentY})`);
           }
-        }, 100);
-      }
-      
-      infoWindow.show();
-    });
+        } catch (error) {
+          console.log('Mac系统信息窗口位置检查失败:', error);
+        }
+      }, 100);
+    }
+    
+    infoWindow.show();
   });
 
   return infoWindow;
