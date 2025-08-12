@@ -29,9 +29,9 @@ function getStartupHtml() {
                     .version { font-size: var(--version-text-size); font-weight: 300; color: var(--text-secondary); transition: color 0.3s ease; opacity: 0; transform: translateY(30px); }
                     /* 内容淡入动画只在 start-animation 类下触发，背景动画始终自动播放 */
                     .org, .product-text, .version { opacity: 0; transform: translateY(30px); }
-                    body.start-animation .org { animation: fadeInUp 1s ease forwards; }
-                    body.start-animation .product-text { animation: fadeInUp 1s ease forwards; animation-delay: 0.3s; }
-                    body.start-animation .version { animation: fadeInUpVersion 1s ease forwards; animation-delay: 0.6s; }
+                    body.start-animation .org { animation: fadeInUp 1s ease forwards; animation-delay: 0.2s; }
+                    body.start-animation .product-text { animation: fadeInUp 1s ease forwards; animation-delay: 0.5s; }
+                    body.start-animation .version { animation: fadeInUpVersion 1s ease forwards; animation-delay: 0.8s; }
                     @media (prefers-color-scheme: light) { .org-text, .product-text { text-shadow: 0 1px 2px var(--shadow-color); } }
                     @media (max-width: 768px) { .org svg { height: 8vw; } .org-text { font-size: 5vw; } .product-text { font-size: 8vw; } }
                     @keyframes fadeInUp { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }

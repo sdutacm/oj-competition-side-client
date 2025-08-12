@@ -1,7 +1,5 @@
 const { app, BrowserWindow, BrowserView, nativeTheme, shell } = require('electron');
 
-// 禁用硬件加速，排查 GPU/驱动/渲染管线导致的黑白屏闪烁
-// app.disableHardwareAcceleration();
 const ToolbarManager = require('./utils/toolbarManager');
 const ContentViewManager = require('./utils/contentViewManager');
 const ShortcutManager = require('./utils/shortcutManager');
@@ -10,7 +8,6 @@ const { isWhiteDomain } = require('./utils/domainHelper');
 const { showBlockedDialog, showBlockedDialogWithDebounce } = require('./utils/dialogHelper');
 const i18n = require('./utils/i18nManager');
 const MacMenuManager = require('./utils/macMenuManager');
-// const StartupManager = require('./utils/startupManager');
 const UpdateManager = require('./utils/updateManager');
 
 const { calculateCenteredPosition } = require('./utils/screenCenterPosition');
@@ -22,7 +19,6 @@ let contentViewManager = null;
 let shortcutManager = null;
 let layoutManager = null;
 let macMenuManager = null;
-// let startupManager = null;
 let updateManager = null;
 
 // 退出确认状态
@@ -713,8 +709,6 @@ app.whenReady().then(() => {
           nodeIntegration: false,
           contextIsolation: true,
           webSecurity: true,
-          sandbox: false,
-          backgroundColor: backgroundColor,
           transparent: false
         }
       });
