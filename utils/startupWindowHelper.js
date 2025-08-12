@@ -19,7 +19,7 @@ function getStartupHtml(isWindows = false) {
                     * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; --left-vw: 7vw; --org-text-size: 3vw; --product-text-size: 6vw; --version-text-size: 2vw; }
                     :root { --bg-primary: #0d1117; --bg-secondary: #21262d; --bg-tertiary: #5b5f64; --text-primary: #f0f6fc; --text-secondary: #8b949e; --accent-color: rgba(255, 255, 255, 0.08); --shadow-color: rgba(0, 0, 0, 0.4); }
                     @media (prefers-color-scheme: light) { :root { --bg-primary: #ffffff; --bg-secondary: #eff2f5; --bg-tertiary: #87929f; --text-primary: #1f2837; --text-secondary: #475569; --accent-color: rgba(59, 130, 246, 0.15); --shadow-color: rgba(15, 23, 42, 0.2); } }
-                    html, body { height: 100%; width: 100%; font-family: "Segoe UI", "Helvetica Neue", sans-serif; color: var(--text-primary); overflow: hidden; line-height: 1.5; margin: 0; padding: 0; border: none; outline: none; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+                    html, body { height: 100%; width: 100%; font-family: "Segoe UI", "Helvetica Neue", sans-serif; color: var(--text-primary); overflow: hidden; line-height: 1.5; margin: 0; padding: 0; border: none; outline: none; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; ${isWindows ? 'opacity: 0; transition: opacity 0.3s ease;' : ''} }
                     .container { position: relative; width: 100%; height: 100%; margin: 0; padding: var(--left-vw); display: flex; flex-direction: column; justify-content: space-between; ${containerStyle} overflow: hidden; background-size: 200% 200%; transition: background 0.3s ease; ${isWindows ? '' : 'animation: gradientShift 6s ease-in-out infinite alternate;'}}
                     .container::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; ${isWindows ? 'background: none;' : 'background: linear-gradient(135deg, transparent 0%, var(--accent-color) 50%, transparent 100%), radial-gradient(ellipse at center, transparent 60%, var(--accent-color) 100%);'} pointer-events: none; z-index: -1; transition: background 0.3s ease; ${isWindows ? 'border-radius: 0px;' : 'border-radius: 16px;'} ${isWindows ? '' : 'animation: backgroundPulse 8s ease-in-out infinite alternate;'} }
                     @media (prefers-color-scheme: light) { .container::before { background: linear-gradient(135deg, transparent 0%, var(--accent-color) 50%, transparent 100%), radial-gradient(ellipse at center, transparent 60%, var(--accent-color) 100%); } }
@@ -97,7 +97,7 @@ function createStartupWindow(htmlContent, options = {}) {
     frame: false,
     resizable: false,
     alwaysOnTop: true,
-    show: false, // 等待内容准备好再显示
+    show: isWindows, // Windows立即显示，避免显示时机问题
     transparent: !isWindows, // 只有Windows不使用透明，避免闪烁
     backgroundColor: isWindows ? '#21262d' : undefined, // Windows使用CSS渐变的主色调
     hasShadow: true,
@@ -109,27 +109,30 @@ function createStartupWindow(htmlContent, options = {}) {
     }
   };
   
-  console.log('[Splash] 创建启动窗口', isWindows ? '(Windows直角非透明模式)' : '(透明圆角模式)');
+  console.log('[Splash] 创建启动窗口', isWindows ? '(Windows立即显示模式)' : '(透明圆角模式)');
   const startupWindow = new BrowserWindow(windowOptions);
   const startupDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
   
-  // Windows系统使用ready-to-show事件，其他系统继续使用did-finish-load
+  // Windows系统：窗口创建时就显示，内容初始隐藏，避免显示时机问题
   if (isWindows) {
-    startupWindow.once('ready-to-show', () => {
-      console.log('[Splash] ready-to-show，窗口准备就绪');
-      startupWindow.show();
-      console.log('[Splash] Windows立即显示启动窗口');
-      
-      // 显示后立即开始动画
+    startupWindow.loadURL(startupDataURL);
+    console.log('[Splash] Windows窗口已创建并显示');
+    
+    // 等待内容加载完成后再显示内容
+    startupWindow.webContents.once('did-finish-load', () => {
+      console.log('[Splash] Windows内容加载完成，显示内容');
       setTimeout(() => {
         try {
-          startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
+          // 显示内容并开始动画
+          startupWindow.webContents.executeJavaScript(`
+            document.body.style.opacity = '1';
+            document.body.classList.add("start-animation");
+          `);
         } catch (e) {
-          console.warn('[Splash] 注入动画启动JS失败:', e.message);
+          console.warn('[Splash] 注入显示内容JS失败:', e.message);
         }
+        if (typeof options.onShow === 'function') options.onShow(startupWindow);
       }, 50);
-      
-      if (typeof options.onShow === 'function') options.onShow(startupWindow);
     });
   } else {
     // 其他平台继续使用原有逻辑
@@ -153,10 +156,10 @@ function createStartupWindow(htmlContent, options = {}) {
         if (typeof options.onShow === 'function') options.onShow(startupWindow);
       }, 100);
     });
+    
+    // 加载页面
+    startupWindow.loadURL(startupDataURL);
   }
-  
-  // 所有平台都加载页面
-  startupWindow.loadURL(startupDataURL);
   
   // 自动关闭逻辑对所有平台一致
   if (options.duration) {
