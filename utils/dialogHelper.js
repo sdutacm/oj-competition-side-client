@@ -474,11 +474,17 @@ function isAboutWindow(window) {
  * @param {BrowserWindow} parentWindow - 父窗口
  */
 function showInfoDialog(parentWindow) {
+  console.log('showInfoDialog 被调用，当前 currentInfoWindow:', currentInfoWindow ? '存在' : '不存在');
+  
   // 如果已经有系统信息窗口打开，则聚焦到该窗口而不是创建新窗口
   if (currentInfoWindow && !currentInfoWindow.isDestroyed()) {
+    console.log('系统信息窗口已存在，聚焦到现有窗口');
     currentInfoWindow.focus();
+    currentInfoWindow.moveTop();
     return currentInfoWindow;
   }
+
+  console.log('创建新的系统信息窗口');
 
   // 根据操作系统选择图标文件
   const os = require('os');
@@ -506,6 +512,7 @@ function showInfoDialog(parentWindow) {
     width: 500,
     height: 580,
     show: true, // 立即显示窗口
+    modal: true, // 设置为模态窗口，但不设置父窗口
     backgroundColor: backgroundColor, // 使用匹配的背景色
     webPreferences: {
       contextIsolation: true
@@ -514,6 +521,10 @@ function showInfoDialog(parentWindow) {
 
   // 设置全局引用
   currentInfoWindow = infoWindow;
+
+  // 确保窗口显示在最前面
+  infoWindow.focus();
+  infoWindow.moveTop();
 
   // 手动确保窗口居中（特别针对 Mac 系统）
   if (isMac) {
@@ -535,7 +546,14 @@ function showInfoDialog(parentWindow) {
 
   // 监听窗口关闭事件，清理全局引用
   infoWindow.on('closed', () => {
-    currentInfoWindow = null;
+    console.log('系统信息窗口关闭事件触发');
+    // 只在窗口真正关闭时清理引用
+    if (currentInfoWindow === infoWindow) {
+      console.log('清理 currentInfoWindow 引用');
+      currentInfoWindow = null;
+    } else {
+      console.log('currentInfoWindow 不匹配，不清理引用');
+    }
   });
 
   // Linux平台：设置窗口类名，确保与主窗口保持一致
@@ -1076,20 +1094,22 @@ function showInfoDialog(parentWindow) {
     }
   });
 
-  infoWindow.once('ready-to-show', () => {
-    // Mac 系统在显示前再次确保居中
-    if (isMac) {
-      const { screen } = require('electron');
-      const primaryDisplay = screen.getPrimaryDisplay();
-      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-      const x = Math.round((screenWidth - 500) / 2);
-      const y = Math.round((screenHeight - 580) / 2);
-      infoWindow.setPosition(x, y);
-      console.log(`Mac 系统信息窗口显示前再次居中: (${x}, ${y})`);
-      
-      // 显示后进行最终的居中检查
-      setTimeout(() => {
-        try {
+  // 内容加载完成后确保窗口在最前面
+  infoWindow.webContents.on('did-finish-load', () => {
+    // 确保窗口显示在最前面
+    infoWindow.focus();
+    infoWindow.moveTop();
+    console.log('系统信息窗口内容加载完成，确保窗口在前面');
+  });
+
+  // 由于窗口已经立即显示，我们在稍后进行位置微调（仅Mac系统需要）
+  if (isMac) {
+    setTimeout(() => {
+      try {
+        if (!infoWindow.isDestroyed()) {
+          const { screen } = require('electron');
+          const primaryDisplay = screen.getPrimaryDisplay();
+          const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
           const [currentX, currentY] = infoWindow.getPosition();
           const idealX = Math.round((screenWidth - 500) / 2);
           const idealY = Math.round((screenHeight - 580) / 2);
@@ -1099,16 +1119,14 @@ function showInfoDialog(parentWindow) {
             infoWindow.setPosition(idealX, idealY);
             console.log(`Mac 系统信息窗口最终位置调整: 从 (${currentX}, ${currentY}) 到 (${idealX}, ${idealY})`);
           } else {
-            console.log(`Mac 系统信息窗口位置正确: (${currentX}, ${currentY})`);
+            console.log(`Mac 系统信息窗口位置确认正确: (${currentX}, ${currentY})`);
           }
-        } catch (error) {
-          console.log('Mac系统信息窗口位置检查失败:', error);
         }
-      }, 100);
-    }
-    
-    // 窗口已经立即显示，这里不需要再调用 show()
-  });
+      } catch (error) {
+        console.log('Mac系统信息窗口位置检查失败:', error);
+      }
+    }, 50); // 减少延迟时间
+  }
 
   return infoWindow;
 }
