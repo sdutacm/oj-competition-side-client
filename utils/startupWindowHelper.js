@@ -106,8 +106,7 @@ function createStartupWindow(htmlContent, options = {}) {
     skipTaskbar: false,
     webPreferences: {
       contextIsolation: true,
-      backgroundThrottling: false, // 防止后台时动画暂停
-      offscreen: isWindows // Windows启用离屏渲染，避免闪屏
+      backgroundThrottling: false // 防止后台时动画暂停
     }
   };
   
@@ -115,25 +114,30 @@ function createStartupWindow(htmlContent, options = {}) {
   const startupWindow = new BrowserWindow(windowOptions);
   const startupDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
   
-  // 统一加载流程，但Windows使用不同的显示事件
+  // 统一加载流程，但Windows使用特殊的预渲染策略
   startupWindow.loadURL(startupDataURL);
   
   if (isWindows) {
-    // Windows使用ready-to-show事件，确保完全准备好
-    startupWindow.once('ready-to-show', () => {
-      console.log('[Splash] Windows ready-to-show，启动窗口完全准备');
-      startupWindow.show();
+    // Windows: 等待第一次绘制完成，确保内容完全渲染
+    startupWindow.webContents.once('did-finish-load', () => {
+      console.log('[Splash] Windows did-finish-load，页面加载完成');
       
-      // 显示后立即开始动画
+      // 再等待一个渲染周期，确保CSS完全生效
       setTimeout(() => {
-        try {
-          startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
-        } catch (e) {
-          console.warn('[Splash] 注入动画启动JS失败:', e.message);
-        }
-      }, 20);
-      
-      if (typeof options.onShow === 'function') options.onShow(startupWindow);
+        startupWindow.show();
+        console.log('[Splash] Windows 延迟显示，确保无闪屏');
+        
+        // 显示后立即开始动画
+        setTimeout(() => {
+          try {
+            startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
+          } catch (e) {
+            console.warn('[Splash] 注入动画启动JS失败:', e.message);
+          }
+        }, 30);
+        
+        if (typeof options.onShow === 'function') options.onShow(startupWindow);
+      }, 100); // 延迟100ms确保CSS渲染完成
     });
   } else {
     // 其他系统使用原有的dom-ready
