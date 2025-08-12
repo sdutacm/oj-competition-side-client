@@ -470,619 +470,285 @@ function isAboutWindow(window) {
 }
 
 /**
- * 显示系统信息窗口
+ * 显示系统信息对话框
  * @param {BrowserWindow} parentWindow - 父窗口
  */
 function showInfoDialog(parentWindow) {
-  console.log('showInfoDialog 被调用，当前 currentInfoWindow:', currentInfoWindow ? '存在' : '不存在');
+  console.log('showInfoDialog 被调用');
   
-  // 如果已经有系统信息窗口打开，则聚焦到该窗口而不是创建新窗口
+  // 防止重复弹出对话框
   if (currentInfoWindow && !currentInfoWindow.isDestroyed()) {
-    console.log('系统信息窗口已存在，聚焦到现有窗口');
+    console.log('系统信息对话框已存在，聚焦到现有对话框');
     currentInfoWindow.focus();
     currentInfoWindow.moveTop();
     return currentInfoWindow;
   }
 
-  console.log('创建新的系统信息窗口');
+  console.log('创建新的系统信息对话框');
 
-  // 根据操作系统选择图标文件
-  const os = require('os');
-  const platform = os.platform();
-  let iconPath;
+  console.log('创建新的系统信息对话框');
 
-  if (platform === 'linux') {
-    iconPath = path.join(__dirname, '../public/favicon.png');
-  } else if (platform === 'darwin') {
-    iconPath = path.join(__dirname, '../public/favicon.icns');
-  } else {
-    // Windows 使用 .png 文件（256x256 兼容性更好）
-    iconPath = path.join(__dirname, '../public/icon.png');
-  }
-
-  // 创建一个新的信息窗口 - 立即显示并设置背景色
-  const isMac = process.platform === 'darwin';
-  const isWindows = process.platform === 'win32';
+  // 使用自定义对话框窗口，避免复杂的窗口管理
   const { nativeTheme } = require('electron');
   const isDark = nativeTheme.shouldUseDarkColors;
+  const isWindows = process.platform === 'win32';
   
-  // 使用与HTML内容匹配的背景色
-  const backgroundColor = isDark ? '#1a1a1a' : '#f5f5f5';
-  
-  // Windows 和其他平台使用不同的窗口配置
-  const windowConfig = {
+  // 创建自定义对话框窗口
+  const dialogWindow = new BrowserWindow({
     width: 500,
     height: 580,
-    show: false, // 使用 ready-to-show 事件显示
-    backgroundColor: backgroundColor, // 使用匹配的背景色
+    parent: parentWindow,
+    modal: true,
+    show: false,
+    backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
     webPreferences: {
       contextIsolation: true
-    }
-  };
-  
-  // Windows 平台特殊配置：不使用模态窗口，使用 alwaysOnTop
-  if (isWindows) {
-    windowConfig.alwaysOnTop = true;
-    windowConfig.skipTaskbar = false; // 允许在任务栏显示
-    windowConfig.minimizable = true;
-    windowConfig.maximizable = false;
-    windowConfig.resizable = false;
-    console.log('Windows 平台：使用 alwaysOnTop 窗口配置');
-  } else {
-    // macOS 和 Linux 使用模态窗口
-    windowConfig.modal = true;
-    console.log('macOS/Linux 平台：使用模态窗口配置');
-  }
-  
-  const infoWindow = new BrowserWindow(windowConfig);
-
-  // 设置全局引用
-  currentInfoWindow = infoWindow;
-
-  // 手动居中窗口（所有平台）
-  const { screen } = require('electron');
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-  
-  // 计算居中位置
-  const windowWidth = 500;
-  const windowHeight = 580;
-  const x = Math.round((screenWidth - windowWidth) / 2);
-  const y = Math.round((screenHeight - windowHeight) / 2);
-  
-  // 设置窗口位置
-  infoWindow.setPosition(x, y);
-  console.log(`${isWindows ? 'Windows' : isMac ? 'Mac' : 'Linux'} 系统信息窗口居中: 屏幕尺寸 ${screenWidth}x${screenHeight}, 窗口位置 (${x}, ${y})`);
-
-  // Windows 平台：添加额外的层级管理
-  if (isWindows) {
-    console.log('Windows 平台：设置窗口层级和状态');
-    // 确保窗口在创建后立即获得焦点
-    infoWindow.focus();
-    infoWindow.moveTop();
-    
-    // Windows 特有的窗口行为监听
-    infoWindow.on('show', () => {
-      console.log('Windows 系统信息窗口显示事件');
-      infoWindow.focus();
-    });
-    
-    infoWindow.on('blur', () => {
-      console.log('Windows 系统信息窗口失去焦点');
-      // 短暂延迟后重新获得焦点，防止窗口被隐藏
-      setTimeout(() => {
-        if (!infoWindow.isDestroyed()) {
-          infoWindow.focus();
-        }
-      }, 100);
-    });
-  } else {
-    // 非 Windows 平台的原有逻辑
-    infoWindow.focus();
-    infoWindow.moveTop();
-  }
-
-  // 监听窗口关闭事件，清理全局引用
-  infoWindow.on('closed', () => {
-    console.log('系统信息窗口关闭事件触发');
-    // 只在窗口真正关闭时清理引用
-    if (currentInfoWindow === infoWindow) {
-      console.log('清理 currentInfoWindow 引用');
-      currentInfoWindow = null;
-    } else {
-      console.log('currentInfoWindow 不匹配，不清理引用');
-    }
+    },
+    minimizable: false,
+    maximizable: false,
+    resizable: false
   });
 
-  // Linux平台：设置窗口类名，确保与主窗口保持一致
-  if (process.platform === 'linux' && infoWindow.setWMClass) {
-    try {
-      infoWindow.setWMClass('sdut-oj-competition-client', 'SDUT OJ Competition Side Client');
-      console.log('Linux 信息窗口类名设置成功');
-    } catch (error) {
-      console.log('设置信息窗口类名失败:', error);
-    }
-  }
+  // 设置全局引用
+  currentInfoWindow = dialogWindow;
 
-  // 确保隐藏菜单栏
-  infoWindow.setMenuBarVisibility(false);
+  // 隐藏菜单栏
+  dialogWindow.setMenuBarVisibility(false);
 
-  // 设置自定义 User-Agent
-  const defaultUserAgent = infoWindow.webContents.getUserAgent();
-  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
-  infoWindow.webContents.setUserAgent(customUserAgent);
-
-  // 禁用信息窗口的开发者工具相关功能
-  const webContents = infoWindow?.webContents;
-  if (webContents) {
-    // 禁用开发者工具快捷键
-    webContents.on('before-input-event', (event, input) => {
-      // 只拦截开发者工具相关快捷键
-      if (
-        input.key === 'F12' ||
-        (input.control && input.shift && input.key === 'I') ||
-        (input.meta && input.alt && input.key === 'I') ||
-        (input.control && input.shift && input.key === 'J') ||
-        (input.meta && input.alt && input.key === 'J') ||
-        (input.control && input.key === 'U') ||
-        (input.meta && input.key === 'U')
-      ) {
-        event.preventDefault();
-        return;
-      }
-      // Mac 下处理 info 快捷键，但禁止在信息窗口中再次打开信息窗口
-      if (process.platform === 'darwin' && webContents.isFocused && webContents.isFocused()) {
-        // 系统信息 Cmd+I - 禁止递归打开
-        if (input.meta && !input.shift && !input.alt && !input.control && input.key.toUpperCase() === 'I') {
-          event.preventDefault(); // 阻止在信息窗口中再次打开信息窗口
-          return;
-        }
-      }
-    });
-  }
-
-  // 创建信息页面的 HTML 内容（使用CSS背景实现logo）
-  function createInfoHTML() {
-    const os = require('os');
-    const platform = os.platform();
-
-    // 使用CSS创建简单的logo，避免图片加载问题
-    const logoImg = `<div class="logo" style="background: var(--accent-color); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 600;">OJ</div>`;
-
+  // 创建系统信息的 HTML 内容
+  function createSystemInfoHTML() {
     return `<!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>关于</title>
+      <title>系统信息</title>
       <style>
         * {
           margin: 0;
           padding: 0;
           box-sizing: border-box;
-          /* 禁止用户选中文本，但排除可点击元素 */
-          user-select: none;
-          -webkit-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
-        }
-        
-        /* 确保链接和按钮可以交互 */
-        .link-item, button, a {
-          user-select: auto !important;
-          -webkit-user-select: auto !important;
-          -moz-user-select: auto !important;
-          -ms-user-select: auto !important;
-          pointer-events: auto !important;
-          cursor: pointer !important;
         }
         
         body {
-          font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI Emoji', Roboto, 'Microsoft YaHei', 'Noto Color Emoji', 'Apple Color Emoji', system-ui, sans-serif;
-          background: var(--bg-color);
-          color: var(--text-color);
-          line-height: 1.6;
-          padding: 0;
-          margin: 0;
-          min-height: 100vh;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+          background: ${isDark ? '#1a1a1a' : '#f5f5f5'};
+          color: ${isDark ? '#ffffff' : '#1f1f1f'};
+          height: 100vh;
           display: flex;
           flex-direction: column;
-          overflow: hidden; /* 隐藏滚动条 */
-          /* 强制使用彩色 emoji */
-          font-variant-emoji: emoji;
-          /* 优化数字显示 */
-          font-variant-numeric: normal;
-          font-feature-settings: normal;
-          /* 禁止用户选中文本 */
-          user-select: none;
-          -webkit-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
-        }
-
-        /* Windows 系统 emoji 字体优化 */
-        .emoji, .emoji-text {
-          font-family: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji", "Twemoji Mozilla", sans-serif;
-          font-feature-settings: "liga" off;
+          overflow: hidden;
         }
         
-        /* 强制所有 emoji 使用彩色字体 */
-        * {
-          font-variant-emoji: emoji;
-        }
-        
-        /* Windows 特定的 emoji 优化 */
-        @media (min-width: 0) {
-          .app-name, .app-version, .app-description, .links-title, .copyright, .feature-text {
-            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Microsoft YaHei", "Segoe UI Emoji", "Apple Color Emoji", system-ui, sans-serif;
-          }
-          .link-item {
-            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Microsoft YaHei", system-ui, sans-serif !important;
-            font-variant-emoji: none !important;
-          }
-        }
-        
-        /* 针对 Windows 的额外 emoji 渲染优化 */
-        @supports (font-variant-emoji: emoji) {
-          * {
-            font-variant-emoji: emoji;
-          }
-        }
-        
-        /* 为旧版 Windows 提供备用方案 */
-        @media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
-          body, .app-name, .app-version, .app-description, .feature-text, .links-title, .copyright {
-            font-family: "Segoe UI", "Segoe UI Emoji", "Segoe UI Symbol", "Microsoft YaHei", system-ui, sans-serif;
-          }
-          .link-item {
-            font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif !important;
-            font-variant-emoji: none !important;
-          }
-        }
-
-        /* 主题变量 */
-        :root {
-          --bg-color: #f5f5f5;
-          --container-bg: rgba(255, 255, 255, 0.95);
-          --text-color: #1f1f1f;
-          --text-secondary: #666;
-          --text-tertiary: #888;
-          --border-color: rgba(0, 0, 0, 0.1);
-          --accent-color: #007aff;
-          --accent-bg: rgba(0, 122, 255, 0.1);
-          --accent-border: rgba(0, 122, 255, 0.2);
-          --hover-bg: rgba(0, 0, 0, 0.05);
-          --shadow-color: rgba(0, 0, 0, 0.1);
-        }
-
-        /* 暗色主题 */
-        @media (prefers-color-scheme: dark) {
-          :root {
-            --bg-color: #1a1a1a;
-            --container-bg: rgba(30, 30, 30, 0.95);
-            --text-color: #ffffff;
-            --text-secondary: #a0a0a0;
-            --text-tertiary: #707070;
-            --border-color: rgba(255, 255, 255, 0.1);
-            --accent-color: #0a84ff;
-            --accent-bg: rgba(10, 132, 255, 0.15);
-            --accent-border: rgba(10, 132, 255, 0.3);
-            --hover-bg: rgba(255, 255, 255, 0.05);
-            --shadow-color: rgba(0, 0, 0, 0.3);
-          }
-        }
-
-        /* 隐藏所有滚动条 */
-        ::-webkit-scrollbar {
-          display: none;
-        }
-        
-        * {
-          scrollbar-width: none; /* Firefox */
-          -ms-overflow-style: none; /* Internet Explorer 10+ */
-        }
-        
-        .container {
-          background: transparent; 
-          margin: 20px;
-          border-radius: 12px;
+        .dialog-container {
           flex: 1;
           display: flex;
           flex-direction: column;
-          overflow: hidden; /* 防止内容溢出 */
-          max-height: calc(100vh - 40px); /* 确保不超过视窗高度 */
+          padding: 20px;
         }
         
         .header {
           text-align: center;
-          padding: 25px 30px 15px;
+          margin-bottom: 30px;
         }
         
         .logo {
-          width: 56px;
-          height: 56px;
-          margin: 0 auto 12px;
-          border-radius: 8px;
+          width: 60px;
+          height: 60px;
+          margin: 0 auto 15px;
+          background: #007aff;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 28px;
+          font-weight: bold;
         }
         
         .app-name {
           font-size: 24px;
-          font-weight: 700;
-          margin-bottom: 6px;
-          color: var(--text-color);
-          font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+          font-weight: 600;
+          margin-bottom: 8px;
         }
         
         .app-version {
           font-size: 16px;
-          color: var(--text-secondary);
-          margin-bottom: 4px;
-          font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-          font-variant-numeric: tabular-nums; /* 使用等宽数字 */
-          font-feature-settings: "tnum"; /* 表格数字 */
+          color: ${isDark ? '#a0a0a0' : '#666'};
+          margin-bottom: 5px;
         }
         
         .app-description {
           font-size: 14px;
-          color: var(--text-tertiary);
-          font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+          color: ${isDark ? '#888' : '#999'};
         }
         
         .content {
-          padding: 20px 30px;
           flex: 1;
-          overflow: hidden; /* 禁用滚动 */
           display: flex;
-          align-items: center;
+          flex-direction: column;
           justify-content: center;
+          align-items: center;
         }
         
-        .feature-section {
-          margin-bottom: 0;
-          width: 100%;
-          text-align: center;
-        }
-        
-        .feature-list {
+        .info-list {
           list-style: none;
-          padding-left: 0;
-          display: inline-block;
-          text-align: left;
+          padding: 0;
+          margin: 0;
         }
         
-        .feature-item {
-          padding: 6px 0;
+        .info-item {
           display: flex;
           align-items: center;
-          gap: 12px;
+          padding: 8px 0;
+          margin-bottom: 5px;
         }
         
-        .feature-icon {
-          width: 4px;
-          height: 4px;
-          background: var(--text-tertiary);
+        .info-icon {
+          width: 6px;
+          height: 6px;
+          background: ${isDark ? '#666' : '#999'};
           border-radius: 50%;
-          flex-shrink: 0;
+          margin-right: 15px;
         }
         
-        .feature-text {
-          color: var(--text-secondary);
+        .info-text {
           font-size: 14px;
-          font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-          font-variant-numeric: tabular-nums; /* 使用等宽数字 */
-          font-feature-settings: "tnum"; /* 表格数字 */
-        }
-        
-        .footer {
-          text-align: center;
-          padding: 15px 30px;
-          border-radius: 0 0 12px 12px;
-        }
-        
-        .copyright {
-          color: var(--text-tertiary);
-          font-size: 12px;
-          font-weight: 400;
+          color: ${isDark ? '#ccc' : '#666'};
         }
         
         .links-section {
+          margin: 30px 0 20px;
           text-align: center;
-          padding: 20px 30px 10px;
-          border-top: 1px solid var(--border-color);
         }
         
         .links-title {
           font-size: 14px;
-          color: var(--text-secondary);
+          color: ${isDark ? '#a0a0a0' : '#666'};
           margin-bottom: 15px;
-          font-weight: 500;
         }
         
-        .links-container {
+        .links {
           display: flex;
           justify-content: center;
-          gap: 15px; /* 减少按钮间距 */
+          gap: 10px;
           flex-wrap: wrap;
-          align-items: center;
         }
         
-        .link-item {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
+        .link {
           padding: 8px 16px;
-          background: var(--accent-bg);
-          border: 1px solid var(--accent-border);
+          background: ${isDark ? 'rgba(0, 122, 255, 0.2)' : 'rgba(0, 122, 255, 0.1)'};
+          border: 1px solid ${isDark ? 'rgba(0, 122, 255, 0.4)' : 'rgba(0, 122, 255, 0.3)'};
           border-radius: 6px;
+          color: #007aff;
           text-decoration: none;
-          color: var(--accent-color);
           font-size: 13px;
-          font-weight: 500;
-          transition: all 0.2s ease;
           cursor: pointer;
-          width: 130px; /* 固定宽度确保一致 */
-          box-sizing: border-box;
-          white-space: nowrap;
-          text-align: center;
-          letter-spacing: normal; /* 正常字符间距 */
-          word-spacing: normal; /* 正常单词间距 */
-          font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important; /* 强制使用系统字体，不使用 emoji 字体 */
-          font-variant-emoji: none; /* 禁用 emoji 字体 */
-          /* 确保链接可以被点击 */
-          pointer-events: auto;
-          user-select: none; /* 保留这个以防止文本选择，但不影响点击 */
-          -webkit-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
+          transition: all 0.2s;
         }
         
-        .link-item:hover {
-          background: var(--hover-bg);
+        .link:hover {
+          background: ${isDark ? 'rgba(0, 122, 255, 0.3)' : 'rgba(0, 122, 255, 0.2)'};
           transform: translateY(-1px);
         }
         
-        .link-icon {
-          width: 16px;
-          height: 16px;
-          fill: currentColor;
-          flex-shrink: 0;
-          display: block;
+        .footer {
+          text-align: center;
+          padding: 20px 0;
+          border-top: 1px solid ${isDark ? '#333' : '#e0e0e0'};
+          margin-top: auto;
+        }
+        
+        .copyright {
+          font-size: 12px;
+          color: ${isDark ? '#666' : '#999'};
+          margin-bottom: 15px;
+        }
+        
+        .close-btn {
+          background: #007aff;
+          color: white;
+          border: none;
+          padding: 10px 24px;
+          border-radius: 6px;
+          font-size: 14px;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+        
+        .close-btn:hover {
+          background: #0056b3;
+        }
+        
+        .close-btn:active {
+          transform: translateY(1px);
         }
       </style>
     </head>
     <body>
-      <div class="container">
+      <div class="dialog-container">
         <div class="header">
-          ${logoImg}
+          <div class="logo">OJ</div>
           <div class="app-name">SDUT OJ 竞赛客户端</div>
           <div class="app-version">${getChineseFormattedVersion()}</div>
           <div class="app-description">专业的在线评测系统客户端</div>
         </div>
         
         <div class="content">
-          <div class="feature-section">
-            <ul class="feature-list">
-              <li class="feature-item">
-                <div class="feature-icon"></div>
-                <div class="feature-text">Electron 27.3.11</div>
-              </li>
-              <li class="feature-item">
-                <div class="feature-icon"></div>
-                <div class="feature-text">Node.js 18.19.1</div>
-              </li>
-              <li class="feature-item">
-                <div class="feature-icon"></div>
-                <div class="feature-text">Chromium 118.0.5993.159</div>
-              </li>
-              <li class="feature-item">
-                <div class="feature-icon"></div>
-                <div class="feature-text">V8 11.8.172.17</div>
-              </li>
-            </ul>
-          </div>
+          <ul class="info-list">
+            <li class="info-item">
+              <div class="info-icon"></div>
+              <div class="info-text">Electron 27.3.11</div>
+            </li>
+            <li class="info-item">
+              <div class="info-icon"></div>
+              <div class="info-text">Node.js 18.19.1</div>
+            </li>
+            <li class="info-item">
+              <div class="info-icon"></div>
+              <div class="info-text">Chromium 118.0.5993.159</div>
+            </li>
+            <li class="info-item">
+              <div class="info-icon"></div>
+              <div class="info-text">V8 11.8.172.17</div>
+            </li>
+          </ul>
         </div>
         
         <div class="links-section">
           <div class="links-title">相关链接</div>
-          <div class="links-container">
-            <a class="link-item" href="#" data-url="https://oj.sdutacm.cn/onlinejudge3/">
-              <svg class="link-icon" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M13.5 3a.5.5 0 0 1 .5.5V11H2V3.5a.5.5 0 0 1 .5-.5h11zm-11-1A1.5 1.5 0 0 0 1 3.5V12h14V3.5A1.5 1.5 0 0 0 13.5 2h-11zM5 5.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm2 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm2 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0z"/>
-              </svg>
-              SDUT OJ 官网
-            </a>
-            <a class="link-item" href="#" data-url="https://github.com/sdutacm/oj-competition-side-client">
-              <svg class="link-icon" viewBox="0 0 16 16">
-                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
-              </svg>
-              GitHub
-            </a>
+          <div class="links">
+            <a class="link" href="#" onclick="openLink('https://oj.sdutacm.cn/onlinejudge3/')">SDUT OJ 官网</a>
+            <a class="link" href="#" onclick="openLink('https://github.com/sdutacm/oj-competition-side-client')">GitHub</a>
           </div>
         </div>
         
         <div class="footer">
           <div class="copyright">© 2008-2025 SDUTACM. All Rights Reserved.</div>
+          <button class="close-btn" onclick="closeDialog()">关闭</button>
         </div>
       </div>
       
       <script>
-        // 打开外部链接的函数
-        function openExternalLink(url) {
-          console.log('openExternalLink called with URL:', url);
-          // 通过 console 消息发送到主进程
-          console.log('OPEN_EXTERNAL_LINK:' + url);
+        function openLink(url) {
+          console.log('OPEN_LINK:' + url);
         }
         
-        // 关闭窗口函数
-        function closeWindow() {
-          console.log('CLOSE_WINDOW');
+        function closeDialog() {
+          console.log('CLOSE_DIALOG');
         }
         
-        // DOM内容加载完成后设置事件监听器
-        document.addEventListener('DOMContentLoaded', function() {
-          console.log('System info dialog DOM loaded');
-          // 为所有外部链接添加点击事件监听器  
-          const linkItems = document.querySelectorAll('.link-item[data-url]');
-          console.log('Found link items:', linkItems.length);
-          
-          linkItems.forEach(function(link, index) {
-            const url = link.getAttribute('data-url');
-            console.log('Setting up link ' + index + ':', url);
-            
-            link.addEventListener('click', function(e) {
-              console.log('Link clicked event triggered for:', url);
-              e.preventDefault(); // 防止默认的链接行为
-              e.stopPropagation(); // 防止事件冒泡
-              
-              if (url) {
-                console.log('Calling openExternalLink with:', url);
-                openExternalLink(url);
-              } else {
-                console.log('No URL found on clicked element');
-              }
-            });
-            
-            // 为链接添加视觉反馈
-            link.addEventListener('mousedown', function() {
-              console.log('Mouse down on link:', url);
-              this.style.transform = 'translateY(0px) scale(0.98)';
-            });
-            
-            link.addEventListener('mouseup', function() {
-              console.log('Mouse up on link:', url);
-              this.style.transform = 'translateY(-1px) scale(1)';
-            });
-            
-            // 添加鼠标进入和离开事件用于调试
-            link.addEventListener('mouseenter', function() {
-              console.log('Mouse enter link:', url);
-              this.style.opacity = '0.8';
-            });
-            
-            link.addEventListener('mouseleave', function() {
-              console.log('Mouse leave link:', url);
-              this.style.opacity = '1';
-            });
-          });
-          
-          console.log('External link event listeners set up complete');
-          
-          // 添加全局点击监听器用于调试
-          document.addEventListener('click', function(e) {
-            console.log('Global click detected on element:', e.target.tagName, 'class:', e.target.className, 'data-url:', e.target.getAttribute('data-url'));
-          }, true);
+        // 支持 ESC 键关闭
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            closeDialog();
+          }
         });
         
-        // 添加键盘快捷键支持
-        document.addEventListener('keydown', function(e) {
-          // ESC 键关闭窗口
-          if (e.key === 'Escape') {
-            closeWindow();
-          }
-          // Cmd+W (Mac) 或 Ctrl+W (Windows/Linux) 关闭窗口
-          if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
-            e.preventDefault();
-            closeWindow();
+        // 自动聚焦到关闭按钮
+        window.addEventListener('load', function() {
+          const closeBtn = document.querySelector('.close-btn');
+          if (closeBtn) {
+            closeBtn.focus();
           }
         });
       </script>
@@ -1090,90 +756,37 @@ function showInfoDialog(parentWindow) {
     </html>`;
   }
 
-  // 直接创建 HTML 内容，无需同步文件读取
-  const finalHTML = createInfoHTML();
-  const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(finalHTML)}`;
+  // 创建和加载 HTML 内容
+  const htmlContent = createSystemInfoHTML();
+  const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+  
+  dialogWindow.loadURL(dataURL);
 
-  console.log('系统信息窗口 HTML 内容已准备，开始加载');
-
-  // 使用 ready-to-show 事件来平衡加载速度和稳定性
-  infoWindow.once('ready-to-show', () => {
-    console.log('系统信息窗口准备显示');
-    
-    if (isWindows) {
-      // Windows 平台：稍微延迟以确保稳定性
-      setTimeout(() => {
-        if (!infoWindow.isDestroyed()) {
-          infoWindow.show();
-          infoWindow.focus();
-          infoWindow.moveTop();
-          console.log('Windows 平台：窗口已显示并置于最前');
-        }
-      }, 20); // 减少延迟到20ms
-    } else {
-      // 其他平台立即显示
-      infoWindow.show();
-      infoWindow.focus();
-      infoWindow.moveTop();
-      console.log('非 Windows 平台：窗口已显示并置于最前');
-    }
-  });
-
-  infoWindow.loadURL(dataURL);
-
-  // 监听控制台消息以处理外部链接和窗口关闭
-  infoWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-    if (message.startsWith('OPEN_EXTERNAL_LINK:')) {
-      const url = message.replace('OPEN_EXTERNAL_LINK:', '');
+  // 监听控制台消息
+  dialogWindow.webContents.on('console-message', (event, level, message) => {
+    if (message.startsWith('OPEN_LINK:')) {
+      const url = message.replace('OPEN_LINK:', '');
       shell.openExternal(url);
-    } else if (message === 'CLOSE_WINDOW') {
-      infoWindow.close();
+    } else if (message === 'CLOSE_DIALOG') {
+      dialogWindow.close();
     }
   });
 
-  // 内容加载完成后进行最终的层级确保
-  infoWindow.webContents.on('did-finish-load', () => {
-    console.log('系统信息窗口内容加载完成');
-    
-    // 确保窗口在最前面（仅作为备用，主要显示已在 ready-to-show 完成）
-    if (infoWindow.isVisible()) {
-      infoWindow.focus();
-      infoWindow.moveTop();
-      console.log('系统信息窗口内容加载完成，确保窗口在前面');
+  // 窗口关闭时清理引用
+  dialogWindow.on('closed', () => {
+    console.log('系统信息对话框关闭');
+    if (currentInfoWindow === dialogWindow) {
+      currentInfoWindow = null;
     }
   });
 
-  // 位置微调（适用于所有平台）- 使用更短的延迟
-  setTimeout(() => {
-    try {
-      if (!infoWindow.isDestroyed()) {
-        const { screen } = require('electron');
-        const primaryDisplay = screen.getPrimaryDisplay();
-        const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-        const [currentX, currentY] = infoWindow.getPosition();
-        const idealX = Math.round((screenWidth - 500) / 2);
-        const idealY = Math.round((screenHeight - 580) / 2);
-        
-        // 如果位置偏差超过5像素，重新调整
-        if (Math.abs(currentX - idealX) > 5 || Math.abs(currentY - idealY) > 5) {
-          infoWindow.setPosition(idealX, idealY);
-          console.log(`系统信息窗口最终位置调整: 从 (${currentX}, ${currentY}) 到 (${idealX}, ${idealY})`);
-        } else {
-          console.log(`系统信息窗口位置确认正确: (${currentX}, ${currentY})`);
-        }
-        
-        // Windows 平台额外确保窗口可见
-        if (isWindows && infoWindow.isVisible()) {
-          infoWindow.focus();
-          console.log('Windows 平台：最终确保窗口焦点');
-        }
-      }
-    } catch (error) {
-      console.log('系统信息窗口位置检查失败:', error);
-    }
-  }, 30); // 统一使用30ms延迟，平衡速度和稳定性
+  // 显示对话框
+  dialogWindow.once('ready-to-show', () => {
+    dialogWindow.show();
+    console.log('系统信息对话框已显示');
+  });
 
-  return infoWindow;
+  return dialogWindow;
 }
 
 // 防抖弹窗，防止同一窗口/类型短时间重复弹窗
