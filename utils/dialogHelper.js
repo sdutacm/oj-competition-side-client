@@ -615,12 +615,8 @@ function showInfoDialog(parentWindow) {
   // 禁用信息窗口的开发者工具相关功能
   const webContents = infoWindow?.webContents;
   if (webContents) {
-    // 移除禁止右键菜单的监听，恢复系统默认行为
-
     // 禁用开发者工具快捷键
     webContents.on('before-input-event', (event, input) => {
-      // ESC键绑定已删除，仅使用关闭按钮关闭窗口
-      
       // 只拦截开发者工具相关快捷键
       if (
         input.key === 'F12' ||
@@ -645,34 +641,13 @@ function showInfoDialog(parentWindow) {
     });
   }
 
-  // 异步函数获取 favicon 的 base64 编码
-  function getBase64ImageSync() {
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      // 强制使用 favicon.png 作为 logo
-      const imagePath = path.join(__dirname, '../public/favicon.png');
-      const imageBuffer = fs.readFileSync(imagePath);
-      return imageBuffer.toString('base64');
-    } catch (error) {
-      console.error('Error loading favicon:', error);
-      return '';
-    }
-  }
-
-  // 创建信息页面的 HTML 内容
-  function createInfoHTML(base64Image = '') {
+  // 创建信息页面的 HTML 内容（使用CSS背景实现logo）
+  function createInfoHTML() {
     const os = require('os');
     const platform = os.platform();
-    const isLinux = platform === 'linux';
-    const isDarwin = platform === 'darwin';
-    const isWindows = platform === 'win32';
 
-    let mimeType = 'image/png'; // 强制 png
-
-    const logoImg = base64Image ?
-      `<img src="data:${mimeType};base64,${base64Image}" alt="Logo" class="logo">` :
-      '<div class="logo" style="background: var(--accent-color); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 600;">OJ</div>';
+    // 使用CSS创建简单的logo，避免图片加载问题
+    const logoImg = `<div class="logo" style="background: var(--accent-color); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 600;">OJ</div>`;
 
     return `<!DOCTYPE html>
     <html>
@@ -1115,10 +1090,11 @@ function showInfoDialog(parentWindow) {
     </html>`;
   }
 
-  // 同步加载图片并创建窗口
-  const base64Image = getBase64ImageSync();
-  const finalHTML = createInfoHTML(base64Image);
+  // 直接创建 HTML 内容，无需同步文件读取
+  const finalHTML = createInfoHTML();
   const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(finalHTML)}`;
+
+  console.log('系统信息窗口 HTML 内容已准备，开始加载');
 
   // 使用 ready-to-show 事件来平衡加载速度和稳定性
   infoWindow.once('ready-to-show', () => {
