@@ -1648,6 +1648,8 @@ class ToolbarManager {
         width: winWidth,
         height: 48
       });
+      // 恢复工具栏随主窗口缩放自适应
+      this.toolbarView.setAutoResize({ width: true, height: false });
     }
   }
 

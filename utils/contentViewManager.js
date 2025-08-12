@@ -220,8 +220,9 @@ class ContentViewManager {
       y = 48;
       h = height - 48;
     }
-    contentView.setBounds({ x: 0, y, width, height: h });
-    contentView.setAutoResize({ width: true, height: true });
+  contentView.setBounds({ x: 0, y, width, height: h });
+  // 恢复内容视图随主窗口缩放自适应
+  contentView.setAutoResize({ width: true, height: true });
 
     // 新建内容视图自动获得焦点，确保快捷键生效
     // 关键：弹窗/子窗口必须获得系统焦点，否则 before-input-event 不会触发
