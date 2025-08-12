@@ -133,8 +133,15 @@ class ContentViewManager {
     targetWindow.addBrowserView(contentView);
     console.log('BrowserView已添加到窗口');
 
-  // 绑定 title 同步
-  this.bindTitleSync(contentView, targetWindow);
+    // 绑定 title 同步
+    this.bindTitleSync(contentView, targetWindow);
+
+    // 恢复导航事件绑定逻辑，主窗口和新窗口都绑定
+    if (targetWindow !== this.mainWindow) {
+      this.setupNavigation(contentView, targetWindow);
+    } else {
+      this.setupNavigation(contentView, targetWindow, true); // 主窗口只绑定导航状态
+    }
     // Windows系统特殊处理：立即设置BrowserView背景色并强制刷新
     if (process.platform === 'win32') {
       try {
@@ -172,12 +179,6 @@ class ContentViewManager {
     try {
       contentView.webContents.loadURL(url);
       console.log('直接加载真实页面:', url);
-      // Windows特殊处理：监听第一次DOM准备就绪，确保有初始内容
-      if (process.platform === 'win32' && targetWindow === this.mainWindow) {
-        contentView.webContents.once('dom-ready', () => {
-          console.log('Windows系统：DOM准备就绪，页面有基础内容');
-        });
-      }
       // 页面加载完成后每次都注入性能优化CSS，保证刷新/新建窗口/导航都生效
       contentView.webContents.on('did-finish-load', () => {
         this.injectPerfCSS(contentView);
@@ -190,6 +191,12 @@ class ContentViewManager {
           console.log('主窗口 dom-ready 注入CSS');
         });
       }
+      // Windows特殊处理：监听第一次DOM准备就绪，确保有初始内容
+      if (process.platform === 'win32' && targetWindow === this.mainWindow) {
+        contentView.webContents.once('dom-ready', () => {
+          console.log('Windows系统：DOM准备就绪，页面有基础内容');
+        });
+      }
     } catch (e) {
       console.warn('加载页面失败:', e.message);
     }
@@ -199,15 +206,29 @@ class ContentViewManager {
 
   // 主窗口和新窗口都绑定跳转/拦截事件，全部用 blockmap 逻辑
   const config = this.config;
-    // will-navigate
+    // will-navigate：主窗口主域名内跳转不拦截，白名单新开窗口，非白名单拦截
     webContents.on('will-navigate', (event, url) => {
       const domain = getHostname(url);
-      if (config && config.POPUP_WHITELIST && require('./domainHelper').isWhiteDomain(url, config)) {
-        event.preventDefault();
-        this.openNewWindow(url);
-      } else if (config && config.POPUP_WHITELIST) {
-        event.preventDefault();
-        showBlockedDialog(targetWindow, domain, '该域名不在允许访问范围', 'default');
+      const isMainDomain = (domain === config.MAIN_DOMAIN || domain.endsWith('.' + config.MAIN_DOMAIN));
+      const isWhite = config && config.POPUP_WHITELIST && require('./domainHelper').isWhiteDomain(url, config);
+      if (targetWindow === this.mainWindow) {
+        if (isWhite && !isMainDomain) {
+          event.preventDefault();
+          this.openNewWindow(url);
+        } else if (!isMainDomain) {
+          event.preventDefault();
+          showBlockedDialog(targetWindow, domain, '该域名不在允许访问范围', 'default');
+        }
+        // 主域名内跳转不拦截，历史栈正常维护
+      } else {
+        // 新窗口逻辑保持原样
+        if (isWhite) {
+          event.preventDefault();
+          this.openNewWindow(url);
+        } else {
+          event.preventDefault();
+          showBlockedDialog(targetWindow, domain, '该域名不在允许访问范围', 'default');
+        }
       }
     });
     // will-redirect
