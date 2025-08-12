@@ -494,15 +494,19 @@ function showInfoDialog(parentWindow) {
     iconPath = path.join(__dirname, '../public/icon.png');
   }
 
-  // 创建一个新的信息窗口 - 取消模态窗口设置
+  // 创建一个新的信息窗口 - 立即显示并设置背景色
   const isMac = process.platform === 'darwin';
   const { nativeTheme } = require('electron');
   const isDark = nativeTheme.shouldUseDarkColors;
+  
+  // 使用与HTML内容匹配的背景色
+  const backgroundColor = isDark ? '#1a1a1a' : '#f5f5f5';
+  
   const infoWindow = new BrowserWindow({
     width: 500,
     height: 580,
-    show: false,
-    backgroundColor: isDark ? '#23272e' : '#f5f5f5',
+    show: true, // 立即显示窗口
+    backgroundColor: backgroundColor, // 使用匹配的背景色
     webPreferences: {
       contextIsolation: true
     }
@@ -1103,7 +1107,7 @@ function showInfoDialog(parentWindow) {
       }, 100);
     }
     
-    infoWindow.show();
+    // 窗口已经立即显示，这里不需要再调用 show()
   });
 
   return infoWindow;
