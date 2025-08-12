@@ -476,317 +476,60 @@ function isAboutWindow(window) {
 function showInfoDialog(parentWindow) {
   console.log('showInfoDialog 被调用');
   
-  // 防止重复弹出对话框
-  if (currentInfoWindow && !currentInfoWindow.isDestroyed()) {
-    console.log('系统信息对话框已存在，聚焦到现有对话框');
-    currentInfoWindow.focus();
-    currentInfoWindow.moveTop();
-    return currentInfoWindow;
-  }
-
-  console.log('创建新的系统信息对话框');
-
-  console.log('创建新的系统信息对话框');
-
-  // 使用自定义对话框窗口，避免复杂的窗口管理
-  const { nativeTheme } = require('electron');
-  const isDark = nativeTheme.shouldUseDarkColors;
-  const isWindows = process.platform === 'win32';
+  // 获取系统信息
+  const appVersion = getChineseFormattedVersion();
+  const electronVersion = process.versions.electron;
+  const nodeVersion = process.versions.node;
+  const chromiumVersion = process.versions.chrome;
+  const v8Version = process.versions.v8;
   
-  // 创建自定义对话框窗口
-  const dialogWindow = new BrowserWindow({
-    width: 500,
-    height: 580,
-    parent: parentWindow,
-    modal: true,
-    show: false,
-    backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
-    webPreferences: {
-      contextIsolation: true
-    },
-    minimizable: false,
-    maximizable: false,
-    resizable: false
-  });
+  // 构建详细信息文本
+  const detailText = `应用版本：${appVersion}
+Electron：${electronVersion}
+Node.js：${nodeVersion}
+Chromium：${chromiumVersion}
+V8：${v8Version}
 
-  // 设置全局引用
-  currentInfoWindow = dialogWindow;
+开发团队：SDUTACM
+项目地址：https://github.com/sdutacm/oj-competition-side-client
+官方网站：https://oj.sdutacm.cn/onlinejudge3/`;
 
-  // 隐藏菜单栏
-  dialogWindow.setMenuBarVisibility(false);
-
-  // 创建系统信息的 HTML 内容
-  function createSystemInfoHTML() {
-    return `<!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>系统信息</title>
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-        
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
-          background: ${isDark ? '#1a1a1a' : '#f5f5f5'};
-          color: ${isDark ? '#ffffff' : '#1f1f1f'};
-          height: 100vh;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-        }
-        
-        .dialog-container {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          padding: 20px;
-        }
-        
-        .header {
-          text-align: center;
-          margin-bottom: 30px;
-        }
-        
-        .logo {
-          width: 60px;
-          height: 60px;
-          margin: 0 auto 15px;
-          background: #007aff;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 28px;
-          font-weight: bold;
-        }
-        
-        .app-name {
-          font-size: 24px;
-          font-weight: 600;
-          margin-bottom: 8px;
-        }
-        
-        .app-version {
-          font-size: 16px;
-          color: ${isDark ? '#a0a0a0' : '#666'};
-          margin-bottom: 5px;
-        }
-        
-        .app-description {
-          font-size: 14px;
-          color: ${isDark ? '#888' : '#999'};
-        }
-        
-        .content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-        }
-        
-        .info-list {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-        
-        .info-item {
-          display: flex;
-          align-items: center;
-          padding: 8px 0;
-          margin-bottom: 5px;
-        }
-        
-        .info-icon {
-          width: 6px;
-          height: 6px;
-          background: ${isDark ? '#666' : '#999'};
-          border-radius: 50%;
-          margin-right: 15px;
-        }
-        
-        .info-text {
-          font-size: 14px;
-          color: ${isDark ? '#ccc' : '#666'};
-        }
-        
-        .links-section {
-          margin: 30px 0 20px;
-          text-align: center;
-        }
-        
-        .links-title {
-          font-size: 14px;
-          color: ${isDark ? '#a0a0a0' : '#666'};
-          margin-bottom: 15px;
-        }
-        
-        .links {
-          display: flex;
-          justify-content: center;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-        
-        .link {
-          padding: 8px 16px;
-          background: ${isDark ? 'rgba(0, 122, 255, 0.2)' : 'rgba(0, 122, 255, 0.1)'};
-          border: 1px solid ${isDark ? 'rgba(0, 122, 255, 0.4)' : 'rgba(0, 122, 255, 0.3)'};
-          border-radius: 6px;
-          color: #007aff;
-          text-decoration: none;
-          font-size: 13px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        
-        .link:hover {
-          background: ${isDark ? 'rgba(0, 122, 255, 0.3)' : 'rgba(0, 122, 255, 0.2)'};
-          transform: translateY(-1px);
-        }
-        
-        .footer {
-          text-align: center;
-          padding: 20px 0;
-          border-top: 1px solid ${isDark ? '#333' : '#e0e0e0'};
-          margin-top: auto;
-        }
-        
-        .copyright {
-          font-size: 12px;
-          color: ${isDark ? '#666' : '#999'};
-          margin-bottom: 15px;
-        }
-        
-        .close-btn {
-          background: #007aff;
-          color: white;
-          border: none;
-          padding: 10px 24px;
-          border-radius: 6px;
-          font-size: 14px;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-        
-        .close-btn:hover {
-          background: #0056b3;
-        }
-        
-        .close-btn:active {
-          transform: translateY(1px);
-        }
-      </style>
-    </head>
-    <body>
-      <div class="dialog-container">
-        <div class="header">
-          <div class="logo">OJ</div>
-          <div class="app-name">SDUT OJ 竞赛客户端</div>
-          <div class="app-version">${getChineseFormattedVersion()}</div>
-          <div class="app-description">专业的在线评测系统客户端</div>
-        </div>
-        
-        <div class="content">
-          <ul class="info-list">
-            <li class="info-item">
-              <div class="info-icon"></div>
-              <div class="info-text">Electron 27.3.11</div>
-            </li>
-            <li class="info-item">
-              <div class="info-icon"></div>
-              <div class="info-text">Node.js 18.19.1</div>
-            </li>
-            <li class="info-item">
-              <div class="info-icon"></div>
-              <div class="info-text">Chromium 118.0.5993.159</div>
-            </li>
-            <li class="info-item">
-              <div class="info-icon"></div>
-              <div class="info-text">V8 11.8.172.17</div>
-            </li>
-          </ul>
-        </div>
-        
-        <div class="links-section">
-          <div class="links-title">相关链接</div>
-          <div class="links">
-            <a class="link" href="#" onclick="openLink('https://oj.sdutacm.cn/onlinejudge3/')">SDUT OJ 官网</a>
-            <a class="link" href="#" onclick="openLink('https://github.com/sdutacm/oj-competition-side-client')">GitHub</a>
-          </div>
-        </div>
-        
-        <div class="footer">
-          <div class="copyright">© 2008-2025 SDUTACM. All Rights Reserved.</div>
-          <button class="close-btn" onclick="closeDialog()">关闭</button>
-        </div>
-      </div>
-      
-      <script>
-        function openLink(url) {
-          console.log('OPEN_LINK:' + url);
-        }
-        
-        function closeDialog() {
-          console.log('CLOSE_DIALOG');
-        }
-        
-        // 支持 ESC 键关闭
-        document.addEventListener('keydown', function(e) {
-          if (e.key === 'Escape') {
-            closeDialog();
-          }
-        });
-        
-        // 自动聚焦到关闭按钮
-        window.addEventListener('load', function() {
-          const closeBtn = document.querySelector('.close-btn');
-          if (closeBtn) {
-            closeBtn.focus();
-          }
-        });
-      </script>
-    </body>
-    </html>`;
-  }
-
-  // 创建和加载 HTML 内容
-  const htmlContent = createSystemInfoHTML();
-  const dataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
-  
-  dialogWindow.loadURL(dataURL);
-
-  // 监听控制台消息
-  dialogWindow.webContents.on('console-message', (event, level, message) => {
-    if (message.startsWith('OPEN_LINK:')) {
-      const url = message.replace('OPEN_LINK:', '');
-      shell.openExternal(url);
-    } else if (message === 'CLOSE_DIALOG') {
-      dialogWindow.close();
-    }
-  });
-
-  // 窗口关闭时清理引用
-  dialogWindow.on('closed', () => {
-    console.log('系统信息对话框关闭');
-    if (currentInfoWindow === dialogWindow) {
-      currentInfoWindow = null;
-    }
-  });
+  // 对话框选项
+  const options = {
+    type: 'info',
+    title: '关于 SDUT OJ 竞赛客户端',
+    message: 'SDUT OJ 竞赛客户端',
+    detail: detailText,
+    buttons: ['确定', '复制信息'],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true
+  };
 
   // 显示对话框
-  dialogWindow.once('ready-to-show', () => {
-    dialogWindow.show();
-    console.log('系统信息对话框已显示');
-  });
+  dialog.showMessageBox(parentWindow, options).then((result) => {
+    console.log('系统信息对话框结果:', result);
+    
+    if (result.response === 1) { // 复制信息按钮
+      const { clipboard } = require('electron');
+      const copyText = `SDUT OJ 竞赛客户端 ${appVersion}
 
-  return dialogWindow;
+系统信息：
+- Electron: ${electronVersion}
+- Node.js: ${nodeVersion}
+- Chromium: ${chromiumVersion}
+- V8: ${v8Version}
+
+开发团队：SDUTACM
+项目地址：https://github.com/sdutacm/oj-competition-side-client
+官方网站：https://oj.sdutacm.cn/onlinejudge3/`;
+      
+      clipboard.writeText(copyText);
+      console.log('系统信息已复制到剪贴板');
+    }
+  }).catch((error) => {
+    console.error('显示系统信息对话框时出错:', error);
+  });
 }
 
 // 防抖弹窗，防止同一窗口/类型短时间重复弹窗
