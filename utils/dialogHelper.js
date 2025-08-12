@@ -212,45 +212,8 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
           user-select: none; /* 禁止选中 */
         }
         
-        .dialog-header {
-          padding: 20px 20px 15px;
-          border-bottom: 1px solid var(--border-color);
-          flex-shrink: 0;
-          border-radius: 8px 8px 0 0; /* 顶部圆角 */
-          background: var(--container-bg); /* 确保背景一致 */
-        }
-        
-        .dialog-title-row {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-        
-        .dialog-icon {
-          width: 24px;
-          height: 24px;
-          flex-shrink: 0;
-        }
-        
-        .dialog-icon-fallback {
-          width: 24px;
-          height: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 16px;
-          flex-shrink: 0;
-        }
-        
-        .dialog-title {
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--text-color);
-          flex: 1;
-        }
-        
         .dialog-body {
-          padding: 20px;
+          padding: 25px 20px 20px;
           flex: 1;
           overflow: hidden;
           display: flex;
@@ -259,10 +222,11 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
         }
         
         .dialog-message {
-          font-size: 14px;
+          font-size: 18px;
           color: var(--text-color);
           line-height: 1.5;
           flex-shrink: 0;
+          font-weight: 500;
         }
         
         .dialog-detail {
@@ -287,7 +251,6 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
           display: flex;
           justify-content: flex-end;
           flex-shrink: 0;
-          border-radius: 0 0 8px 8px; /* 底部圆角 */
           background: var(--container-bg); /* 确保背景一致 */
         }
         
@@ -343,12 +306,6 @@ function showCustomBlockedDialog(parentWindow, title, message, detail, buttonTex
     </head>
     <body>
       <div class="dialog-container">
-        <div class="dialog-header">
-          <div class="dialog-title-row">
-            ${logoImg}
-            <div class="dialog-title">${title}</div>
-          </div>
-        </div>
         <div class="dialog-body">
           <div class="dialog-message">${message}</div>
           <div class="dialog-detail">${detail}</div>
