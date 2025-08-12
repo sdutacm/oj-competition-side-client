@@ -818,18 +818,13 @@ app.whenReady().then(() => {
     duration: 3500,
     onClose: () => {
       splashClosed = true;
-      // splash 关闭后先显示主窗口，再加载页面
+      // splash 关闭后立即显示主窗口，不等待页面加载
       if (mainWindow && !mainWindow.isDestroyed()) {
-        // 只加载url，不重复创建BrowserView
-        let contentLoaded = false;
-        const showMainWindow = () => {
-          if (!mainWindow.isDestroyed() && !contentLoaded) {
-            mainWindow.show();
-            mainWindow.focus();
-            contentLoaded = true;
-            console.log('主窗口内容加载完成，显示主窗口');
-          }
-        };
+        console.log('[Splash] 启动窗口关闭，立即显示主窗口');
+        mainWindow.show();
+        mainWindow.focus();
+        
+        // 然后开始加载页面内容
         if (contentViewManager && contentViewManager.contentView) {
           try {
             // splash 关闭后同步设置 bounds，防止内容不可见
@@ -841,11 +836,22 @@ app.whenReady().then(() => {
               width: contentBounds.width,
               height: contentBounds.height - toolbarHeight
             });
-            // 加载页面并监听 did-finish-load
+            // 加载页面，但不等待加载完成才显示窗口
             const wc = contentViewManager.contentView.webContents;
             wc.loadURL(APP_CONFIG.HOME_URL);
-            console.log('主窗口内容视图加载页面:', APP_CONFIG.HOME_URL);
-            wc.once('did-finish-load', showMainWindow);
+            console.log('主窗口开始加载页面:', APP_CONFIG.HOME_URL);
+            wc.once('did-finish-load', () => {
+              console.log('主窗口页面加载完成');
+            });
+            // 如果页面加载超过2秒，可以考虑显示加载提示
+            setTimeout(() => {
+              if (!wc.isDestroyed()) {
+                const url = wc.getURL();
+                if (!url || url === 'about:blank') {
+                  console.log('页面加载较慢，主窗口已显示但内容仍在加载中');
+                }
+              }
+            }, 2000);
           } catch (e) {
             console.warn('主窗口内容视图加载页面失败:', e.message);
           }
@@ -853,9 +859,6 @@ app.whenReady().then(() => {
           // 兜底：如果没有内容视图则创建
           const view = contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
           console.log('主窗口开始加载页面（兜底）');
-          if (view && view.webContents) {
-            view.webContents.once('did-finish-load', showMainWindow);
-          }
         }
       }
       // 启动更新检查
