@@ -91,16 +91,13 @@ function createStartupWindow(htmlContent, options = {}) {
     y: centeredPosition.y,
     frame: false,
     resizable: false,
-    alwaysOnTop: true, // splash 永远置顶
+    alwaysOnTop: true,
     transparent: true,
     backgroundColor: 'rgba(0,0,0,0)',
     hasShadow: false,
     skipTaskbar: false,
     webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      devTools: false,
-      backgroundThrottling: false
+      contextIsolation: true
     }
   };
   console.log('[Splash] 创建启动窗口');

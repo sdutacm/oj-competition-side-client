@@ -346,10 +346,6 @@ function openNewWindow(url) {
     // 创建内容视图并添加到窗口
     const contentView = new BrowserView({
       webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        webSecurity: true,
-        sandbox: false,
         backgroundColor: browserViewBgColor,
         transparent: false
       }
@@ -706,10 +702,7 @@ app.whenReady().then(() => {
         backgroundColor: backgroundColor,
         show: false,
         webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true,
-          webSecurity: true,
-          transparent: false
+          contextIsolation: true
         }
       });
       // 初始化内容视图管理器，但不加载页面

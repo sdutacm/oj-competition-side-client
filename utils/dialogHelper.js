@@ -97,23 +97,17 @@ function showBlockedDialog(parentWindow, hostname, reason, type = 'default', cal
  */
 function showCustomBlockedDialog(parentWindow, title, message, detail, buttonText, callback) {
   // 创建自定义弹窗窗口
+  const { nativeTheme } = require('electron');
+  const isDark = nativeTheme.shouldUseDarkColors;
   const dialogWindow = new BrowserWindow({
     width: 480,
     height: 340,
     parent: parentWindow,
     modal: true,
-    resizable: false,
     show: false,
-    frame: false, // 移除标题栏和边框
-    titleBarStyle: 'hidden', // 隐藏标题栏
-    closable: false, // 禁用关闭按钮
-    minimizable: false, // 禁用最小化按钮
-    maximizable: false, // 禁用最大化按钮
-    icon: path.join(__dirname, '../public/icon.png'), // 设置窗口图标
+    backgroundColor: isDark ? '#23272e' : '#f5f5f5',
     webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      devTools: false,
+      contextIsolation: true
     }
   });
 
@@ -573,30 +567,15 @@ function showInfoDialog(parentWindow) {
 
   // 创建一个新的信息窗口 - 取消模态窗口设置
   const isMac = process.platform === 'darwin';
+  const { nativeTheme } = require('electron');
+  const isDark = nativeTheme.shouldUseDarkColors;
   const infoWindow = new BrowserWindow({
     width: 500,
-    height: 580, // 增加高度以适应链接部分
-    // 移除 parent 和 modal 设置，改为普通窗口
-    resizable: false,
+    height: 580,
     show: false,
-    icon: iconPath,
-    frame: true, // 强制有原生边框和按钮
-    titleBarStyle: 'default', // 所有平台都使用默认标题栏
-    closable: true, // 确保窗口可以关闭
-    minimizable: false, // 禁用最小化按钮
-    maximizable: false, // 禁用最大化按钮
-    alwaysOnTop: false, // 不要始终置顶
-    center: true, // 居中显示
-    fullscreenable: false, // 禁用全屏
-    // Mac 特定的居中设置
-    ...(isMac && {
-      x: undefined, // 让系统自动计算 x 位置
-      y: undefined, // 让系统自动计算 y 位置
-    }),
+    backgroundColor: isDark ? '#23272e' : '#f5f5f5',
     webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      devTools: false, // 禁用开发者工具
+      contextIsolation: true
     }
   });
 
