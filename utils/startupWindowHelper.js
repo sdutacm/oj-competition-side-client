@@ -71,45 +71,49 @@ function createStartupWindow(htmlContent, options = {}) {
     const width = options.width || 1000;
     const height = options.height || 600;
     const centeredPosition = calculateCenteredPosition(width, height);
-    const windowOptions = {
-        width,
-        height,
-        x: centeredPosition.x,
-        y: centeredPosition.y,
-        frame: false,
-        resizable: false,
-        alwaysOnTop: false,
-        transparent: true,
-        backgroundColor: 'rgba(0,0,0,0)',
-        hasShadow: false,
-        skipTaskbar: false,
-        webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true,
-            devTools: false,
-            backgroundThrottling: false
-        }
-    };
-    const startupWindow = new BrowserWindow(windowOptions);
-    const startupDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
-    startupWindow.loadURL(startupDataURL);
-    startupWindow.webContents.once('dom-ready', () => {
-        if (process.platform === 'win32') {
-            startupWindow.setBackgroundColor('rgba(0,0,0,0)');
-        }
-        startupWindow.show();
-        if (typeof options.onShow === 'function') options.onShow(startupWindow);
-        // 自动关闭
-        if (options.duration) {
-            setTimeout(() => {
-                startupWindow.close();
-            }, options.duration);
-        }
-    });
-    startupWindow.on('closed', () => {
-        if (typeof options.onClose === 'function') options.onClose();
-    });
-    return startupWindow;
+  const windowOptions = {
+    width,
+    height,
+    x: centeredPosition.x,
+    y: centeredPosition.y,
+    frame: false,
+    resizable: false,
+    alwaysOnTop: true, // splash 永远置顶
+    transparent: true,
+    backgroundColor: 'rgba(0,0,0,0)',
+    hasShadow: false,
+    skipTaskbar: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      devTools: false,
+      backgroundThrottling: false
+    }
+  };
+  console.log('[Splash] 创建启动窗口');
+  const startupWindow = new BrowserWindow(windowOptions);
+  const startupDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+  startupWindow.loadURL(startupDataURL);
+  startupWindow.webContents.once('dom-ready', () => {
+    if (process.platform === 'win32') {
+      startupWindow.setBackgroundColor('rgba(0,0,0,0)');
+    }
+    console.log('[Splash] dom-ready，准备显示启动窗口');
+    startupWindow.show();
+    if (typeof options.onShow === 'function') options.onShow(startupWindow);
+    // 自动关闭
+    if (options.duration) {
+      setTimeout(() => {
+        console.log('[Splash] 到时自动关闭启动窗口');
+        startupWindow.close();
+      }, options.duration);
+    }
+  });
+  startupWindow.on('closed', () => {
+    console.log('[Splash] 启动窗口已关闭');
+    if (typeof options.onClose === 'function') options.onClose();
+  });
+  return startupWindow;
 }
 
 module.exports = { createStartupWindow, getStartupHtml };
