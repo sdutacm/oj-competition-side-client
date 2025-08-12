@@ -85,6 +85,10 @@ class MacMenuManager {
             label: this.getAboutMenuLabel(),
             click: () => this.showAboutDialog()
           },
+          {
+            label: i18n.t('menu.checkForUpdates'),
+            click: () => this.checkForUpdates()
+          },
           { type: 'separator' },
           {
             label: i18n.t('menu.hide', { appName: appName }),
@@ -399,6 +403,134 @@ class MacMenuManager {
 
   reportIssue() {
     shell.openExternal('https://github.com/ATRIOR-LCL/oj-client/issues');
+  }
+
+  /**
+   * 检查更新
+   */
+  async checkForUpdates() {
+    try {
+      console.log('Mac菜单栏触发手动检查更新');
+      
+      const { dialog } = require('electron');
+
+      if (global.updateManager) {
+        try {
+          // 直接调用静默检查方法获取结果，不显示加载对话框
+          const result = await global.updateManager.checkForUpdatesQuiet();
+
+          if (result.error) {
+            // 显示错误对话框
+            await dialog.showMessageBox(this.mainWindow, {
+              type: 'error',
+              title: '检查更新失败',
+              message: '无法检查更新',
+              detail: `错误信息: ${result.error}\n\n请检查网络连接或稍后重试。`,
+              buttons: ['确定'],
+              defaultId: 0,
+              noLink: true
+            });
+          } else if (result.hasUpdate && result.latestVersion) {
+            // 有更新且未被跳过，显示正常的新版本对话框
+            const options = {
+              type: 'info',
+              title: '发现新版本',
+              message: `发现新版本 ${result.latestVersion}`,
+              detail: `当前版本: ${global.updateManager.currentVersion}\n最新版本: ${result.latestVersion}\n\n建议更新到最新版本以获得更好的体验和最新功能。`,
+              buttons: ['稍后提醒', '立即下载', '跳过此版本'],
+              defaultId: 1,
+              cancelId: 0,
+              noLink: true
+            };
+
+            const updateResult = await dialog.showMessageBox(this.mainWindow, options);
+            
+            switch (updateResult.response) {
+              case 1: // 立即下载
+                global.updateManager.openDownloadPage();
+                break;
+              case 2: // 跳过此版本
+                await global.updateManager.skipVersion(result.latestVersion);
+                break;
+              // case 0: 稍后提醒 - 不做任何操作
+            }
+          } else if (result.skipped && result.latestVersion) {
+            // 版本被跳过，显示特殊提示
+            const options = {
+              type: 'info',
+              title: '发现新版本（已跳过）',
+              message: `发现新版本 ${result.latestVersion}`,
+              detail: `当前版本: ${global.updateManager.currentVersion}\n最新版本: ${result.latestVersion}\n\n您之前选择跳过了此版本。是否要重新考虑更新？`,
+              buttons: ['继续跳过', '立即下载', '稍后提醒'],
+              defaultId: 1,
+              cancelId: 0,
+              noLink: true
+            };
+
+            const updateResult = await dialog.showMessageBox(this.mainWindow, options);
+            
+            switch (updateResult.response) {
+              case 1: // 立即下载
+                global.updateManager.openDownloadPage();
+                // 清除跳过状态，这样用户就不会再看到"已跳过"提示
+                await global.updateManager.skipVersion(''); // 清空跳过的版本
+                break;
+              case 2: // 稍后提醒
+                // 清除跳过状态，下次自动检查时会提示
+                await global.updateManager.skipVersion('');
+                break;
+              // case 0: 继续跳过 - 保持当前状态不变
+            }
+          } else {
+            // 无更新，显示已是最新版本对话框
+            await dialog.showMessageBox(this.mainWindow, {
+              type: 'info',
+              title: '已是最新版本',
+              message: '当前已是最新版本',
+              detail: `当前版本: ${global.updateManager.currentVersion}\n\n您使用的已经是最新版本，无需更新。`,
+              buttons: ['确定'],
+              defaultId: 0,
+              noLink: true
+            });
+          }
+        } catch (updateError) {
+          await dialog.showMessageBox(this.mainWindow, {
+            type: 'error',
+            title: '检查更新失败',
+            message: '检查更新时发生错误',
+            detail: updateError.message || '未知错误',
+            buttons: ['确定'],
+            defaultId: 0,
+            noLink: true
+          });
+        }
+      } else {
+        console.warn('更新管理器未初始化');
+        // 显示错误提示
+        await dialog.showMessageBox(this.mainWindow, {
+          type: 'warning',
+          title: '更新检查失败',
+          message: '更新管理器未初始化',
+          detail: '请稍后重试或重启应用程序。',
+          buttons: ['确定'],
+          defaultId: 0,
+          noLink: true
+        });
+      }
+    } catch (error) {
+      console.error('Mac菜单栏检查更新失败:', error);
+      // 显示错误提示
+      const { dialog } = require('electron');
+      await dialog.showMessageBox(this.mainWindow, {
+        type: 'error',
+        title: '更新检查失败',
+        message: '检查更新时发生错误',
+        detail: error.message || '未知错误',
+        buttons: ['确定'],
+        defaultId: 0,
+        noLink: true
+      });
+    }
   }
 
   /**
