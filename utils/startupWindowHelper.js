@@ -117,42 +117,22 @@ function createStartupWindow(htmlContent, options = {}) {
   // 统一加载流程，但Windows优化显示速度
   startupWindow.loadURL(startupDataURL);
   
-  if (isWindows) {
-    // Windows使用paint事件确保内容完全渲染后再显示
-    startupWindow.webContents.once('paint', () => {
-      console.log('[Splash] Windows - paint事件，内容已渲染');
-      startupWindow.show();
-      console.log('[Splash] Windows - 启动窗口已显示');
-      
-      // 显示后立即开始动画
-      setTimeout(() => {
-        try {
-          startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
-        } catch (e) {
-          console.warn('[Splash] 注入动画启动JS失败:', e.message);
-        }
-      }, 20);
-      
-      if (typeof options.onShow === 'function') options.onShow(startupWindow);
-    });
-  } else {
-    // macOS/Linux使用原有dom-ready方式
-    startupWindow.webContents.once('dom-ready', () => {
-      console.log('[Splash] dom-ready，准备显示启动窗口');
-      startupWindow.show();
-      
-      // 显示后立即开始动画
-      setTimeout(() => {
-        try {
-          startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
-        } catch (e) {
-          console.warn('[Splash] 注入动画启动JS失败:', e.message);
-        }
-      }, 0);
-      
-      if (typeof options.onShow === 'function') options.onShow(startupWindow);
-    });
-  }
+  startupWindow.webContents.once('dom-ready', () => {
+    console.log('[Splash] dom-ready，准备显示启动窗口');
+    // Windows和其他平台都等待dom-ready后显示，避免闪屏
+    startupWindow.show();
+    
+    // 显示后立即开始动画
+    setTimeout(() => {
+      try {
+        startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
+      } catch (e) {
+        console.warn('[Splash] 注入动画启动JS失败:', e.message);
+      }
+    }, isWindows ? 10 : 0); // Windows稍微延迟确保渲染完成
+    
+    if (typeof options.onShow === 'function') options.onShow(startupWindow);
+  });
   
   // 自动关闭逻辑对所有平台一致
   if (options.duration) {
