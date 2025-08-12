@@ -781,10 +781,16 @@ app.whenReady().then(() => {
       splashClosed = true;
       // splash 关闭后先显示主窗口，再加载页面
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.show();
-        mainWindow.focus();
-        console.log('splash关闭后，主窗口显示');
         // 只加载url，不重复创建BrowserView
+        let contentLoaded = false;
+        const showMainWindow = () => {
+          if (!mainWindow.isDestroyed() && !contentLoaded) {
+            mainWindow.show();
+            mainWindow.focus();
+            contentLoaded = true;
+            console.log('主窗口内容加载完成，显示主窗口');
+          }
+        };
         if (contentViewManager && contentViewManager.contentView) {
           try {
             // splash 关闭后同步设置 bounds，防止内容不可见
@@ -796,15 +802,21 @@ app.whenReady().then(() => {
               width: contentBounds.width,
               height: contentBounds.height - toolbarHeight
             });
-            contentViewManager.contentView.webContents.loadURL(APP_CONFIG.HOME_URL);
+            // 加载页面并监听 did-finish-load
+            const wc = contentViewManager.contentView.webContents;
+            wc.loadURL(APP_CONFIG.HOME_URL);
             console.log('主窗口内容视图加载页面:', APP_CONFIG.HOME_URL);
+            wc.once('did-finish-load', showMainWindow);
           } catch (e) {
             console.warn('主窗口内容视图加载页面失败:', e.message);
           }
         } else if (contentViewManager) {
           // 兜底：如果没有内容视图则创建
-          contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
+          const view = contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
           console.log('主窗口开始加载页面（兜底）');
+          if (view && view.webContents) {
+            view.webContents.once('did-finish-load', showMainWindow);
+          }
         }
       }
       // 启动更新检查
