@@ -1639,8 +1639,15 @@ class ToolbarManager {
    * 设置工具栏位置
    */
   setBounds(bounds) {
-    if (this.toolbarView) {
-      this.toolbarView.setBounds(bounds);
+    if (this.toolbarView && this.mainWindow) {
+      // 工具栏宽度始终等于主窗口宽度
+      const [winWidth] = this.mainWindow.getContentSize();
+      this.toolbarView.setBounds({
+        x: 0,
+        y: 0,
+        width: winWidth,
+        height: 48
+      });
     }
   }
 
