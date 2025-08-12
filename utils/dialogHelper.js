@@ -575,7 +575,7 @@ function showInfoDialog(parentWindow) {
   const infoWindow = new BrowserWindow({
     width: 500,
     height: 580,
-    show: true, // 立即弹窗，避免白屏
+    show: false, // 等内容加载完再 show，彻底无白屏
     backgroundColor: isDark ? '#23272e' : '#f5f5f5', // 跟随系统主题色
     webPreferences: {
       contextIsolation: true
@@ -584,6 +584,12 @@ function showInfoDialog(parentWindow) {
   // 防止窗口被主窗口遮挡，确保置顶（仅信息窗口）
   infoWindow.setAlwaysOnTop(true, 'pop-up-menu');
   infoWindow.moveTop();
+
+  // 内容加载完再 show，彻底无白屏
+  infoWindow.webContents.once('did-finish-load', () => {
+    infoWindow.show();
+    infoWindow.focus();
+  });
 
   // 设置全局引用
   currentInfoWindow = infoWindow;
