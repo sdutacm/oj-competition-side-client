@@ -353,7 +353,6 @@ class ShortcutManager {
             } else if (webContents.canGoBack()) {
               webContents.goBack();
             }
-            // 延迟更新状态，等待导航完成
             setTimeout(() => {
               try {
                 this.contentViewManager.updateNavigationState();
@@ -372,7 +371,6 @@ class ShortcutManager {
             } else if (webContents.canGoForward()) {
               webContents.goForward();
             }
-            // 延迟更新状态，等待导航完成
             setTimeout(() => {
               try {
                 this.contentViewManager.updateNavigationState();
@@ -411,6 +409,12 @@ class ShortcutManager {
     } catch (error) {
       console.log('处理工具栏动作失败（已忽略）:', error.message);
     }
+    // 工具栏操作后自动聚焦主内容区，保证快捷键全局可用
+    try {
+      if (webContents && typeof webContents.focus === 'function') {
+        webContents.focus();
+      }
+    } catch (e) {}
   }
 }
 

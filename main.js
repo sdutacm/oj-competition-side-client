@@ -539,24 +539,23 @@ function createMainWindow() {
       contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
       mainWindow._contentViewManager = contentViewManager;
       console.log('内容视图管理器同步创建完成');
-      
-  // 立即同步创建内容视图并开始加载
-  contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
-  console.log('内容视图同步创建完成，页面已开始加载');
 
-      // ready-to-show 事件后再 show，减少黑屏时间，2 秒超时兜底
-      let shown = false;
-      const showMainWindow = (reason) => {
-        if (!shown && mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-          mainWindow.focus();
-          shown = true;
-          console.log('主窗口显示，原因:', reason);
-        }
-      };
-      mainWindow.once('ready-to-show', () => showMainWindow('ready-to-show'));
-      setTimeout(() => showMainWindow('timeout'), 2000);
-      
+      // 立即同步创建内容视图并开始加载
+      const view = contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
+      console.log('内容视图同步创建完成，页面已开始加载');
+
+      // 只在内容视图创建并 loadURL 后注册一次拦截器
+      if (view && view.webContents) {
+        view.webContents.once('did-finish-load', () => {
+          setupMainWindowInterceptors();
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.show();
+            mainWindow.focus();
+            console.log('主窗口内容加载完成后显示');
+          }
+        });
+      }
+
       // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
       const contentBounds = mainWindow.getContentBounds();
       const toolbarHeight = 48; // 工具栏高度
@@ -886,8 +885,7 @@ function initializeOtherComponentsAsync() {
         });
       }
 
-      // 设置拦截器
-      setupMainWindowInterceptors();
+  // ...拦截器注册已移至 createMainWindow 内容视图加载后...
 
       // 注册快捷键（非阻塞）
       if (shortcutManager && process.platform !== 'darwin') {
@@ -1076,8 +1074,7 @@ function finishInitialization() {
     // 设置布局
     setupLayout();
 
-    // 设置拦截器
-    setupMainWindowInterceptors();
+  // ...拦截器注册已移至 createMainWindow 内容视图加载后...
 
     // 注册快捷键（非阻塞）
     if (shortcutManager && process.platform !== 'darwin') {
@@ -1193,9 +1190,7 @@ function createViews() {
       }
     }
 
-    // 设置主窗口的拦截逻辑
-    setupMainWindowInterceptors();
-    console.log('主窗口拦截器设置完成');
+  // ...拦截器注册已移至 createMainWindow 内容视图加载后...
 
     console.log('所有视图快速创建完成');
   } catch (error) {

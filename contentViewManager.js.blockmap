@@ -5,26 +5,6 @@ const { checkDomainAllowed } = require('./domainHelper');
 const { getCustomUserAgent } = require('./uaHelper');
 
 class ContentViewManager {
-  /**
-   * 绑定内容视图 title 到主窗口
-   */
-  bindTitleSync(contentView, targetWindow) {
-    if (!contentView || !contentView.webContents || !targetWindow) return;
-    contentView.webContents.on('page-title-updated', (event, title) => {
-      event.preventDefault();
-      try {
-        targetWindow.setTitle(title);
-        console.log('主窗口 title 同步为:', title);
-      } catch {}
-    });
-    // 首次加载后主动同步一次
-    contentView.webContents.on('did-finish-load', () => {
-      try {
-        const title = contentView.webContents.getTitle();
-        if (title) targetWindow.setTitle(title);
-      } catch {}
-    });
-  }
   constructor(mainWindow, config, openNewWindow) {
     this.mainWindow = mainWindow;
     this.contentView = null;
@@ -133,8 +113,6 @@ class ContentViewManager {
     targetWindow.addBrowserView(contentView);
     console.log('BrowserView已添加到窗口');
 
-  // 绑定 title 同步
-  this.bindTitleSync(contentView, targetWindow);
     // Windows系统特殊处理：立即设置BrowserView背景色并强制刷新
     if (process.platform === 'win32') {
       try {
@@ -149,12 +127,11 @@ class ContentViewManager {
       }
     }
 
-  // 只声明一次 webContents
-  const webContents = contentView.webContents;
-  // 设置自定义 User-Agent
-  const defaultUserAgent = webContents.getUserAgent();
-  const customUserAgent = getCustomUserAgent(defaultUserAgent);
-  webContents.setUserAgent(customUserAgent);
+    // 设置自定义 User-Agent
+    const webContents = contentView.webContents;
+    const defaultUserAgent = webContents.getUserAgent();
+    const customUserAgent = getCustomUserAgent(defaultUserAgent);
+    webContents.setUserAgent(customUserAgent);
 
     // 移除性能配置，使用默认行为
     
@@ -168,28 +145,30 @@ class ContentViewManager {
       return contentView; // 返回空的contentView，不加载非法域名
     }
 
-    // 直接加载真实页面，不做额外的全局背景色注入
+    // 直接加载真实页面，不做额外的性能操作
     try {
+      
+      // 简单直接加载，使用默认浏览器行为
       contentView.webContents.loadURL(url);
       console.log('直接加载真实页面:', url);
+      
       // Windows特殊处理：监听第一次DOM准备就绪，确保有初始内容
       if (process.platform === 'win32' && targetWindow === this.mainWindow) {
         contentView.webContents.once('dom-ready', () => {
           console.log('Windows系统：DOM准备就绪，页面有基础内容');
         });
       }
-      // 页面加载完成后每次都注入性能优化CSS，保证刷新/新建窗口/导航都生效
+      
+      // 页面加载完成后注入性能优化CSS（仅首次）
+      let cssInjected = false;
       contentView.webContents.on('did-finish-load', () => {
-        this.injectPerfCSS(contentView);
-        console.log('页面加载完成并注入CSS');
-      });
-      // 主窗口内容视图的 dom-ready 也注入一次，增强注入时机
-      if (targetWindow === this.mainWindow) {
-        contentView.webContents.on('dom-ready', () => {
+        if (!cssInjected) {
           this.injectPerfCSS(contentView);
-          console.log('主窗口 dom-ready 注入CSS');
-        });
-      }
+          cssInjected = true;
+          console.log('页面加载完成并注入CSS');
+        }
+      });
+      
     } catch (e) {
       console.warn('加载页面失败:', e.message);
     }
@@ -197,51 +176,12 @@ class ContentViewManager {
     // 禁用内容视图的开发者工具相关功能和快捷键，仅拦截开发者工具快捷键
     this.disableDevToolsForContentView(contentView);
 
-  // 主窗口和新窗口都绑定跳转/拦截事件，全部用 blockmap 逻辑
-  const config = this.config;
-    // will-navigate
-    webContents.on('will-navigate', (event, url) => {
-      const domain = getHostname(url);
-      if (config && config.POPUP_WHITELIST && require('./domainHelper').isWhiteDomain(url, config)) {
-        event.preventDefault();
-        this.openNewWindow(url);
-      } else if (config && config.POPUP_WHITELIST) {
-        event.preventDefault();
-        showBlockedDialog(targetWindow, domain, '该域名不在允许访问范围', 'default');
-      }
-    });
-    // will-redirect
-    webContents.on('will-redirect', (event, url) => {
-      const domain = getHostname(url);
-      if (targetWindow === this.mainWindow) {
-        // 只要重定向后依然在主域名或白名单内就允许
-        const isMainDomain = (domain === config.MAIN_DOMAIN || domain.endsWith('.' + config.MAIN_DOMAIN));
-        const isWhite = config && config.POPUP_WHITELIST && require('./domainHelper').isWhiteDomain(url, config);
-        if (isMainDomain || isWhite) {
-          // 允许重定向，不拦截
-          return;
-        } else {
-          event.preventDefault();
-          showBlockedDialog(targetWindow, domain, '非法重定向拦截，已阻止跳转', 'redirect');
-        }
-      } else {
-        // 新窗口跳出白名单只弹窗不阻塞
-        if (config && config.POPUP_WHITELIST && !require('./domainHelper').isWhiteDomain(url, config)) {
-          showBlockedDialog(targetWindow, domain, '非法重定向拦截，已跳出白名单', 'redirect');
-        }
-      }
-    });
-    // setWindowOpenHandler
-    webContents.setWindowOpenHandler(({ url }) => {
-      const domain = getHostname(url);
-      if (config && config.POPUP_WHITELIST && require('./domainHelper').isWhiteDomain(url, config)) {
-        this.openNewWindow(url);
-        return { action: 'deny' };
-      } else {
-        showBlockedDialog(targetWindow, domain, '该域名不在允许访问范围', 'default');
-        return { action: 'deny' };
-      }
-    });
+    // 仅新窗口绑定跳转拦截，主窗口只绑定导航状态
+    if (targetWindow !== this.mainWindow) {
+      this.setupNavigation(contentView, targetWindow);
+    } else {
+      this.setupNavigation(contentView, targetWindow, true); // 主窗口只绑定导航状态
+    }
     // 记录子窗口视图
     if (targetWindow !== this.mainWindow) {
       this.childViews.push(contentView);
@@ -249,20 +189,22 @@ class ContentViewManager {
       this.contentView = contentView;
     }
 
-    // 设置内容区 BrowserView 大小（始终生效，防止不可见）
+    // 设置内容区 BrowserView 大小
     const [width, height] = targetWindow.getContentSize();
     let y = 0;
     let h = height;
+    // 主窗口默认为工具栏预留空间，新窗口根据参数决定
     if (!allowToolbarOverlap && targetWindow === this.mainWindow) {
+      // 主窗口总是为工具栏预留空间
       y = 48;
       h = height - 48;
     } else if (!allowToolbarOverlap && this.toolbarManager && this.toolbarManager.toolbarView) {
+      // 新窗口只有在工具栏存在时才预留空间
       y = 48;
       h = height - 48;
     }
-  contentView.setBounds({ x: 0, y, width, height: h });
-  // 恢复内容视图随主窗口缩放自适应
-  contentView.setAutoResize({ width: true, height: true });
+  // contentView.setBounds({ x: 0, y, width, height: h });
+  // contentView.setAutoResize({ width: true, height: true });
 
     // 新建内容视图自动获得焦点，确保快捷键生效
     // 关键：弹窗/子窗口必须获得系统焦点，否则 before-input-event 不会触发
