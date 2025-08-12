@@ -10,7 +10,7 @@ const { isWhiteDomain } = require('./utils/domainHelper');
 const { showBlockedDialog, showBlockedDialogWithDebounce } = require('./utils/dialogHelper');
 const i18n = require('./utils/i18nManager');
 const MacMenuManager = require('./utils/macMenuManager');
-const StartupManager = require('./utils/startupManager');
+// const StartupManager = require('./utils/startupManager');
 const UpdateManager = require('./utils/updateManager');
 
 const { calculateCenteredPosition } = require('./utils/screenCenterPosition');
@@ -22,7 +22,7 @@ let contentViewManager = null;
 let shortcutManager = null;
 let layoutManager = null;
 let macMenuManager = null;
-let startupManager = null;
+// let startupManager = null;
 let updateManager = null;
 
 // 退出确认状态
@@ -687,36 +687,31 @@ app.whenReady().then(() => {
     });
   }
 
-  // 恢复 StartupManager 启动动画逻辑
-  startupManager = new StartupManager();
-  
-  // 初始化更新管理器
+  // 恢复 StartupManager 逻辑，仅首次启动或特殊场合才显示 splash
   updateManager = new UpdateManager();
-  global.updateManager = updateManager; // 设置为全局变量供其他模块使用
+  global.updateManager = updateManager;
   console.log('更新管理器初始化完成');
-  
+  const startupManager = new (require('./utils/startupManager'))();
   if (startupManager.shouldShowStartupWindow()) {
-    // 首次启动或需要播放动画
+    // 首次启动或特殊场合，先播放 splash
     startupManager.showStartupWindow(() => {
       createMainWindow();
-      // 延迟更新检查，优先保证主窗口界面稳定加载
       setTimeout(() => {
         if (updateManager) {
           console.log('启动更新检查 (首次启动)');
           updateManager.startPeriodicCheck();
         }
-      }, 10000); // 10秒后开始更新检查，优先保证界面流畅
+      }, 10000);
     });
   } else {
     // 非首次启动，直接进入主窗口
     createMainWindow();
-    // 延迟更新检查，优先保证主窗口界面稳定加载
     setTimeout(() => {
       if (updateManager) {
         console.log('启动更新检查 (正常启动)');
         updateManager.startPeriodicCheck();
       }
-    }, 8000); // 8秒后开始更新检查，优先保证界面流畅
+    }, 8000);
   }
 }).catch(error => {
   console.error('应用启动失败:', error);
