@@ -1,7 +1,7 @@
 const { app, BrowserWindow, BrowserView, nativeTheme, shell } = require('electron');
 
 // 禁用硬件加速，排查 GPU/驱动/渲染管线导致的黑白屏闪烁
-app.disableHardwareAcceleration();
+// app.disableHardwareAcceleration();
 const ToolbarManager = require('./utils/toolbarManager');
 const ContentViewManager = require('./utils/contentViewManager');
 const ShortcutManager = require('./utils/shortcutManager');
@@ -773,16 +773,16 @@ function initializeOtherComponentsAsync() {
       if (toolbarManager) {
         toolbarManager.createToolbarView().then(() => {
           console.log('工具栏视图创建完成');
-          
-          // 立即设置工具栏bounds
+          // 缩小工具栏宽度为主窗口宽度的 70%，右侧留出背景色
           const contentBounds = mainWindow.getContentBounds();
+          const toolbarWidth = Math.floor(contentBounds.width * 0.7);
           toolbarManager.setBounds({
             x: 0,
             y: 0,
-            width: contentBounds.width,
+            width: toolbarWidth,
             height: 48 // 工具栏高度
           });
-          console.log('工具栏bounds设置完成，工具栏应该可见');
+          console.log('工具栏bounds设置完成，工具栏应该可见（缩小宽度）');
         }).catch((error) => {
           console.warn('工具栏视图创建失败:', error);
         });
