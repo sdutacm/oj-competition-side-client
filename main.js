@@ -354,7 +354,8 @@ function openNewWindow(url) {
         contextIsolation: true,
         webSecurity: true,
         sandbox: false,
-        backgroundColor: browserViewBgColor
+        backgroundColor: browserViewBgColor,
+        transparent: false
       }
     });
 
@@ -527,14 +528,14 @@ function createMainWindow() {
       height: windowHeight,
       x: centerPosition.x,
       y: centerPosition.y,
-      backgroundColor: '#f5f5f5', // 强制与网页一致，彻底避免黑屏
+      backgroundColor: backgroundColor, // 统一用主题色
       show: false, // 先不显示，等内容加载完成后再 show
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
         webSecurity: true,
         sandbox: false,
-        backgroundColor: '#f5f5f5', // BrowserView 也强制背景色
+        backgroundColor: backgroundColor, // BrowserView 也统一用主题色
         transparent: false // 禁止透明，避免黑底
       }
     });
