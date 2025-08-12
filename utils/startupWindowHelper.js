@@ -119,17 +119,26 @@ function createStartupWindow(htmlContent, options = {}) {
   
   startupWindow.webContents.once('dom-ready', () => {
     console.log('[Splash] dom-ready，准备显示启动窗口');
-    // Windows和其他平台都等待dom-ready后显示，避免闪屏
-    startupWindow.show();
     
-    // 显示后立即开始动画
+    if (isWindows) {
+      // Windows需要稍等CSS渲染完成，避免闪屏
+      setTimeout(() => {
+        startupWindow.show();
+        console.log('[Splash] Windows延迟显示，避免闪屏');
+      }, 150); // Windows延迟150ms让CSS完全渲染
+    } else {
+      // 其他系统立即显示
+      startupWindow.show();
+    }
+    
+    // 显示后开始动画
     setTimeout(() => {
       try {
         startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
       } catch (e) {
         console.warn('[Splash] 注入动画启动JS失败:', e.message);
       }
-    }, isWindows ? 10 : 0); // Windows稍微延迟确保渲染完成
+    }, isWindows ? 200 : 50); // Windows额外延迟确保显示完成
     
     if (typeof options.onShow === 'function') options.onShow(startupWindow);
   });
