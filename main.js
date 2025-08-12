@@ -1,7 +1,10 @@
 const { app, BrowserWindow, BrowserView, nativeTheme, shell } = require('electron');
 
-// 禁用Windows窗口动画，解决启动窗口闪屏问题
+// 禁用Windows窗口动画和其他可能导致闪屏的特性
 app.commandLine.appendSwitch('wm-window-animations-disabled');
+app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
 
 // 启动性能监控
 const startTime = Date.now();
