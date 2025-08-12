@@ -5,6 +5,26 @@ const { checkDomainAllowed } = require('./domainHelper');
 const { getCustomUserAgent } = require('./uaHelper');
 
 class ContentViewManager {
+  /**
+   * 绑定内容视图 title 到主窗口
+   */
+  bindTitleSync(contentView, targetWindow) {
+    if (!contentView || !contentView.webContents || !targetWindow) return;
+    contentView.webContents.on('page-title-updated', (event, title) => {
+      event.preventDefault();
+      try {
+        targetWindow.setTitle(title);
+        console.log('主窗口 title 同步为:', title);
+      } catch {}
+    });
+    // 首次加载后主动同步一次
+    contentView.webContents.on('did-finish-load', () => {
+      try {
+        const title = contentView.webContents.getTitle();
+        if (title) targetWindow.setTitle(title);
+      } catch {}
+    });
+  }
   constructor(mainWindow, config, openNewWindow) {
     this.mainWindow = mainWindow;
     this.contentView = null;
@@ -113,6 +133,8 @@ class ContentViewManager {
     targetWindow.addBrowserView(contentView);
     console.log('BrowserView已添加到窗口');
 
+  // 绑定 title 同步
+  this.bindTitleSync(contentView, targetWindow);
     // Windows系统特殊处理：立即设置BrowserView背景色并强制刷新
     if (process.platform === 'win32') {
       try {
@@ -145,15 +167,8 @@ class ContentViewManager {
       return contentView; // 返回空的contentView，不加载非法域名
     }
 
-    // 直接加载真实页面，并在加载前注入全局背景色CSS，彻底消除白/黑屏
+    // 直接加载真实页面，不做额外的全局背景色注入
     try {
-      // 先注入全局背景色CSS，确保渲染管线一致
-      const bgColor = this.getWindowsBackgroundColor();
-      contentView.webContents.on('did-start-navigation', () => {
-        contentView.webContents.insertCSS(`html,body{background:${bgColor} !important;}`);
-        console.log('全局背景色CSS已注入:', bgColor);
-      });
-      // 简单直接加载，使用默认浏览器行为
       contentView.webContents.loadURL(url);
       console.log('直接加载真实页面:', url);
       // Windows特殊处理：监听第一次DOM准备就绪，确保有初始内容
@@ -194,22 +209,19 @@ class ContentViewManager {
       this.contentView = contentView;
     }
 
-    // 设置内容区 BrowserView 大小
+    // 设置内容区 BrowserView 大小（始终生效，防止不可见）
     const [width, height] = targetWindow.getContentSize();
     let y = 0;
     let h = height;
-    // 主窗口默认为工具栏预留空间，新窗口根据参数决定
     if (!allowToolbarOverlap && targetWindow === this.mainWindow) {
-      // 主窗口总是为工具栏预留空间
       y = 48;
       h = height - 48;
     } else if (!allowToolbarOverlap && this.toolbarManager && this.toolbarManager.toolbarView) {
-      // 新窗口只有在工具栏存在时才预留空间
       y = 48;
       h = height - 48;
     }
-  // contentView.setBounds({ x: 0, y, width, height: h });
-  // contentView.setAutoResize({ width: true, height: true });
+    contentView.setBounds({ x: 0, y, width, height: h });
+    contentView.setAutoResize({ width: true, height: true });
 
     // 新建内容视图自动获得焦点，确保快捷键生效
     // 关键：弹窗/子窗口必须获得系统焦点，否则 before-input-event 不会触发
