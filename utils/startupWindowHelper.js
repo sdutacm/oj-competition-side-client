@@ -17,16 +17,21 @@ function getStartupHtml() {
                     :root { --bg-primary: #0d1117; --bg-secondary: #21262d; --bg-tertiary: #5b5f64; --text-primary: #f0f6fc; --text-secondary: #8b949e; --accent-color: rgba(255, 255, 255, 0.08); --shadow-color: rgba(0, 0, 0, 0.4); }
                     @media (prefers-color-scheme: light) { :root { --bg-primary: #ffffff; --bg-secondary: #eff2f5; --bg-tertiary: #87929f; --text-primary: #1f2837; --text-secondary: #475569; --accent-color: rgba(59, 130, 246, 0.15); --shadow-color: rgba(15, 23, 42, 0.2); } }
                     html, body { height: 100%; width: 100%; font-family: "Segoe UI", "Helvetica Neue", sans-serif; color: var(--text-primary); overflow: hidden; line-height: 1.5; margin: 0; padding: 0; border: none; outline: none; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-                    .container { position: relative; width: 100%; height: 100%; margin: 0; padding: var(--left-vw); display: flex; flex-direction: column; justify-content: space-between; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%); background-size: 200% 200%; border: none; transition: background 0.3s ease; animation: gradientShift 6s ease-in-out infinite alternate; border: gray 1px solid;}
-                    .container::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, transparent 0%, var(--accent-color) 50%, transparent 100%), radial-gradient(ellipse at center, transparent 60%, var(--accent-color) 100%); pointer-events: none; z-index: -1; transition: background 0.3s ease; animation: backgroundPulse 8s ease-in-out infinite alternate; border-radius: 16px; }
+                    .container { position: relative; width: 100%; height: 100%; margin: 0; padding: var(--left-vw); display: flex; flex-direction: column; justify-content: space-between; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%); background-size: 200% 200%; border: none; transition: background 0.3s ease; border: gray 1px solid; animation: gradientShift 6s ease-in-out infinite alternate;}
+                    .container::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, transparent 0%, var(--accent-color) 50%, transparent 100%), radial-gradient(ellipse at center, transparent 60%, var(--accent-color) 100%); pointer-events: none; z-index: -1; transition: background 0.3s ease; border-radius: 16px; animation: backgroundPulse 8s ease-in-out infinite alternate; }
                     @media (prefers-color-scheme: light) { .container::before { background: linear-gradient(135deg, transparent 0%, var(--accent-color) 50%, transparent 100%), radial-gradient(ellipse at center, transparent 60%, var(--accent-color) 100%); } }
                     .org, .product-text, .version { opacity: 0; transform: translateY(30px); color: var(--text-primary); transition: color 0.3s ease; }
-                    .org { display: flex; align-items: center; animation: fadeInUp 1s ease forwards; }
+                    .org { display: flex; align-items: center; }
                     .org svg { height: 3.5vw; width: auto; margin-right: 1vw; filter: drop-shadow(0 2px 4px var(--shadow-color)); transition: filter 0.3s ease; }
                     .product { display: flex; flex-direction: column; justify-content: start; align-items: start; }
-                    .product-text { animation: fadeInUp 1s ease forwards; animation-delay: 0.3s; font-size: var(--product-text-size); font-weight: 700; display: flex; flex-direction: column; align-items: start; text-align: center; color: var(--text-primary); text-shadow: 0 1px 3px var(--shadow-color); transition: color 0.3s ease, text-shadow 0.3s ease; }
+                    .product-text { font-size: var(--product-text-size); font-weight: 700; display: flex; flex-direction: column; align-items: start; text-align: center; color: var(--text-primary); text-shadow: 0 1px 3px var(--shadow-color); transition: color 0.3s ease, text-shadow 0.3s ease; }
                     .org-text { font-size: var(--org-text-size); font-weight: 600; color: var(--text-primary); text-shadow: 0 1px 3px var(--shadow-color); transition: color 0.3s ease, text-shadow 0.3s ease; letter-spacing: 0.02em; }
-                    .version { font-size: var(--version-text-size); font-weight: 300; color: var(--text-secondary); transition: color 0.3s ease; opacity: 0; transform: translateY(30px); animation: fadeInUpVersion 1s ease forwards; animation-delay: 0.6s; }
+                    .version { font-size: var(--version-text-size); font-weight: 300; color: var(--text-secondary); transition: color 0.3s ease; opacity: 0; transform: translateY(30px); }
+                    /* 内容淡入动画只在 start-animation 类下触发，背景动画始终自动播放 */
+                    .org, .product-text, .version { opacity: 0; transform: translateY(30px); }
+                    body.start-animation .org { animation: fadeInUp 1s ease forwards; }
+                    body.start-animation .product-text { animation: fadeInUp 1s ease forwards; animation-delay: 0.3s; }
+                    body.start-animation .version { animation: fadeInUpVersion 1s ease forwards; animation-delay: 0.6s; }
                     @media (prefers-color-scheme: light) { .org-text, .product-text { text-shadow: 0 1px 2px var(--shadow-color); } }
                     @media (max-width: 768px) { .org svg { height: 8vw; } .org-text { font-size: 5vw; } .product-text { font-size: 8vw; } }
                     @keyframes fadeInUp { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }
@@ -34,6 +39,14 @@ function getStartupHtml() {
                     @keyframes backgroundPulse { 0% { transform: scale(1) rotate(0deg); opacity: 0.8; } 25% { transform: scale(1.05) rotate(1deg); opacity: 0.9; } 50% { transform: scale(1.1) rotate(0deg); opacity: 1; } 75% { transform: scale(1.05) rotate(-1deg); opacity: 0.9; } 100% { transform: scale(1) rotate(0deg); opacity: 0.8; } }
                     @keyframes gradientShift { 0% { background-position: 0% 50%; } 25% { background-position: 50% 0%; } 50% { background-position: 100% 50%; } 75% { background-position: 50% 100%; } 100% { background-position: 0% 50%; } }
                   </style>
+                  <script>
+                    // 兼容 preload 失败时的兜底
+                    window.addEventListener('message', function(event) {
+                      if (event.data && event.data.type === 'START_ANIMATION') {
+                        document.body.classList.add('start-animation');
+                      }
+                    });
+                  </script>
                 </head>
                 <body>
                   <div class="container">
@@ -68,9 +81,9 @@ function getStartupHtml() {
 function createStartupWindow(htmlContent, options = {}) {
   const isWindows = process.platform === 'win32';
   if (!htmlContent) htmlContent = getStartupHtml(isWindows);
-    const width = options.width || 1000;
-    const height = options.height || 600;
-    const centeredPosition = calculateCenteredPosition(width, height);
+  const width = options.width || 1000;
+  const height = options.height || 600;
+  const centeredPosition = calculateCenteredPosition(width, height);
   const windowOptions = {
     width,
     height,
@@ -100,6 +113,14 @@ function createStartupWindow(htmlContent, options = {}) {
     }
     console.log('[Splash] dom-ready，准备显示启动窗口');
     startupWindow.show();
+    // show 后直接注入 JS 启动动画
+    setTimeout(() => {
+      try {
+        startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
+      } catch (e) {
+        console.warn('[Splash] 注入动画启动JS失败:', e.message);
+      }
+    }, 10);
     if (typeof options.onShow === 'function') options.onShow(startupWindow);
     // 自动关闭
     if (options.duration) {
