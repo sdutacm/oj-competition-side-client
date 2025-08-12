@@ -547,6 +547,9 @@ function isAboutWindow(window) {
 function showInfoDialog(parentWindow) {
   // 如果已经有系统信息窗口打开，则聚焦到该窗口而不是创建新窗口
   if (currentInfoWindow && !currentInfoWindow.isDestroyed()) {
+    if (!currentInfoWindow.isVisible()) {
+      currentInfoWindow.show();
+    }
     currentInfoWindow.focus();
     return currentInfoWindow;
   }
@@ -578,6 +581,9 @@ function showInfoDialog(parentWindow) {
       contextIsolation: true
     }
   });
+  // 防止窗口被主窗口遮挡，确保置顶（仅信息窗口）
+  infoWindow.setAlwaysOnTop(true, 'pop-up-menu');
+  infoWindow.moveTop();
 
   // 设置全局引用
   currentInfoWindow = infoWindow;
@@ -602,7 +608,10 @@ function showInfoDialog(parentWindow) {
 
   // 监听窗口关闭事件，清理全局引用
   infoWindow.on('closed', () => {
-    currentInfoWindow = null;
+    // 只在窗口真正关闭时清理引用
+    if (currentInfoWindow === infoWindow) {
+      currentInfoWindow = null;
+    }
   });
 
   // Linux平台：设置窗口类名，确保与主窗口保持一致
