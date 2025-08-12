@@ -113,14 +113,16 @@ function createStartupWindow(htmlContent, options = {}) {
     }
     console.log('[Splash] dom-ready，准备显示启动窗口');
     startupWindow.show();
-    // show 后直接注入 JS 启动动画
+  });
+  // show 事件后再注入动画启动，保证动画完整播放
+  startupWindow.once('show', () => {
     setTimeout(() => {
       try {
         startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
       } catch (e) {
         console.warn('[Splash] 注入动画启动JS失败:', e.message);
       }
-    }, 10);
+    }, 0);
     if (typeof options.onShow === 'function') options.onShow(startupWindow);
     // 自动关闭
     if (options.duration) {
