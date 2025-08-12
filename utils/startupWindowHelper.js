@@ -114,25 +114,28 @@ function createStartupWindow(htmlContent, options = {}) {
   const startupWindow = new BrowserWindow(windowOptions);
   const startupDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
   
-  // 所有平台统一使用dom-ready事件，简化逻辑
+  // 所有平台都等待页面完全加载，规避闪屏
   startupWindow.loadURL(startupDataURL);
   
-  startupWindow.webContents.once('dom-ready', () => {
-    console.log('[Splash] dom-ready，准备显示启动窗口');
+  startupWindow.webContents.once('did-finish-load', () => {
+    console.log('[Splash] did-finish-load，页面加载完成');
     
-    // 所有平台都立即显示，减少背景色切换时间
-    startupWindow.show();
-    
-    // 立即开始动画，减少等待时间
+    // 等待一个渲染周期，确保内容完全渲染
     setTimeout(() => {
-      try {
-        startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
-      } catch (e) {
-        console.warn('[Splash] 注入动画启动JS失败:', e.message);
-      }
-    }, 30); // 统一30ms延迟，最小化等待
-    
-    if (typeof options.onShow === 'function') options.onShow(startupWindow);
+      startupWindow.show();
+      console.log('[Splash] 延迟显示启动窗口，规避闪屏');
+      
+      // 显示后立即开始动画
+      setTimeout(() => {
+        try {
+          startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
+        } catch (e) {
+          console.warn('[Splash] 注入动画启动JS失败:', e.message);
+        }
+      }, 50);
+      
+      if (typeof options.onShow === 'function') options.onShow(startupWindow);
+    }, isWindows ? 150 : 100); // Windows需要更多延迟来避免闪屏
   });
   
   // 自动关闭逻辑对所有平台一致
