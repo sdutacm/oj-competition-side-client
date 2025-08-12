@@ -145,33 +145,35 @@ class ContentViewManager {
       return contentView; // 返回空的contentView，不加载非法域名
     }
 
-    // 直接加载真实页面，不做额外的性能操作
+    // 直接加载真实页面，并在加载前注入全局背景色CSS，彻底消除白/黑屏
     try {
-      
+      // 先注入全局背景色CSS，确保渲染管线一致
+      const bgColor = this.getWindowsBackgroundColor();
+      contentView.webContents.on('did-start-navigation', () => {
+        contentView.webContents.insertCSS(`html,body{background:${bgColor} !important;}`);
+        console.log('全局背景色CSS已注入:', bgColor);
+      });
       // 简单直接加载，使用默认浏览器行为
       contentView.webContents.loadURL(url);
       console.log('直接加载真实页面:', url);
-      
       // Windows特殊处理：监听第一次DOM准备就绪，确保有初始内容
       if (process.platform === 'win32' && targetWindow === this.mainWindow) {
         contentView.webContents.once('dom-ready', () => {
           console.log('Windows系统：DOM准备就绪，页面有基础内容');
         });
       }
-      
       // 页面加载完成后每次都注入性能优化CSS，保证刷新/新建窗口/导航都生效
-        contentView.webContents.on('did-finish-load', () => {
+      contentView.webContents.on('did-finish-load', () => {
+        this.injectPerfCSS(contentView);
+        console.log('页面加载完成并注入CSS');
+      });
+      // 主窗口内容视图的 dom-ready 也注入一次，增强注入时机
+      if (targetWindow === this.mainWindow) {
+        contentView.webContents.on('dom-ready', () => {
           this.injectPerfCSS(contentView);
-          console.log('页面加载完成并注入CSS');
+          console.log('主窗口 dom-ready 注入CSS');
         });
-        // 主窗口内容视图的 dom-ready 也注入一次，增强注入时机
-        if (targetWindow === this.mainWindow) {
-          contentView.webContents.on('dom-ready', () => {
-            this.injectPerfCSS(contentView);
-            console.log('主窗口 dom-ready 注入CSS');
-          });
-        }
-      
+      }
     } catch (e) {
       console.warn('加载页面失败:', e.message);
     }
