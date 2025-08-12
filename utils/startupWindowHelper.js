@@ -106,7 +106,8 @@ function createStartupWindow(htmlContent, options = {}) {
     skipTaskbar: false,
     webPreferences: {
       contextIsolation: true,
-      backgroundThrottling: false // 防止后台时动画暂停
+      backgroundThrottling: false, // 防止后台时动画暂停
+      offscreen: isWindows // Windows启用离屏渲染，避免闪屏
     }
   };
   
@@ -114,34 +115,44 @@ function createStartupWindow(htmlContent, options = {}) {
   const startupWindow = new BrowserWindow(windowOptions);
   const startupDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
   
-  // 统一加载流程，但Windows优化显示速度
+  // 统一加载流程，但Windows使用不同的显示事件
   startupWindow.loadURL(startupDataURL);
   
-  startupWindow.webContents.once('dom-ready', () => {
-    console.log('[Splash] dom-ready，准备显示启动窗口');
-    
-    if (isWindows) {
-      // Windows需要稍等CSS渲染完成，避免闪屏
-      setTimeout(() => {
-        startupWindow.show();
-        console.log('[Splash] Windows延迟显示，避免闪屏');
-      }, 150); // Windows延迟150ms让CSS完全渲染
-    } else {
-      // 其他系统立即显示
+  if (isWindows) {
+    // Windows使用ready-to-show事件，确保完全准备好
+    startupWindow.once('ready-to-show', () => {
+      console.log('[Splash] Windows ready-to-show，启动窗口完全准备');
       startupWindow.show();
-    }
-    
-    // 显示后开始动画
-    setTimeout(() => {
-      try {
-        startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
-      } catch (e) {
-        console.warn('[Splash] 注入动画启动JS失败:', e.message);
-      }
-    }, isWindows ? 200 : 50); // Windows额外延迟确保显示完成
-    
-    if (typeof options.onShow === 'function') options.onShow(startupWindow);
-  });
+      
+      // 显示后立即开始动画
+      setTimeout(() => {
+        try {
+          startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
+        } catch (e) {
+          console.warn('[Splash] 注入动画启动JS失败:', e.message);
+        }
+      }, 20);
+      
+      if (typeof options.onShow === 'function') options.onShow(startupWindow);
+    });
+  } else {
+    // 其他系统使用原有的dom-ready
+    startupWindow.webContents.once('dom-ready', () => {
+      console.log('[Splash] dom-ready，准备显示启动窗口');
+      startupWindow.show();
+      
+      // 显示后立即开始动画
+      setTimeout(() => {
+        try {
+          startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
+        } catch (e) {
+          console.warn('[Splash] 注入动画启动JS失败:', e.message);
+        }
+      }, 50);
+      
+      if (typeof options.onShow === 'function') options.onShow(startupWindow);
+    });
+  }
   
   // 自动关闭逻辑对所有平台一致
   if (options.duration) {
