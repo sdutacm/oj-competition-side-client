@@ -502,46 +502,84 @@ function showInfoDialog(parentWindow) {
 
   // 创建一个新的信息窗口 - 立即显示并设置背景色
   const isMac = process.platform === 'darwin';
+  const isWindows = process.platform === 'win32';
   const { nativeTheme } = require('electron');
   const isDark = nativeTheme.shouldUseDarkColors;
   
   // 使用与HTML内容匹配的背景色
   const backgroundColor = isDark ? '#1a1a1a' : '#f5f5f5';
   
-  const infoWindow = new BrowserWindow({
+  // Windows 和其他平台使用不同的窗口配置
+  const windowConfig = {
     width: 500,
     height: 580,
-    show: true, // 立即显示窗口
-    modal: true, // 设置为模态窗口，但不设置父窗口
+    show: false, // 先隐藏，等准备好再显示
     backgroundColor: backgroundColor, // 使用匹配的背景色
     webPreferences: {
       contextIsolation: true
     }
-  });
+  };
+  
+  // Windows 平台特殊配置：不使用模态窗口，使用 alwaysOnTop
+  if (isWindows) {
+    windowConfig.alwaysOnTop = true;
+    windowConfig.skipTaskbar = false; // 允许在任务栏显示
+    windowConfig.minimizable = true;
+    windowConfig.maximizable = false;
+    windowConfig.resizable = false;
+    console.log('Windows 平台：使用 alwaysOnTop 窗口配置');
+  } else {
+    // macOS 和 Linux 使用模态窗口
+    windowConfig.modal = true;
+    console.log('macOS/Linux 平台：使用模态窗口配置');
+  }
+  
+  const infoWindow = new BrowserWindow(windowConfig);
 
   // 设置全局引用
   currentInfoWindow = infoWindow;
 
-  // 确保窗口显示在最前面
-  infoWindow.focus();
-  infoWindow.moveTop();
+  // 手动居中窗口（所有平台）
+  const { screen } = require('electron');
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+  
+  // 计算居中位置
+  const windowWidth = 500;
+  const windowHeight = 580;
+  const x = Math.round((screenWidth - windowWidth) / 2);
+  const y = Math.round((screenHeight - windowHeight) / 2);
+  
+  // 设置窗口位置
+  infoWindow.setPosition(x, y);
+  console.log(`${isWindows ? 'Windows' : isMac ? 'Mac' : 'Linux'} 系统信息窗口居中: 屏幕尺寸 ${screenWidth}x${screenHeight}, 窗口位置 (${x}, ${y})`);
 
-  // 手动确保窗口居中（特别针对 Mac 系统）
-  if (isMac) {
-    // 获取屏幕尺寸
-    const { screen } = require('electron');
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+  // Windows 平台：添加额外的层级管理
+  if (isWindows) {
+    console.log('Windows 平台：设置窗口层级和状态');
+    // 确保窗口在创建后立即获得焦点
+    infoWindow.focus();
+    infoWindow.moveTop();
     
-    // 计算居中位置
-    const windowWidth = 500;
-    const windowHeight = 580;
-    const x = Math.round((screenWidth - windowWidth) / 2);
-    const y = Math.round((screenHeight - windowHeight) / 2);
+    // Windows 特有的窗口行为监听
+    infoWindow.on('show', () => {
+      console.log('Windows 系统信息窗口显示事件');
+      infoWindow.focus();
+    });
     
-    // 设置窗口位置
-    infoWindow.setPosition(x, y);
-    console.log(`Mac 系统信息窗口手动居中: 屏幕尺寸 ${screenWidth}x${screenHeight}, 窗口位置 (${x}, ${y})`);
+    infoWindow.on('blur', () => {
+      console.log('Windows 系统信息窗口失去焦点');
+      // 短暂延迟后重新获得焦点，防止窗口被隐藏
+      setTimeout(() => {
+        if (!infoWindow.isDestroyed()) {
+          infoWindow.focus();
+        }
+      }, 100);
+    });
+  } else {
+    // 非 Windows 平台的原有逻辑
+    infoWindow.focus();
+    infoWindow.moveTop();
   }
 
   // 监听窗口关闭事件，清理全局引用
@@ -1094,39 +1132,61 @@ function showInfoDialog(parentWindow) {
     }
   });
 
-  // 内容加载完成后确保窗口在最前面
+  // 内容加载完成后确保窗口在最前面并显示
   infoWindow.webContents.on('did-finish-load', () => {
-    // 确保窗口显示在最前面
-    infoWindow.focus();
-    infoWindow.moveTop();
-    console.log('系统信息窗口内容加载完成，确保窗口在前面');
+    console.log('系统信息窗口内容加载完成');
+    
+    // Windows 平台特殊处理
+    if (isWindows) {
+      console.log('Windows 平台：内容加载完成，准备显示窗口');
+      
+      // 确保窗口准备就绪后再显示
+      setTimeout(() => {
+        if (!infoWindow.isDestroyed()) {
+          infoWindow.show();
+          infoWindow.focus();
+          infoWindow.moveTop();
+          console.log('Windows 平台：窗口已显示并置于最前');
+        }
+      }, 10);
+    } else {
+      // 非 Windows 平台立即显示
+      infoWindow.show();
+      infoWindow.focus();
+      infoWindow.moveTop();
+      console.log('非 Windows 平台：窗口已显示并置于最前');
+    }
   });
 
-  // 由于窗口已经立即显示，我们在稍后进行位置微调（仅Mac系统需要）
-  if (isMac) {
-    setTimeout(() => {
-      try {
-        if (!infoWindow.isDestroyed()) {
-          const { screen } = require('electron');
-          const primaryDisplay = screen.getPrimaryDisplay();
-          const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-          const [currentX, currentY] = infoWindow.getPosition();
-          const idealX = Math.round((screenWidth - 500) / 2);
-          const idealY = Math.round((screenHeight - 580) / 2);
-          
-          // 如果位置偏差超过5像素，重新调整
-          if (Math.abs(currentX - idealX) > 5 || Math.abs(currentY - idealY) > 5) {
-            infoWindow.setPosition(idealX, idealY);
-            console.log(`Mac 系统信息窗口最终位置调整: 从 (${currentX}, ${currentY}) 到 (${idealX}, ${idealY})`);
-          } else {
-            console.log(`Mac 系统信息窗口位置确认正确: (${currentX}, ${currentY})`);
-          }
+  // 位置微调（适用于所有平台）
+  setTimeout(() => {
+    try {
+      if (!infoWindow.isDestroyed()) {
+        const { screen } = require('electron');
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+        const [currentX, currentY] = infoWindow.getPosition();
+        const idealX = Math.round((screenWidth - 500) / 2);
+        const idealY = Math.round((screenHeight - 580) / 2);
+        
+        // 如果位置偏差超过5像素，重新调整
+        if (Math.abs(currentX - idealX) > 5 || Math.abs(currentY - idealY) > 5) {
+          infoWindow.setPosition(idealX, idealY);
+          console.log(`系统信息窗口最终位置调整: 从 (${currentX}, ${currentY}) 到 (${idealX}, ${idealY})`);
+        } else {
+          console.log(`系统信息窗口位置确认正确: (${currentX}, ${currentY})`);
         }
-      } catch (error) {
-        console.log('Mac系统信息窗口位置检查失败:', error);
+        
+        // Windows 平台额外确保窗口可见
+        if (isWindows && infoWindow.isVisible()) {
+          infoWindow.focus();
+          console.log('Windows 平台：最终确保窗口焦点');
+        }
       }
-    }, 50); // 减少延迟时间
-  }
+    } catch (error) {
+      console.log('系统信息窗口位置检查失败:', error);
+    }
+  }, isWindows ? 100 : 50); // Windows 使用更长的延迟
 
   return infoWindow;
 }
