@@ -572,7 +572,7 @@ function showInfoDialog(parentWindow) {
   const infoWindow = new BrowserWindow({
     width: 500,
     height: 580,
-    show: true,
+    show: false,
     backgroundColor: isDark ? '#23272e' : '#f5f5f5',
     webPreferences: {
       contextIsolation: true
