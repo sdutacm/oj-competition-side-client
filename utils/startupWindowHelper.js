@@ -90,7 +90,7 @@ function createStartupWindow(htmlContent, options = {}) {
   const height = options.height || 600;
   const centeredPosition = calculateCenteredPosition(width, height);
   
-  // Windows 系统使用原生直角窗口，其他系统使用透明圆角
+  // Windows使用非透明避免闪烁，其他系统保持透明设计
   const windowOptions = {
     width,
     height,
@@ -99,10 +99,10 @@ function createStartupWindow(htmlContent, options = {}) {
     frame: false,
     resizable: false,
     alwaysOnTop: true,
-    show: false, // 所有平台都等待内容准备好再显示，避免闪屏
-    transparent: !isWindows, // Windows 使用原生窗口，不需要透明
-    backgroundColor: isWindows ? '#0d1117' : undefined, // Windows 设置背景色
-    hasShadow: true, // Windows 也可以有阴影
+    show: false, // 等待内容准备好再显示
+    transparent: !isWindows, // 只有Windows不使用透明，避免闪烁
+    backgroundColor: isWindows ? '#0d1117' : undefined, // 只有Windows设置背景色
+    hasShadow: true,
     skipTaskbar: false,
     webPreferences: {
       contextIsolation: true,
@@ -110,53 +110,38 @@ function createStartupWindow(htmlContent, options = {}) {
     }
   };
   
-  console.log('[Splash] 创建启动窗口', isWindows ? '(Windows原生直角模式)' : '(透明圆角模式)');
+  console.log('[Splash] 创建启动窗口', isWindows ? '(Windows直角非透明模式)' : '(透明圆角模式)');
   const startupWindow = new BrowserWindow(windowOptions);
   const startupDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
   
-  // 统一加载流程，但Windows使用特殊的预渲染策略
+  // 所有平台统一使用dom-ready事件，简化逻辑
   startupWindow.loadURL(startupDataURL);
   
-  if (isWindows) {
-    // Windows: 等待第一次绘制完成，确保内容完全渲染
-    startupWindow.webContents.once('did-finish-load', () => {
-      console.log('[Splash] Windows did-finish-load，页面加载完成');
-      
-      // 再等待一个渲染周期，确保CSS完全生效
+  startupWindow.webContents.once('dom-ready', () => {
+    console.log('[Splash] dom-ready，准备显示启动窗口');
+    
+    if (isWindows) {
+      // Windows仍需要小延迟确保CSS生效
       setTimeout(() => {
         startupWindow.show();
-        console.log('[Splash] Windows 延迟显示，确保无闪屏');
-        
-        // 显示后立即开始动画
-        setTimeout(() => {
-          try {
-            startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
-          } catch (e) {
-            console.warn('[Splash] 注入动画启动JS失败:', e.message);
-          }
-        }, 30);
-        
-        if (typeof options.onShow === 'function') options.onShow(startupWindow);
-      }, 100); // 延迟100ms确保CSS渲染完成
-    });
-  } else {
-    // 其他系统使用原有的dom-ready
-    startupWindow.webContents.once('dom-ready', () => {
-      console.log('[Splash] dom-ready，准备显示启动窗口');
-      startupWindow.show();
-      
-      // 显示后立即开始动画
-      setTimeout(() => {
-        try {
-          startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
-        } catch (e) {
-          console.warn('[Splash] 注入动画启动JS失败:', e.message);
-        }
+        console.log('[Splash] Windows显示启动窗口');
       }, 50);
-      
-      if (typeof options.onShow === 'function') options.onShow(startupWindow);
-    });
-  }
+    } else {
+      // 其他系统立即显示
+      startupWindow.show();
+    }
+    
+    // 显示后开始动画
+    setTimeout(() => {
+      try {
+        startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
+      } catch (e) {
+        console.warn('[Splash] 注入动画启动JS失败:', e.message);
+      }
+    }, isWindows ? 80 : 50); // Windows稍微多延迟30ms
+    
+    if (typeof options.onShow === 'function') options.onShow(startupWindow);
+  });
   
   // 自动关闭逻辑对所有平台一致
   if (options.duration) {
