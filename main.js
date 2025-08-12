@@ -1,17 +1,27 @@
 const { app, BrowserWindow, BrowserView, nativeTheme, shell } = require('electron');
 
-const ToolbarManager = require('./utils/toolbarManager');
-const ContentViewManager = require('./utils/contentViewManager');
-const ShortcutManager = require('./utils/shortcutManager');
-const { LayoutManager } = require('./utils/windowHelper');
-const { isWhiteDomain } = require('./utils/domainHelper');
-const { showBlockedDialog, showBlockedDialogWithDebounce } = require('./utils/dialogHelper');
-const i18n = require('./utils/i18nManager');
-const MacMenuManager = require('./utils/macMenuManager');
-const UpdateManager = require('./utils/updateManager');
+// 启动性能监控
+const startTime = Date.now();
+console.log('=== 应用启动开始 ===', new Date().toISOString());
 
+// 核心启动必需的模块
 const { calculateCenteredPosition } = require('./utils/screenCenterPosition');
 const { getAppVersion } = require('./utils/versionHelper');
+
+// 延迟加载的模块 - 这些将在需要时才加载，提升启动速度
+let ToolbarManager = null;
+let ContentViewManager = null;
+let ShortcutManager = null;
+let LayoutManager = null;
+let isWhiteDomain = null;
+let showBlockedDialog = null;
+let showBlockedDialogWithDebounce = null;
+let UpdateManager = null;
+
+// 只在 macOS 系统下加载 i18n 和 MacMenuManager
+let i18n = null;
+let MacMenuManager = null;
+// 移除自动初始化，改为手动初始化以提升启动性能
 
 let mainWindow = null;
 let toolbarManager = null;
@@ -40,6 +50,38 @@ function closeAllChildWindows() {
     }
   });
   allWindows = [];
+}
+
+/**
+ * 延迟加载模块 - 提升启动性能
+ * 这些模块只在实际需要时才被加载
+ */
+function loadModulesLazily() {
+  if (!ToolbarManager) {
+    ToolbarManager = require('./utils/toolbarManager');
+  }
+  if (!ContentViewManager) {
+    ContentViewManager = require('./utils/contentViewManager');
+  }
+  if (!ShortcutManager) {
+    ShortcutManager = require('./utils/shortcutManager');
+  }
+  if (!LayoutManager) {
+    const windowHelper = require('./utils/windowHelper');
+    LayoutManager = windowHelper.LayoutManager;
+  }
+  if (!isWhiteDomain) {
+    const domainHelper = require('./utils/domainHelper');
+    isWhiteDomain = domainHelper.isWhiteDomain;
+  }
+  if (!showBlockedDialog) {
+    const dialogHelper = require('./utils/dialogHelper');
+    showBlockedDialog = dialogHelper.showBlockedDialog;
+    showBlockedDialogWithDebounce = dialogHelper.showBlockedDialogWithDebounce;
+  }
+  if (!UpdateManager) {
+    UpdateManager = require('./utils/updateManager');
+  }
 }
 
 // 应用配置
@@ -642,14 +684,20 @@ function createMainWindow() {
 
 
 app.whenReady().then(() => {
+  console.log('=== Electron Ready ===', `耗时: ${Date.now() - startTime}ms`);
+  
   // 只在 macOS 系统下初始化 i18n
   if (process.platform === 'darwin') {
-    console.log('macOS 系统 - 初始化 i18n');
+    console.log('macOS 系统 - 延迟加载 i18n');
+    // 延迟加载i18n模块，提升启动性能
+    i18n = require('./utils/i18nManager');
+    MacMenuManager = require('./utils/macMenuManager');
     console.log('App ready - 当前语言:', i18n.getCurrentLanguage());
     console.log('App ready - 测试翻译:', i18n.t('app.name'));
     console.log("App Data Path:", app.getPath('userData'));
   } else {
     console.log('非 macOS 系统 - 跳过 i18n 初始化');
+    console.log("App Data Path:", app.getPath('userData'));
   }
 
   // Windows 系统主题变化监听器 - 动态更新背景色减少白屏
@@ -677,6 +725,11 @@ app.whenReady().then(() => {
       }
     });
   }
+
+  // 延迟加载模块，提升启动性能
+  console.log('=== 开始加载模块 ===', `耗时: ${Date.now() - startTime}ms`);
+  loadModulesLazily();
+  console.log('=== 模块加载完成 ===', `耗时: ${Date.now() - startTime}ms`);
 
   // 恢复 StartupManager 逻辑，仅首次启动或特殊场合才显示 splash
   updateManager = new UpdateManager();
