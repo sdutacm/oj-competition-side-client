@@ -65,8 +65,8 @@ function showBlockedDialog(parentWindow, hostname, reason, type = 'default', cal
   const isWindows = process.platform === 'win32';
   
   if (isWindows) {
-    // Windows 使用自定义 HTML 弹窗
-    showCustomBlockedDialog(parentWindow, randomTitle, randomMessage, randomDetail, randomButton, callback);
+    // Windows 使用自定义 HTML 弹窗，标题固定为"白名单拦截"
+    showCustomBlockedDialog(parentWindow, '白名单拦截', randomMessage, randomDetail, randomButton, callback);
   } else {
     // Mac/Linux 使用原生弹窗
     const opts = {
