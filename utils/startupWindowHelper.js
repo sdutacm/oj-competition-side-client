@@ -101,7 +101,7 @@ function createStartupWindow(htmlContent, options = {}) {
     alwaysOnTop: true,
     show: false, // 等待内容准备好再显示
     transparent: !isWindows, // 只有Windows不使用透明，避免闪烁
-    backgroundColor: isWindows ? '#0d1117' : undefined, // 只有Windows设置背景色
+    backgroundColor: isWindows ? '#21262d' : undefined, // Windows使用CSS中相同的背景色
     hasShadow: true,
     skipTaskbar: false,
     webPreferences: {
@@ -120,25 +120,17 @@ function createStartupWindow(htmlContent, options = {}) {
   startupWindow.webContents.once('dom-ready', () => {
     console.log('[Splash] dom-ready，准备显示启动窗口');
     
-    if (isWindows) {
-      // Windows仍需要小延迟确保CSS生效
-      setTimeout(() => {
-        startupWindow.show();
-        console.log('[Splash] Windows显示启动窗口');
-      }, 50);
-    } else {
-      // 其他系统立即显示
-      startupWindow.show();
-    }
+    // 所有平台都立即显示，减少背景色切换时间
+    startupWindow.show();
     
-    // 显示后开始动画
+    // 立即开始动画，减少等待时间
     setTimeout(() => {
       try {
         startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
       } catch (e) {
         console.warn('[Splash] 注入动画启动JS失败:', e.message);
       }
-    }, isWindows ? 80 : 50); // Windows稍微多延迟30ms
+    }, 30); // 统一30ms延迟，最小化等待
     
     if (typeof options.onShow === 'function') options.onShow(startupWindow);
   });
