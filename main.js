@@ -528,7 +528,7 @@ function createMainWindow() {
       x: centerPosition.x,
       y: centerPosition.y,
       backgroundColor: backgroundColor, // 统一用主题色
-      show: false, // 先不显示，等内容加载完成后再 show
+      show: false, // 先不显示，等 ready-to-show 再 show
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -552,17 +552,14 @@ function createMainWindow() {
   contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
   console.log('内容视图同步创建完成，页面已开始加载');
 
-      // did-finish-load 后再 show，彻底排查首屏闪烁
-      const contentView = contentViewManager.getView && contentViewManager.getView();
-      if (contentView && contentView.webContents) {
-        contentView.webContents.once('did-finish-load', () => {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.show();
-            mainWindow.focus();
-            console.log('主窗口内容加载完成后显示');
-          }
-        });
-      }
+      // ready-to-show 事件后再 show，减少黑屏时间
+      mainWindow.once('ready-to-show', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show();
+          mainWindow.focus();
+          console.log('主窗口 ready-to-show 后显示');
+        }
+      });
       
       // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
       const contentBounds = mainWindow.getContentBounds();
