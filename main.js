@@ -730,18 +730,7 @@ app.whenReady().then(() => {
         width: contentBounds.width,
         height: contentBounds.height - toolbarHeight
       });
-      // 监听 ready-to-show，等 splash 关闭后再 show
-      let shown = false;
-      const showMainWindow = (reason) => {
-        if (!shown && mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-          mainWindow.focus();
-          shown = true;
-          console.log('主窗口显示，原因:', reason);
-        }
-      };
-      mainWindow.once('ready-to-show', () => showMainWindow('ready-to-show'));
-      setTimeout(() => showMainWindow('timeout'), 2000);
+  // 不自动 show，等 splash 关闭后再 show
       // 关闭事件等同原逻辑
       mainWindow.on('close', (event) => {
         if (isRestarting) return;
