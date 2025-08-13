@@ -769,20 +769,60 @@ app.whenReady().then(() => {
       console.warn('异步组件初始化失败:', error);
     });
   });
-  // 先显示主窗口，再加载主页面内容
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.show();
-    mainWindow.focus();
-    console.log('主窗口已显示，准备加载页面');
-    if (contentViewManager && contentViewManager.contentView) {
-      try {
-        const wc = contentViewManager.contentView.webContents;
-        wc.loadURL(APP_CONFIG.HOME_URL);
-        wc.once('did-finish-load', () => {
-          console.log('主窗口页面加载完成');
-        });
-      } catch (e) {
-        console.warn('主窗口内容视图加载页面失败:', e.message);
+  // 工具栏视图创建完成后再显示主窗口，主窗口显示后再加载主页面
+  if (toolbarManager) {
+    toolbarManager.createToolbarView().then(() => {
+      console.log('工具栏视图创建完成');
+      // 缩小工具栏宽度为主窗口宽度的 70%，右侧留出背景色
+      const contentBounds = mainWindow.getContentBounds();
+      const toolbarWidth = Math.floor(contentBounds.width * 0.7);
+      toolbarManager.setBounds({
+        x: 0,
+        y: 0,
+        width: toolbarWidth,
+        height: 48 // 工具栏高度
+      });
+      console.log('工具栏bounds设置完成，工具栏应该可见（缩小宽度）');
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+        console.log('主窗口已显示，准备加载页面');
+        if (contentViewManager && contentViewManager.contentView) {
+          try {
+            const wc = contentViewManager.contentView.webContents;
+            wc.loadURL(APP_CONFIG.HOME_URL);
+            wc.once('did-finish-load', () => {
+              console.log('主窗口页面加载完成');
+            });
+          } catch (e) {
+            console.warn('主窗口内容视图加载页面失败:', e.message);
+          }
+        }
+      }
+    }).catch((error) => {
+      console.warn('工具栏视图创建失败:', error);
+      // 工具栏视图失败也要保证主窗口可见
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+        if (contentViewManager && contentViewManager.contentView) {
+          try {
+            const wc = contentViewManager.contentView.webContents;
+            wc.loadURL(APP_CONFIG.HOME_URL);
+          } catch (e) {}
+        }
+      }
+    });
+  } else {
+    // 没有工具栏管理器也保证主窗口可见
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+      if (contentViewManager && contentViewManager.contentView) {
+        try {
+          const wc = contentViewManager.contentView.webContents;
+          wc.loadURL(APP_CONFIG.HOME_URL);
+        } catch (e) {}
       }
     }
   }
