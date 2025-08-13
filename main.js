@@ -694,6 +694,15 @@ app.whenReady().then(() => {
 
   // splash（启动窗口）相关逻辑已移除，主窗口逻辑保持不变
 
+  // 初始化全局 updateManager，供菜单栏和工具栏使用
+  if (!UpdateManager) {
+    UpdateManager = require('./utils/updateManager');
+  }
+  if (!updateManager) {
+    updateManager = new UpdateManager();
+    global.updateManager = updateManager;
+  }
+
   // 应用 ready 后立即创建主窗口，避免首次不弹窗
   createMainWindow();
 }).catch(error => {
