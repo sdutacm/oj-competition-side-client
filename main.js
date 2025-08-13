@@ -1120,7 +1120,8 @@ global.setRestartingState = (state) => {
   }
 };
 
-app.on('reopen-main-window', () => {
+// 处理重新打开主窗口事件
+const handleReopenMainWindow = async () => {
   console.log('收到重新打开主窗口事件');
   isRestarting = true; // 设置重启标记
   // 立即重新创建主窗口，无需延迟
@@ -1141,6 +1142,14 @@ app.on('reopen-main-window', () => {
     console.log('主窗口已存在，清除重启标记');
     isRestarting = false; // 主窗口已存在，清除标记
     isQuittingConfirmed = false; // 重置退出确认标志
+  }
+};
+
+app.on('reopen-main-window', () => {
+  if (app.isReady()) {
+    handleReopenMainWindow();
+  } else {
+    app.whenReady().then(handleReopenMainWindow);
   }
 });
 
@@ -1216,6 +1225,21 @@ app.on('window-all-closed', (event) => {
 app.on('activate', () => {
   console.log('应用被激活（点击 Dock 图标）');
 
+  // 如果 app 还没有 ready，先等待 ready
+  if (!app.isReady()) {
+    console.log('应用还未 ready，等待 ready 后再处理激活事件');
+    app.whenReady().then(() => {
+      console.log('应用已 ready，现在处理激活事件');
+      handleActivateEvent();
+    });
+    return;
+  }
+
+  handleActivateEvent();
+});
+
+// 激活事件处理逻辑
+function handleActivateEvent() {
   // 如果正在重启，不处理激活事件
   if (isRestarting) {
     console.log('正在重启中，跳过激活事件处理');
@@ -1236,4 +1260,4 @@ app.on('activate', () => {
     console.log('主窗口不存在，正在重新创建...');
     createMainWindow();
   }
-});
+}
