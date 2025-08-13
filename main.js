@@ -534,7 +534,7 @@ function createMainWindow() {
       x: centerPosition.x,
       y: centerPosition.y,
       backgroundColor: backgroundColor, // 统一用主题色
-      show: false, // 先不显示，等 ready-to-show 再 show
+      show: false, // 先不显示，布局后立即显示
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -544,31 +544,19 @@ function createMainWindow() {
         transparent: false // 禁止透明，避免黑底
       }
     });
-    
+
     // ===== 立即同步初始化，确保真正的立即加载 =====
     console.log('窗口创建完成，开始同步初始化...');
-    
+
     try {
       // 立即同步创建内容视图管理器
       contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
       mainWindow._contentViewManager = contentViewManager;
       console.log('内容视图管理器同步创建完成');
 
-      // 立即同步创建内容视图并开始加载
-      const view = contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
-      console.log('内容视图同步创建完成，页面已开始加载');
-
-      // 只在内容视图创建并 loadURL 后注册一次拦截器
-      if (view && view.webContents) {
-        view.webContents.once('did-finish-load', () => {
-          setupMainWindowInterceptors();
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.show();
-            mainWindow.focus();
-            console.log('主窗口内容加载完成后显示');
-          }
-        });
-      }
+      // 立即同步创建内容视图（不加载URL）
+      const view = contentViewManager.createContentView(undefined, undefined);
+      console.log('内容视图同步创建完成（未加载URL）');
 
       // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
       const contentBounds = mainWindow.getContentBounds();
@@ -580,14 +568,22 @@ function createMainWindow() {
         height: contentBounds.height - toolbarHeight
       });
       console.log('内容视图直接设置为工具栏下方，避免后续调整闪烁');
-      
+
+      // 布局完成后立即显示主窗口
+      mainWindow.show();
+      mainWindow.focus();
+      console.log('主窗口布局完成后立即显示');
+
+      // show后再加载主页面URL
+      if (view && view.webContents) {
+        view.webContents.loadURL(APP_CONFIG.HOME_URL);
+        // 注册拦截器
+        setupMainWindowInterceptors();
+      }
     } catch (error) {
       console.error('同步初始化失败:', error);
     }
-    
-  // 主窗口直接创建并显示，无 splash
-    // 主窗口直接创建并显示，无 splash
-    
+
     // 窗口显示后立即初始化其他组件，减少白屏期间的操作
     setImmediate(() => {
       initializeOtherComponentsAsync().catch(error => {
@@ -601,16 +597,13 @@ function createMainWindow() {
         console.log('重启过程中，跳过关闭确认对话框');
         return; // 允许默认关闭行为
       }
-      
       // 如果已经确认过退出，也直接允许关闭
       if (isQuittingConfirmed) {
         console.log('已确认退出，跳过关闭确认对话框');
         return; // 允许默认关闭行为
       }
-      
       // 阻止默认关闭行为
       event.preventDefault();
-      
       // 显示关闭确认对话框
       const { dialog } = require('electron');
       const options = {
@@ -623,15 +616,12 @@ function createMainWindow() {
         cancelId: 0,  // ESC键对应"取消"
         noLink: true
       };
-
       dialog.showMessageBox(mainWindow, options).then((result) => {
         if (result.response === 1) { // 用户点击了"确认关闭"
           // 设置退出确认标志，避免 before-quit 事件重复确认
           isQuittingConfirmed = true;
-          
           // 先关闭所有子窗口
           closeAllChildWindows();
-          
           // 最后关闭主窗口
           mainWindow.destroy();
         }
@@ -645,7 +635,6 @@ function createMainWindow() {
     mainWindow.on('closed', () => {
       // 清理所有子窗口
       closeAllChildWindows();
-      
       mainWindow = null;
     });
   } catch (error) {
@@ -703,89 +692,10 @@ app.whenReady().then(() => {
   loadModulesLazily();
   console.log('=== 模块加载完成 ===', `耗时: ${Date.now() - startTime}ms`);
 
-  // 直接创建主窗口并立即显示和加载页面，无 splash
-  updateManager = new UpdateManager();
-  global.updateManager = updateManager;
-  console.log('更新管理器初始化完成');
-  const windowWidth = 1400;
-  const windowHeight = 900;
-  const centerPosition = calculateCenteredPosition(windowWidth, windowHeight);
-  const backgroundColor = getWindowsBackgroundColor();
-  console.log('创建主窗口使用背景色:', backgroundColor);
-  mainWindow = new BrowserWindow({
-    width: windowWidth,
-    height: windowHeight,
-    x: centerPosition.x,
-    y: centerPosition.y,
-    backgroundColor: backgroundColor,
-    show: false,
-    webPreferences: {
-      contextIsolation: true
-    }
-  });
-  contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
-  mainWindow._contentViewManager = contentViewManager;
-  // 创建内容视图但不立即加载主页面
-  contentViewManager.createContentView(undefined, 'about:blank');
-  // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
-  const contentBounds = mainWindow.getContentBounds();
-  const toolbarHeight = 48;
-  contentViewManager.setBounds({
-    x: 0,
-    y: toolbarHeight,
-    width: contentBounds.width,
-    height: contentBounds.height - toolbarHeight
-  });
-  mainWindow.on('close', (event) => {
-    if (isRestarting) return;
-    if (isQuittingConfirmed) return;
-    event.preventDefault();
-    const { dialog } = require('electron');
-    const options = {
-      type: 'question',
-      title: '确认关闭',
-      message: '确定要关闭应用程序吗？',
-      detail: '关闭后所有窗口都将被关闭，当前的浏览状态将不会保存。',
-      buttons: ['取消', '确认关闭'],
-      defaultId: 0,
-      cancelId: 0,
-      noLink: true
-    };
-    dialog.showMessageBox(mainWindow, options).then((result) => {
-      if (result.response === 1) {
-        isQuittingConfirmed = true;
-        closeAllChildWindows();
-        mainWindow.destroy();
-      }
-    }).catch(() => {});
-  });
-  mainWindow.on('closed', () => {
-    closeAllChildWindows();
-    mainWindow = null;
-  });
-  // 立即初始化其他组件
-  setImmediate(() => {
-    initializeOtherComponentsAsync().catch(error => {
-      console.warn('异步组件初始化失败:', error);
-    });
-  });
-  // 先显示主窗口，再加载主页面内容
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.show();
-    mainWindow.focus();
-    console.log('主窗口已显示，准备加载页面');
-    if (contentViewManager && contentViewManager.contentView) {
-      try {
-        const wc = contentViewManager.contentView.webContents;
-        wc.loadURL(APP_CONFIG.HOME_URL);
-        wc.once('did-finish-load', () => {
-          console.log('主窗口页面加载完成');
-        });
-      } catch (e) {
-        console.warn('主窗口内容视图加载页面失败:', e.message);
-      }
-    }
-  }
+  // splash（启动窗口）相关逻辑已移除，主窗口逻辑保持不变
+
+  // 应用 ready 后立即创建主窗口，避免首次不弹窗
+  createMainWindow();
 }).catch(error => {
   console.error('应用启动失败:', error);
 });
