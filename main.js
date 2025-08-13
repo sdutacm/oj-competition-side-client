@@ -108,25 +108,7 @@ const APP_CONFIG = {
 
 
 
-// 检查是否是可以打开外部链接的特殊页面（如关于页面等）
-function isExternalLinkAllowedContext(webContents) {
-  if (!webContents) return false;
 
-  // 检查是否是关于窗口（从 dialogHelper 导入检查函数）
-  try {
-    const dialogHelper = require('./utils/dialogHelper');
-    if (dialogHelper && dialogHelper.isAboutWindow) {
-      const ownerWindow = webContents.getOwnerBrowserWindow();
-      if (ownerWindow && dialogHelper.isAboutWindow(ownerWindow)) {
-        return true;
-      }
-    }
-  } catch (error) {
-    console.warn('检查关于窗口失败:', error);
-  }
-
-  return false;
-}
 
 // 重定向拦截器，应用于任意 BrowserView
 function applyRedirectInterceptor(view, win, isMainWindow = false) {
@@ -1260,22 +1242,14 @@ function setupMainWindowInterceptors() {
         }
       });
 
-      // 添加外部链接处理 - 遵循白名单逻辑
+
+      // 添加外部链接处理 - github.com一律拦截
       contentView.webContents.on('new-window', (event, url) => {
         event.preventDefault();
         const domain = require('./utils/urlHelper').getHostname(url);
-
-        // 检查是否是关于界面的GitHub链接
         if (domain.includes('github.com')) {
-          // 只有在关于界面中才允许打开GitHub链接
-          if (isExternalLinkAllowedContext(contentView.webContents)) {
-            shell.openExternal(url);
-            return;
-          } else {
-            // 其他情况下拦截GitHub链接
-            showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
-            return;
-          }
+          showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+          return;
         }
 
         // 如果是主域名或白名单域名，在新窗口中打开
@@ -1294,16 +1268,10 @@ function setupMainWindowInterceptors() {
       contentView.webContents.on('will-navigate', (event, url) => {
         const domain = require('./utils/urlHelper').getHostname(url);
 
-        // 检查是否是GitHub链接
+        // 检查是否是GitHub链接，全部拦截
         if (domain.includes('github.com')) {
           event.preventDefault();
-          // 只有在关于界面中才允许打开GitHub链接
-          if (isExternalLinkAllowedContext(contentView.webContents)) {
-            shell.openExternal(url);
-          } else {
-            // 其他情况下拦截GitHub链接
-            showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
-          }
+          showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
           return;
         }
 
@@ -1346,15 +1314,9 @@ function setupMainWindowInterceptors() {
       contentView.webContents.setWindowOpenHandler(({ url }) => {
         const domain = require('./utils/urlHelper').getHostname(url);
 
-        // 检查是否是GitHub链接
+        // 检查是否是GitHub链接，全部拦截
         if (domain.includes('github.com')) {
-          // 只有在关于界面中才允许打开GitHub链接
-          if (isExternalLinkAllowedContext(contentView.webContents)) {
-            shell.openExternal(url);
-          } else {
-            // 其他情况下拦截GitHub链接
-            showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
-          }
+          showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
           return { action: 'deny' };
         }
 
