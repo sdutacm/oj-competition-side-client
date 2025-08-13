@@ -87,7 +87,7 @@ function loadModulesLazily() {
 // 应用配置
 const APP_CONFIG = {
   // 主页面地址
-  HOME_URL: 'https://op.sdutacm.cn/',
+  HOME_URL: 'https://op.sdutacm.cn/onlinejudge3_cs/competitions',
 
   // 主窗口允许访问的根域名（支持子路径）
   MAIN_DOMAIN: 'op.sdutacm.cn',
@@ -292,16 +292,6 @@ function openNewWindow(url) {
       allWindows.splice(index, 1);
     }
   });
-
-  // 立即显示无需再额外 setTimeout
-  // ====== 临时注释掉 show/focus/setBounds 相关操作，便于定位页面加载后闪烁问题 ======
-  // setTimeout(() => {
-  //   if (win && !win.isDestroyed()) {
-  //     win.show();
-  //     win.focus();
-  //     console.log('新窗口显示完成 (内容加载后)');
-  //   }
-  // }, 100); // 统一延迟时间，确保内容加载完成
 
   // 为新窗口创建简单的内容视图管理器模拟
   const newWindowContentViewManager = {
@@ -757,9 +747,11 @@ app.whenReady().then(() => {
           contextIsolation: true
         }
       });
-      // 初始化内容视图管理器，但不加载页面
+      // 初始化内容视图管理器，但不加载主页面
       contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
       mainWindow._contentViewManager = contentViewManager;
+      // 只创建空白内容视图
+      contentViewManager.createContentView(undefined, 'about:blank');
       // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
       const contentBounds = mainWindow.getContentBounds();
       const toolbarHeight = 48;
@@ -804,6 +796,32 @@ app.whenReady().then(() => {
           console.warn('异步组件初始化失败:', error);
         });
       });
+
+      // 主窗口布局完成后立即关闭 splash 并显示主窗口
+      if (global.splashWindow && !global.splashWindow.isDestroyed()) {
+        try {
+          global.splashWindow.close();
+        } catch (e) {
+          console.warn('关闭 splash 窗口失败:', e.message);
+        }
+      }
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+        // 然后开始加载页面内容
+        if (contentViewManager && contentViewManager.contentView) {
+          try {
+            const wc = contentViewManager.contentView.webContents;
+            wc.loadURL(APP_CONFIG.HOME_URL);
+            console.log('主窗口开始加载页面:', APP_CONFIG.HOME_URL);
+            wc.once('did-finish-load', () => {
+              console.log('主窗口页面加载完成');
+            });
+          } catch (e) {
+            console.warn('主窗口内容视图加载页面失败:', e.message);
+          }
+        }
+      }
     } catch (error) {
       console.error('主窗口创建失败:', error);
       throw error;
@@ -811,54 +829,24 @@ app.whenReady().then(() => {
   }
 
   // 播放 splash，后台创建主窗口但不加载页面
-  createMainWindowWithoutUrl();
-  createStartupWindow(undefined, {
+  // 先创建主窗口和内容视图，布局完成后自动关闭 splash 并显示主窗口
+  global.splashWindow = createStartupWindow(undefined, {
     width: 1000,
     height: 600,
     duration: 3500,
     onClose: () => {
-      splashClosed = true;
-      // splash 关闭后立即显示主窗口，不等待页面加载
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        console.log('[Splash] 启动窗口关闭，立即显示主窗口');
+      // 兜底：如果主窗口还没显示，则在此显示
+      if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
         mainWindow.show();
         mainWindow.focus();
-        
-        // 然后开始加载页面内容
         if (contentViewManager && contentViewManager.contentView) {
           try {
-            // splash 关闭后同步设置 bounds，防止内容不可见
-            const contentBounds = mainWindow.getContentBounds();
-            const toolbarHeight = 48;
-            contentViewManager.setBounds({
-              x: 0,
-              y: toolbarHeight,
-              width: contentBounds.width,
-              height: contentBounds.height - toolbarHeight
-            });
-            // 加载页面，但不等待加载完成才显示窗口
             const wc = contentViewManager.contentView.webContents;
             wc.loadURL(APP_CONFIG.HOME_URL);
-            console.log('主窗口开始加载页面:', APP_CONFIG.HOME_URL);
-            wc.once('did-finish-load', () => {
-              console.log('主窗口页面加载完成');
-            });
-            // 如果页面加载超过2秒，可以考虑显示加载提示
-            setTimeout(() => {
-              if (!wc.isDestroyed()) {
-                const url = wc.getURL();
-                if (!url || url === 'about:blank') {
-                  console.log('页面加载较慢，主窗口已显示但内容仍在加载中');
-                }
-              }
-            }, 2000);
+            console.log('主窗口开始加载页面(兜底):', APP_CONFIG.HOME_URL);
           } catch (e) {
-            console.warn('主窗口内容视图加载页面失败:', e.message);
+            console.warn('主窗口内容视图加载页面失败(兜底):', e.message);
           }
-        } else if (contentViewManager) {
-          // 兜底：如果没有内容视图则创建
-          const view = contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
-          console.log('主窗口开始加载页面（兜底）');
         }
       }
       // 启动更新检查
@@ -870,6 +858,7 @@ app.whenReady().then(() => {
       }, 8000);
     }
   });
+  createMainWindowWithoutUrl();
 }).catch(error => {
   console.error('应用启动失败:', error);
 });
