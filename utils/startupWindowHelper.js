@@ -115,7 +115,9 @@ function createStartupWindow(htmlContent, options = {}) {
   startupWindow.once('show', () => {
     setTimeout(() => {
       try {
-        startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
+        if (startupWindow && !startupWindow.isDestroyed()) {
+          startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
+        }
       } catch (e) {
         console.warn('[Splash] 注入动画启动JS失败:', e.message);
       }
@@ -124,14 +126,22 @@ function createStartupWindow(htmlContent, options = {}) {
     // 自动关闭
     if (options.duration) {
       setTimeout(() => {
-        console.log('[Splash] 到时自动关闭启动窗口');
-        startupWindow.close();
+        if (startupWindow && !startupWindow.isDestroyed()) {
+          console.log('[Splash] 到时自动关闭启动窗口');
+          startupWindow.close();
+        }
       }, options.duration);
     }
   });
   startupWindow.on('closed', () => {
     console.log('[Splash] 启动窗口已关闭');
-    if (typeof options.onClose === 'function') options.onClose();
+    if (typeof options.onClose === 'function') {
+      try {
+        options.onClose();
+      } catch (e) {
+        console.warn('[Splash] onClose 回调执行失败:', e.message);
+      }
+    }
   });
   return startupWindow;
 }

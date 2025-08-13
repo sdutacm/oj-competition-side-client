@@ -797,31 +797,33 @@ app.whenReady().then(() => {
         });
       });
 
-      // 主窗口布局完成后立即关闭 splash 并显示主窗口
-      if (global.splashWindow && !global.splashWindow.isDestroyed()) {
-        try {
-          global.splashWindow.close();
-        } catch (e) {
-          console.warn('关闭 splash 窗口失败:', e.message);
-        }
-      }
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.show();
-        mainWindow.focus();
-        // 然后开始加载页面内容
-        if (contentViewManager && contentViewManager.contentView) {
+      // 主窗口布局完成后，强制等待1秒再关闭 splash 并显示主窗口
+      setTimeout(() => {
+        if (global.splashWindow && !global.splashWindow.isDestroyed()) {
           try {
-            const wc = contentViewManager.contentView.webContents;
-            wc.loadURL(APP_CONFIG.HOME_URL);
-            console.log('主窗口开始加载页面:', APP_CONFIG.HOME_URL);
-            wc.once('did-finish-load', () => {
-              console.log('主窗口页面加载完成');
-            });
+            global.splashWindow.close();
           } catch (e) {
-            console.warn('主窗口内容视图加载页面失败:', e.message);
+            console.warn('关闭 splash 窗口失败:', e.message);
           }
         }
-      }
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show();
+          mainWindow.focus();
+          // 然后开始加载页面内容
+          if (contentViewManager && contentViewManager.contentView) {
+            try {
+              const wc = contentViewManager.contentView.webContents;
+              wc.loadURL(APP_CONFIG.HOME_URL);
+              console.log('主窗口开始加载页面:', APP_CONFIG.HOME_URL);
+              wc.once('did-finish-load', () => {
+                console.log('主窗口页面加载完成');
+              });
+            } catch (e) {
+              console.warn('主窗口内容视图加载页面失败:', e.message);
+            }
+          }
+        }
+      }, 2000);
     } catch (error) {
       console.error('主窗口创建失败:', error);
       throw error;
