@@ -703,89 +703,146 @@ app.whenReady().then(() => {
   loadModulesLazily();
   console.log('=== 模块加载完成 ===', `耗时: ${Date.now() - startTime}ms`);
 
-  // 直接创建主窗口并立即显示和加载页面，无 splash
+  // 恢复 StartupManager 逻辑，仅首次启动或特殊场合才显示 splash
   updateManager = new UpdateManager();
   global.updateManager = updateManager;
   console.log('更新管理器初始化完成');
-  const windowWidth = 1400;
-  const windowHeight = 900;
-  const centerPosition = calculateCenteredPosition(windowWidth, windowHeight);
-  const backgroundColor = getWindowsBackgroundColor();
-  console.log('创建主窗口使用背景色:', backgroundColor);
-  mainWindow = new BrowserWindow({
-    width: windowWidth,
-    height: windowHeight,
-    x: centerPosition.x,
-    y: centerPosition.y,
-    backgroundColor: backgroundColor,
-    show: false,
-    webPreferences: {
-      contextIsolation: true
-    }
-  });
-  contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
-  mainWindow._contentViewManager = contentViewManager;
-  // 创建内容视图但不立即加载主页面
-  contentViewManager.createContentView(undefined, 'about:blank');
-  // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
-  const contentBounds = mainWindow.getContentBounds();
-  const toolbarHeight = 48;
-  contentViewManager.setBounds({
-    x: 0,
-    y: toolbarHeight,
-    width: contentBounds.width,
-    height: contentBounds.height - toolbarHeight
-  });
-  mainWindow.on('close', (event) => {
-    if (isRestarting) return;
-    if (isQuittingConfirmed) return;
-    event.preventDefault();
-    const { dialog } = require('electron');
-    const options = {
-      type: 'question',
-      title: '确认关闭',
-      message: '确定要关闭应用程序吗？',
-      detail: '关闭后所有窗口都将被关闭，当前的浏览状态将不会保存。',
-      buttons: ['取消', '确认关闭'],
-      defaultId: 0,
-      cancelId: 0,
-      noLink: true
-    };
-    dialog.showMessageBox(mainWindow, options).then((result) => {
-      if (result.response === 1) {
-        isQuittingConfirmed = true;
+  // 每次都播放 splash，主窗口后台创建但不加载 url，等 splash 关闭后再加载页面
+  const { createStartupWindow } = require('./utils/startupWindowHelper');
+  let splashClosed = false;
+  // 先创建主窗口，但不加载内容
+  function createMainWindowWithoutUrl() {
+    try {
+      const windowWidth = 1400;
+      const windowHeight = 900;
+      const centerPosition = calculateCenteredPosition(windowWidth, windowHeight);
+      const backgroundColor = getWindowsBackgroundColor();
+      console.log('创建主窗口（不加载url）使用背景色:', backgroundColor);
+      mainWindow = new BrowserWindow({
+        width: windowWidth,
+        height: windowHeight,
+        x: centerPosition.x,
+        y: centerPosition.y,
+        backgroundColor: backgroundColor,
+        show: false,
+        webPreferences: {
+          contextIsolation: true
+        }
+      });
+      // 初始化内容视图管理器，但不加载主页面
+      contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
+      mainWindow._contentViewManager = contentViewManager;
+      // 只创建空白内容视图
+      contentViewManager.createContentView(undefined, 'about:blank');
+      // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
+      const contentBounds = mainWindow.getContentBounds();
+      const toolbarHeight = 48;
+      contentViewManager.setBounds({
+        x: 0,
+        y: toolbarHeight,
+        width: contentBounds.width,
+        height: contentBounds.height - toolbarHeight
+      });
+  // 不自动 show，等 splash 关闭后再 show
+      // 关闭事件等同原逻辑
+      mainWindow.on('close', (event) => {
+        if (isRestarting) return;
+        if (isQuittingConfirmed) return;
+        event.preventDefault();
+        const { dialog } = require('electron');
+        const options = {
+          type: 'question',
+          title: '确认关闭',
+          message: '确定要关闭应用程序吗？',
+          detail: '关闭后所有窗口都将被关闭，当前的浏览状态将不会保存。',
+          buttons: ['取消', '确认关闭'],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true
+        };
+        dialog.showMessageBox(mainWindow, options).then((result) => {
+          if (result.response === 1) {
+            isQuittingConfirmed = true;
+            closeAllChildWindows();
+            mainWindow.destroy();
+          }
+        }).catch(() => {});
+      });
+      mainWindow.on('closed', () => {
         closeAllChildWindows();
-        mainWindow.destroy();
-      }
-    }).catch(() => {});
-  });
-  mainWindow.on('closed', () => {
-    closeAllChildWindows();
-    mainWindow = null;
-  });
-  // 立即初始化其他组件
-  setImmediate(() => {
-    initializeOtherComponentsAsync().catch(error => {
-      console.warn('异步组件初始化失败:', error);
-    });
-  });
-  // 先显示主窗口，再加载主页面内容
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.show();
-    mainWindow.focus();
-    console.log('主窗口已显示，准备加载页面');
-    if (contentViewManager && contentViewManager.contentView) {
-      try {
-        const wc = contentViewManager.contentView.webContents;
-        wc.loadURL(APP_CONFIG.HOME_URL);
-        wc.once('did-finish-load', () => {
-          console.log('主窗口页面加载完成');
+        mainWindow = null;
+      });
+      // 立即初始化其他组件
+      setImmediate(() => {
+        initializeOtherComponentsAsync().catch(error => {
+          console.warn('异步组件初始化失败:', error);
         });
-      } catch (e) {
-        console.warn('主窗口内容视图加载页面失败:', e.message);
-      }
+      });
+
+      // 主窗口布局完成后，强制等待1秒再关闭 splash 并显示主窗口
+      setTimeout(() => {
+        if (global.splashWindow && !global.splashWindow.isDestroyed()) {
+          try {
+            global.splashWindow.close();
+          } catch (e) {
+            console.warn('关闭 splash 窗口失败:', e.message);
+          }
+        }
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show();
+          mainWindow.focus();
+          // 然后开始加载页面内容
+          if (contentViewManager && contentViewManager.contentView) {
+            try {
+              const wc = contentViewManager.contentView.webContents;
+              wc.loadURL(APP_CONFIG.HOME_URL);
+              console.log('主窗口开始加载页面:', APP_CONFIG.HOME_URL);
+              wc.once('did-finish-load', () => {
+                console.log('主窗口页面加载完成');
+              });
+            } catch (e) {
+              console.warn('主窗口内容视图加载页面失败:', e.message);
+            }
+          }
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('主窗口创建失败:', error);
+      throw error;
     }
   }
+
+  // 播放 splash，后台创建主窗口但不加载页面
+  // 先创建主窗口和内容视图，布局完成后自动关闭 splash 并显示主窗口
+  global.splashWindow = createStartupWindow(undefined, {
+    width: 1000,
+    height: 600,
+    duration: 3500,
+    onClose: () => {
+      // 兜底：如果主窗口还没显示，则在此显示
+      if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+        mainWindow.show();
+        mainWindow.focus();
+        if (contentViewManager && contentViewManager.contentView) {
+          try {
+            const wc = contentViewManager.contentView.webContents;
+            wc.loadURL(APP_CONFIG.HOME_URL);
+            console.log('主窗口开始加载页面(兜底):', APP_CONFIG.HOME_URL);
+          } catch (e) {
+            console.warn('主窗口内容视图加载页面失败(兜底):', e.message);
+          }
+        }
+      }
+      // 启动更新检查
+      setTimeout(() => {
+        if (updateManager) {
+          console.log('启动更新检查');
+          updateManager.startPeriodicCheck();
+        }
+      }, 8000);
+    }
+  });
+  createMainWindowWithoutUrl();
 }).catch(error => {
   console.error('应用启动失败:', error);
 });

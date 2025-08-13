@@ -113,28 +113,126 @@ const APP_CONFIG = {
 // 重定向拦截器，应用于任意 BrowserView
 function applyRedirectInterceptor(view, win, isMainWindow = false) {
   if (view && view.webContents) {
-    // will-navigate/will-redirect 只拦截一次，且只在当前窗口处理
-    // will-navigate 拦截时对域名去重，1秒内同一域名只弹一次窗
-    let lastBlockedDomain = '';
-    let lastBlockedTime = 0;
-    function shouldBlock(url) {
-      const now = Date.now();
-      const domain = require('./utils/urlHelper').getHostname(url);
-      if (domain === lastBlockedDomain && now - lastBlockedTime < 1000) return false;
-      lastBlockedDomain = domain;
-      lastBlockedTime = now;
-      return true;
-    }
+    let lastRedirectBlockedUrl = '';
+    let lastRedirectBlockedTime = 0;
+    let currentPageUrl = ''; // 记录当前页面URL
+
+    // 监听页面导航开始，记录URL
+    view.webContents.on('did-start-navigation', (event, url) => {
+      if (!url.startsWith('data:') && url !== 'about:blank') {
+        currentPageUrl = url;
+        console.log('页面导航开始，记录URL:', currentPageUrl);
+      }
+    });
+
+    // 监听页面导航完成，更新URL记录
+    view.webContents.on('did-navigate', (event, url) => {
+      if (!url.startsWith('data:') && url !== 'about:blank') {
+        currentPageUrl = url;
+        console.log('页面导航完成，更新URL:', currentPageUrl);
+      }
+    });
 
     view.webContents.on('will-navigate', (event, url) => {
-      if (!isWhiteDomain(url, APP_CONFIG)) {
+      const domain = require('./utils/urlHelper').getHostname(url);
+      if (isMainWindow && isWhiteDomain(url, APP_CONFIG)) {
         event.preventDefault();
-        if (win && !win.isDestroyed() && shouldBlock(url)) {
-          showBlockedDialogWithDebounce(win, require('./utils/urlHelper').getHostname(url), '该域名不在允许访问范围', 'default');
+        openNewWindow(url);
+        return;
+      }
+      if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+        event.preventDefault();
+        if (win && !win.isDestroyed()) {
+          showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
+        }
+        return;
+      }
+      if (domain === APP_CONFIG.MAIN_DOMAIN || domain.endsWith('.' + APP_CONFIG.MAIN_DOMAIN)) {
+        return;
+      }
+      event.preventDefault();
+    });
+
+    view.webContents.on('will-redirect', (event, url) => {
+      console.log('检测到重定向，从', currentPageUrl, '到', url);
+
+      const redirectDomain = require('./utils/urlHelper').getHostname(url);
+      if (redirectDomain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
+        event.preventDefault();
+        if (win && !win.isDestroyed()) {
+          showBlockedDialogWithDebounce(win, redirectDomain, '非法重定向拦截，已自动回退主页', 'redirect');
+        }
+
+        // 自动回退主页（仅新窗口需要，主窗口不回退）
+        if (!isMainWindow) {
+          // 使用 setTimeout 异步执行，避免在事件处理期间同步加载URL
+          setTimeout(() => {
+            try {
+              let targetUrl;
+              if (currentPageUrl && currentPageUrl !== 'about:blank' && !currentPageUrl.startsWith('data:')) {
+                const beforeRedirectDomain = require('./utils/urlHelper').getHostname(currentPageUrl);
+                if (beforeRedirectDomain) {
+                  // 直接回退到重定向前URL的顶级域名
+                  targetUrl = `https://${beforeRedirectDomain}/`;
+                  console.log('重定向拦截，回退到重定向前URL的顶级域名:', targetUrl, '(重定向前URL:', currentPageUrl, ')');
+                } else {
+                  // 域名提取失败，使用新窗口的初始URL
+                  if (win._shortcutManager && win._shortcutManager.initialUrl) {
+                    targetUrl = win._shortcutManager.initialUrl;
+                    console.log('重定向拦截，域名提取失败，回退到窗口初始URL:', targetUrl);
+                  } else {
+                    targetUrl = `https://${APP_CONFIG.MAIN_DOMAIN}/`;
+                    console.log('重定向拦截，域名提取失败，使用系统主域名:', targetUrl);
+                  }
+                }
+              } else {
+                // 当前URL无效，使用新窗口的初始URL
+                if (win._shortcutManager && win._shortcutManager.initialUrl) {
+                  targetUrl = win._shortcutManager.initialUrl;
+                  console.log('重定向拦截，当前URL无效，回退到窗口初始URL:', targetUrl);
+                } else {
+                  targetUrl = `https://${APP_CONFIG.MAIN_DOMAIN}/`;
+                  console.log('重定向拦截，当前URL无效，使用系统主域名:', targetUrl);
+                }
+              }
+
+              // 检查窗口是否仍然有效
+              if (view && view.webContents && !view.webContents.isDestroyed()) {
+                view.webContents.loadURL(targetUrl);
+              }
+
+              // 重要：更新窗口的初始URL为新的安全顶级域名，避免"返回主页"时再次触发重定向
+              if (win._shortcutManager && targetUrl && targetUrl.startsWith('https://')) {
+                win._shortcutManager.initialUrl = targetUrl;
+                win._shortcutManager.homeUrl = targetUrl;
+                console.log('已更新窗口初始URL为新的安全域名:', targetUrl);
+              }
+            } catch (error) {
+              console.log('重定向拦截处理失败:', error);
+              // 最终备用方案：使用新窗口的初始URL或系统主域名
+              let fallbackUrl;
+              if (win._shortcutManager && win._shortcutManager.initialUrl) {
+                fallbackUrl = win._shortcutManager.initialUrl;
+              } else {
+                fallbackUrl = `https://${APP_CONFIG.MAIN_DOMAIN}/`;
+              }
+
+              // 检查窗口是否仍然有效
+              if (view && view.webContents && !view.webContents.isDestroyed()) {
+                view.webContents.loadURL(fallbackUrl);
+              }
+
+              // 重要：更新窗口的初始URL为新的安全域名
+              if (win._shortcutManager && fallbackUrl && fallbackUrl.startsWith('https://')) {
+                win._shortcutManager.initialUrl = fallbackUrl;
+                win._shortcutManager.homeUrl = fallbackUrl;
+                console.log('已更新窗口初始URL为备用安全域名:', fallbackUrl);
+              }
+            }
+          }, 50);
         }
       }
     });
-    // will-redirect 不再拦截，避免重复
   }
 }
 
@@ -143,7 +241,7 @@ function openNewWindow(url) {
   const windowWidth = 1400;
   const windowHeight = 900;
   const centerPosition = calculateCenteredPosition(windowWidth, windowHeight);
-
+  
   // 使用统一的背景色检测函数
   const backgroundColor = getWindowsBackgroundColor();
   console.log('创建新窗口使用背景色:', backgroundColor);
@@ -168,7 +266,7 @@ function openNewWindow(url) {
 
   // 将新窗口添加到追踪列表
   allWindows.push(win);
-
+  
   // 监听新窗口关闭事件，从追踪列表中移除
   win.on('closed', () => {
     const index = allWindows.indexOf(win);
@@ -258,7 +356,7 @@ function openNewWindow(url) {
     // Windows系统：获取统一的背景色
     const browserViewBgColor = getWindowsBackgroundColor();
     console.log('新窗口BrowserView使用背景色:', browserViewBgColor);
-
+    
     // 创建内容视图并添加到窗口
     const contentView = new BrowserView({
       webPreferences: {
@@ -272,7 +370,7 @@ function openNewWindow(url) {
 
     // 设置自定义 User-Agent
     const defaultUserAgent = contentView.webContents.getUserAgent();
-    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
+  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
     contentView.webContents.setUserAgent(customUserAgent);
 
     // 新窗口标题同步 - 跟随网页标题
@@ -363,7 +461,7 @@ function openNewWindow(url) {
   if (newWindowContentViewManager.contentView && !newWindowContentViewManager.contentView.webContents.isDestroyed()) {
     newWindowContentViewManager.contentView.webContents.loadURL(url);
   }
-
+  
   setTimeout(() => {
     if (win && !win.isDestroyed()) {
       win.show();
@@ -400,7 +498,7 @@ function getWindowsBackgroundColor() {
   try {
     const isDarkTheme = nativeTheme.shouldUseDarkColors;
     console.log('系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
-
+    
     // Windows系统特殊处理，背景色与主题保持一致
     if (process.platform === 'win32') {
       return isDarkTheme ? '#1f1f1f' : '#f5f5f5';
@@ -436,7 +534,7 @@ function createMainWindow() {
       x: centerPosition.x,
       y: centerPosition.y,
       backgroundColor: backgroundColor, // 统一用主题色
-      show: false, // 先不显示，布局后立即显示
+      show: false, // 先不显示，等 ready-to-show 再 show
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -446,19 +544,31 @@ function createMainWindow() {
         transparent: false // 禁止透明，避免黑底
       }
     });
-
+    
     // ===== 立即同步初始化，确保真正的立即加载 =====
     console.log('窗口创建完成，开始同步初始化...');
-
+    
     try {
       // 立即同步创建内容视图管理器
       contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
       mainWindow._contentViewManager = contentViewManager;
       console.log('内容视图管理器同步创建完成');
 
-      // 立即同步创建内容视图（不加载URL）
-      const view = contentViewManager.createContentView(undefined, undefined);
-      console.log('内容视图同步创建完成（未加载URL）');
+      // 立即同步创建内容视图并开始加载
+      const view = contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
+      console.log('内容视图同步创建完成，页面已开始加载');
+
+      // 只在内容视图创建并 loadURL 后注册一次拦截器
+      if (view && view.webContents) {
+        view.webContents.once('did-finish-load', () => {
+          setupMainWindowInterceptors();
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.show();
+            mainWindow.focus();
+            console.log('主窗口内容加载完成后显示');
+          }
+        });
+      }
 
       // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
       const contentBounds = mainWindow.getContentBounds();
@@ -470,22 +580,14 @@ function createMainWindow() {
         height: contentBounds.height - toolbarHeight
       });
       console.log('内容视图直接设置为工具栏下方，避免后续调整闪烁');
-
-      // 只有当内容视图加载完成后再显示主窗口，避免白屏
-      if (view && view.webContents) {
-        view.webContents.once('did-finish-load', () => {
-          mainWindow.show();
-          mainWindow.focus();
-          console.log('主窗口内容加载完成后显示');
-        });
-        view.webContents.loadURL(APP_CONFIG.HOME_URL);
-        // 注册拦截器
-        setupMainWindowInterceptors();
-      }
+      
     } catch (error) {
       console.error('同步初始化失败:', error);
     }
-
+    
+  // 主窗口直接创建并显示，无 splash
+    // 主窗口直接创建并显示，无 splash
+    
     // 窗口显示后立即初始化其他组件，减少白屏期间的操作
     setImmediate(() => {
       initializeOtherComponentsAsync().catch(error => {
@@ -499,13 +601,16 @@ function createMainWindow() {
         console.log('重启过程中，跳过关闭确认对话框');
         return; // 允许默认关闭行为
       }
+      
       // 如果已经确认过退出，也直接允许关闭
       if (isQuittingConfirmed) {
         console.log('已确认退出，跳过关闭确认对话框');
         return; // 允许默认关闭行为
       }
+      
       // 阻止默认关闭行为
       event.preventDefault();
+      
       // 显示关闭确认对话框
       const { dialog } = require('electron');
       const options = {
@@ -518,12 +623,15 @@ function createMainWindow() {
         cancelId: 0,  // ESC键对应"取消"
         noLink: true
       };
+
       dialog.showMessageBox(mainWindow, options).then((result) => {
         if (result.response === 1) { // 用户点击了"确认关闭"
           // 设置退出确认标志，避免 before-quit 事件重复确认
           isQuittingConfirmed = true;
+          
           // 先关闭所有子窗口
           closeAllChildWindows();
+          
           // 最后关闭主窗口
           mainWindow.destroy();
         }
@@ -537,6 +645,7 @@ function createMainWindow() {
     mainWindow.on('closed', () => {
       // 清理所有子窗口
       closeAllChildWindows();
+      
       mainWindow = null;
     });
   } catch (error) {
@@ -548,7 +657,7 @@ function createMainWindow() {
 
 app.whenReady().then(() => {
   console.log('=== Electron Ready ===', `耗时: ${Date.now() - startTime}ms`);
-
+  
   // 只在 macOS 系统下初始化 i18n
   if (process.platform === 'darwin') {
     console.log('macOS 系统 - 延迟加载 i18n');
@@ -569,14 +678,14 @@ app.whenReady().then(() => {
       try {
         // 使用统一的背景色检测函数
         const newBgColor = getWindowsBackgroundColor();
-
+        
         console.log('Windows系统主题变化检测到，更新背景色:', newBgColor);
-
+        
         // 更新主窗口背景色
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.setBackgroundColor(newBgColor);
         }
-
+        
         // 更新所有子窗口背景色
         allWindows.forEach(win => {
           if (win && !win.isDestroyed()) {
@@ -594,18 +703,114 @@ app.whenReady().then(() => {
   loadModulesLazily();
   console.log('=== 模块加载完成 ===', `耗时: ${Date.now() - startTime}ms`);
 
-  // splash（启动窗口）相关逻辑已移除，主窗口逻辑保持不变
+  // 初始化更新管理器
+  updateManager = new UpdateManager();
+  global.updateManager = updateManager;
+  console.log('更新管理器初始化完成');
 
-  // 初始化全局 updateManager，供菜单栏和工具栏使用
-  if (!UpdateManager) {
-    UpdateManager = require('./utils/updateManager');
-  }
-  if (!updateManager) {
-    updateManager = new UpdateManager();
-    global.updateManager = updateManager;
+  // 直接创建主窗口，等页面加载完成后再显示
+  function createMainWindow() {
+    try {
+      const windowWidth = 1400;
+      const windowHeight = 900;
+      const centerPosition = calculateCenteredPosition(windowWidth, windowHeight);
+      const backgroundColor = getWindowsBackgroundColor();
+      console.log('创建主窗口使用背景色:', backgroundColor);
+      
+      mainWindow = new BrowserWindow({
+        width: windowWidth,
+        height: windowHeight,
+        x: centerPosition.x,
+        y: centerPosition.y,
+        backgroundColor: backgroundColor,
+        show: false, // 初始不显示，等页面加载完成后再显示
+        webPreferences: {
+          contextIsolation: true
+        }
+      });
+
+      // 初始化内容视图管理器
+      contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
+      mainWindow._contentViewManager = contentViewManager;
+      
+      // 创建内容视图并立即开始加载页面
+      contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
+      
+      // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
+      const contentBounds = mainWindow.getContentBounds();
+      const toolbarHeight = 48;
+      contentViewManager.setBounds({
+        x: 0,
+        y: toolbarHeight,
+        width: contentBounds.width,
+        height: contentBounds.height - toolbarHeight
+      });
+
+      // 关闭事件处理
+      mainWindow.on('close', (event) => {
+        if (isRestarting) return;
+        if (isQuittingConfirmed) return;
+        event.preventDefault();
+        const { dialog } = require('electron');
+        const options = {
+          type: 'question',
+          title: '确认关闭',
+          message: '确定要关闭应用程序吗？',
+          detail: '关闭后所有窗口都将被关闭，当前的浏览状态将不会保存。',
+          buttons: ['取消', '确认关闭'],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true
+        };
+        dialog.showMessageBox(mainWindow, options).then((result) => {
+          if (result.response === 1) {
+            isQuittingConfirmed = true;
+            closeAllChildWindows();
+            mainWindow.destroy();
+          }
+        }).catch(() => {});
+      });
+
+      mainWindow.on('closed', () => {
+        closeAllChildWindows();
+        mainWindow = null;
+      });
+
+      // 立即初始化其他组件
+      setImmediate(() => {
+        initializeOtherComponentsAsync().catch(error => {
+          console.warn('异步组件初始化失败:', error);
+        });
+      });
+
+      // 监听页面加载完成事件，然后显示主窗口
+      if (contentViewManager && contentViewManager.contentView) {
+        const webContents = contentViewManager.contentView.webContents;
+        console.log('主窗口开始加载页面:', APP_CONFIG.HOME_URL);
+        
+        webContents.once('did-finish-load', () => {
+          console.log('主窗口页面加载完成，显示窗口');
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.show();
+            mainWindow.focus();
+          }
+        });
+
+        // 启动更新检查
+        setTimeout(() => {
+          if (updateManager) {
+            console.log('启动更新检查');
+            updateManager.startPeriodicCheck();
+          }
+        }, 5000);
+      }
+
+    } catch (error) {
+      console.error('主窗口创建失败:', error);
+      throw error;
+    }
   }
 
-  // 应用 ready 后立即创建主窗口，避免首次不弹窗
   createMainWindow();
 }).catch(error => {
   console.error('应用启动失败:', error);
@@ -634,7 +839,7 @@ function initializeOtherComponentsAsync() {
   return new Promise((resolve, reject) => {
     try {
       console.log('开始异步初始化其他组件...');
-
+      
       // 创建快捷键管理器
       shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, mainWindow, true);
       shortcutManager.initialUrl = APP_CONFIG.HOME_URL;
@@ -678,7 +883,7 @@ function initializeOtherComponentsAsync() {
         });
       }
 
-      // ...拦截器注册已移至 createMainWindow 内容视图加载后...
+  // ...拦截器注册已移至 createMainWindow 内容视图加载后...
 
       // 注册快捷键（非阻塞）
       if (shortcutManager && process.platform !== 'darwin') {
@@ -741,7 +946,7 @@ function initializeViewsAsync() {
   return new Promise((resolve, reject) => {
     try {
       console.log('第二阶段：异步创建完整组件...');
-
+      
       // 异步创建其他管理器
       setImmediate(() => {
         try {
@@ -762,7 +967,7 @@ function initializeViewsAsync() {
           });
         }
       });
-
+      
     } catch (error) {
       console.error('异步初始化失败:', error);
       reject(error);
@@ -867,7 +1072,7 @@ function finishInitialization() {
     // 设置布局
     setupLayout();
 
-    // ...拦截器注册已移至 createMainWindow 内容视图加载后...
+  // ...拦截器注册已移至 createMainWindow 内容视图加载后...
 
     // 注册快捷键（非阻塞）
     if (shortcutManager && process.platform !== 'darwin') {
@@ -983,7 +1188,7 @@ function createViews() {
       }
     }
 
-    // ...拦截器注册已移至 createMainWindow 内容视图加载后...
+  // ...拦截器注册已移至 createMainWindow 内容视图加载后...
 
     console.log('所有视图快速创建完成');
   } catch (error) {
@@ -1192,15 +1397,15 @@ app.on('before-quit', (event) => {
   if (isQuittingConfirmed) {
     return;
   }
-
+  
   // 如果正在重启，也不需要确认
   if (isRestarting) {
     return;
   }
-
+  
   // 阻止默认退出行为，显示确认对话框
   event.preventDefault();
-
+  
   if (mainWindow && !mainWindow.isDestroyed()) {
     // 如果主窗口存在，通过主窗口的 close 事件来处理
     // 这样可以复用主窗口的确认逻辑
@@ -1222,10 +1427,10 @@ app.on('before-quit', (event) => {
     dialog.showMessageBox(null, options).then((result) => {
       if (result.response === 1) {
         isQuittingConfirmed = true;
-
+        
         // 先关闭所有子窗口
         closeAllChildWindows();
-
+        
         app.quit();
       }
     }).catch((error) => {
