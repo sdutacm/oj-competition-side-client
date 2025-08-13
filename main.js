@@ -116,6 +116,28 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
     let lastRedirectBlockedUrl = '';
     let lastRedirectBlockedTime = 0;
     let currentPageUrl = ''; // 记录当前页面URL
+    
+    // 防重复拦截：域名级别的去重机制
+    let lastBlockedDomain = '';
+    let lastBlockedTime = 0;
+    const DEBOUNCE_TIME = 2000; // 2秒内同一域名只弹一次窗
+
+    // 检查是否应该拦截（去重逻辑）
+    function shouldBlockDialog(url) {
+      const now = Date.now();
+      const domain = require('./utils/urlHelper').getHostname(url);
+      
+      // 如果是同一域名且在去重时间内，则不弹窗
+      if (domain === lastBlockedDomain && now - lastBlockedTime < DEBOUNCE_TIME) {
+        console.log(`拦截去重: ${domain} 在 ${DEBOUNCE_TIME}ms 内已拦截过，跳过弹窗`);
+        return false;
+      }
+      
+      // 更新最近拦截记录
+      lastBlockedDomain = domain;
+      lastBlockedTime = now;
+      return true;
+    }
 
     // 监听页面导航开始，记录URL
     view.webContents.on('did-start-navigation', (event, url) => {
@@ -142,7 +164,7 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
       }
       if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
         event.preventDefault();
-        if (win && !win.isDestroyed()) {
+        if (win && !win.isDestroyed() && shouldBlockDialog(url)) {
           showBlockedDialogWithDebounce(win, domain, '该域名不在允许访问范围', 'default');
         }
         return;
@@ -159,7 +181,7 @@ function applyRedirectInterceptor(view, win, isMainWindow = false) {
       const redirectDomain = require('./utils/urlHelper').getHostname(url);
       if (redirectDomain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
         event.preventDefault();
-        if (win && !win.isDestroyed()) {
+        if (win && !win.isDestroyed() && shouldBlockDialog(url)) {
           showBlockedDialogWithDebounce(win, redirectDomain, '非法重定向拦截，已自动回退主页', 'redirect');
         }
 
@@ -817,22 +839,6 @@ app.whenReady().then(() => {
 });
 
 /**
- * 禁用开发者工具相关功能
- */
-function disableDevTools() {
-  // 禁用主窗口的开发者工具
-  const webContents = mainWindow?.webContents;
-  if (webContents) {
-    // 移除禁止右键菜单的监听，恢复系统默认行为
-
-    // 禁用开发者工具的打开
-    webContents.on('devtools-opened', () => {
-      webContents.closeDevTools();
-    });
-  }
-}
-
-/**
  * 异步初始化其他非关键组件（不影响页面加载）
  */
 function initializeOtherComponentsAsync() {
@@ -919,285 +925,6 @@ function initializeOtherComponentsAsync() {
 }
 
 /**
- * 第一阶段：初始化基础管理器（最小必要组件）
- */
-function initializeBasicManagers() {
-  try {
-    console.log('创建最小必要管理器...');
-
-    // 仅创建内容视图管理器，其他延后
-    contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
-    console.log('内容视图管理器创建完成');
-
-    // 设置主窗口的管理器引用
-    mainWindow._contentViewManager = contentViewManager;
-
-    console.log('基础管理器初始化完成');
-  } catch (error) {
-    console.error('初始化基础管理器失败:', error);
-    throw error;
-  }
-}
-
-/**
- * 第二阶段：异步初始化视图和其他组件
- */
-function initializeViewsAsync() {
-  return new Promise((resolve, reject) => {
-    try {
-      console.log('第二阶段：异步创建完整组件...');
-      
-      // 异步创建其他管理器
-      setImmediate(() => {
-        try {
-          // 创建快捷键管理器
-          shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, mainWindow, true);
-          shortcutManager.initialUrl = APP_CONFIG.HOME_URL;
-          shortcutManager.homeUrl = APP_CONFIG.HOME_URL;
-          console.log('快捷键管理器创建完成');
-
-          // 下一个tick创建工具栏
-          setImmediate(() => {
-            createToolbarAsync(resolve, reject);
-          });
-        } catch (error) {
-          console.warn('快捷键管理器创建失败:', error);
-          setImmediate(() => {
-            createToolbarAsync(resolve, reject);
-          });
-        }
-      });
-      
-    } catch (error) {
-      console.error('异步初始化失败:', error);
-      reject(error);
-    }
-  });
-}
-
-/**
- * 异步创建工具栏和布局
- */
-function createToolbarAsync(resolve, reject) {
-  try {
-    // 创建工具栏管理器
-    toolbarManager = new ToolbarManager(mainWindow, (action) => {
-      if (shortcutManager) {
-        shortcutManager.handleToolbarAction(action);
-      }
-    }, null);
-
-    contentViewManager.setToolbarManager(toolbarManager);
-    console.log('工具栏管理器创建完成');
-
-    // 下一个tick创建布局
-    setImmediate(() => {
-      createLayoutAsync(resolve, reject);
-    });
-  } catch (error) {
-    console.warn('工具栏管理器创建失败:', error);
-    setImmediate(() => {
-      createLayoutAsync(resolve, reject);
-    });
-  }
-}
-
-/**
- * 异步创建布局和视图
- */
-function createLayoutAsync(resolve, reject) {
-  try {
-    // 创建布局管理器
-    layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
-    console.log('布局管理器创建完成');
-
-    // 设置管理器引用
-    mainWindow._toolbarManager = toolbarManager;
-    mainWindow._shortcutManager = shortcutManager;
-    mainWindow._layoutManager = layoutManager;
-
-    // 下一个tick创建视图
-    setImmediate(() => {
-      createViewsAsync(resolve, reject);
-    });
-  } catch (error) {
-    console.warn('布局管理器创建失败:', error);
-    setImmediate(() => {
-      createViewsAsync(resolve, reject);
-    });
-  }
-}
-
-/**
- * 异步创建视图（除了内容视图，只创建工具栏等）
- */
-function createViewsAsync(resolve, reject) {
-  try {
-    console.log('异步创建工具栏视图...');
-
-    // 异步创建工具栏视图
-    if (toolbarManager) {
-      toolbarManager.createToolbarView().then(() => {
-        console.log('工具栏视图创建完成');
-        // 工具栏创建完成后立即重新布局，确保内容视图位置正确
-        if (layoutManager) {
-          layoutManager.layoutViews();
-          console.log('工具栏创建后重新布局完成');
-        }
-      }).catch((error) => {
-        console.warn('工具栏视图创建失败:', error);
-      });
-    }
-
-    // 设置布局和其他配置
-    setImmediate(() => {
-      finishInitialization();
-      // 视图创建完成，通知可以显示窗口
-      if (resolve) resolve();
-    });
-  } catch (error) {
-    console.warn('异步创建视图失败:', error);
-    setImmediate(() => {
-      finishInitialization();
-      if (reject) reject(error);
-    });
-  }
-}
-
-/**
- * 完成初始化
- */
-function finishInitialization() {
-  try {
-    // 设置布局
-    setupLayout();
-
-  // ...拦截器注册已移至 createMainWindow 内容视图加载后...
-
-    // 注册快捷键（非阻塞）
-    if (shortcutManager && process.platform !== 'darwin') {
-      setTimeout(() => {
-        try {
-          shortcutManager.registerShortcuts();
-          console.log('快捷键注册完成');
-        } catch (error) {
-          console.warn('快捷键注册失败:', error);
-        }
-      }, 100);
-    }
-
-    // 创建菜单（非阻塞）
-    if (process.platform === 'darwin') {
-      setTimeout(() => {
-        try {
-          macMenuManager = new MacMenuManager(mainWindow);
-          console.log('macOS菜单创建完成');
-        } catch (error) {
-          console.warn('macOS菜单创建失败:', error);
-        }
-      }, 100);
-    }
-
-    console.log('所有组件异步初始化完成');
-  } catch (error) {
-    console.error('完成初始化失败:', error);
-  }
-}
-
-/**
- * 初始化所有管理器（旧版本，保留以防回滚）
- */
-function initializeManagers() {
-  try {
-    console.log('初始化管理器...');
-
-    // 创建内容视图管理器
-    contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
-    console.log('内容视图管理器创建完成');
-
-    // 创建快捷键管理器
-    shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, mainWindow, true);
-    // 设置主窗口的初始 url
-    shortcutManager.initialUrl = APP_CONFIG.HOME_URL;
-    shortcutManager.homeUrl = APP_CONFIG.HOME_URL;
-    console.log('快捷键管理器创建完成');
-
-    // 暂时简化工具栏管理器创建
-    try {
-      toolbarManager = new ToolbarManager(mainWindow, (action) => {
-        if (shortcutManager) {
-          shortcutManager.handleToolbarAction(action);
-        }
-      }, null);
-
-      // 连接工具栏管理器和内容视图管理器
-      contentViewManager.setToolbarManager(toolbarManager);
-      console.log('工具栏管理器创建完成');
-    } catch (error) {
-      console.warn('工具栏管理器创建失败，但不影响核心功能:', error);
-    }
-
-    // 创建布局管理器
-    layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
-    console.log('布局管理器创建完成');
-
-    // 设置主窗口的管理器引用，供菜单使用
-    mainWindow._contentViewManager = contentViewManager;
-    mainWindow._toolbarManager = toolbarManager;
-    mainWindow._shortcutManager = shortcutManager;
-    mainWindow._layoutManager = layoutManager;
-
-    console.log('所有管理器初始化完成');
-  } catch (error) {
-    console.error('初始化管理器失败:', error);
-    throw error;
-  }
-}
-
-/**
- * 创建所有视图
- */
-function createViews() {
-  try {
-    console.log('快速创建视图...');
-
-    // 优先创建工具栏视图，确保立即显示
-    if (toolbarManager) {
-      try {
-        console.log('创建工具栏视图...');
-        toolbarManager.createToolbarView();
-        console.log('工具栏视图创建完成');
-      } catch (error) {
-        console.warn('工具栏视图创建失败，但不影响核心功能:', error);
-      }
-    }
-
-    // 创建内容视图
-    console.log('创建内容视图...');
-    contentViewManager.createContentView();
-    console.log('内容视图创建完成');
-
-    // Windows/Linux 平台：内容视图创建后再注册快捷键，确保 webContents 存在
-    if (shortcutManager && process.platform !== 'darwin') {
-      try {
-        console.log('内容视图创建后注册主窗口快捷键...');
-        shortcutManager.registerShortcuts();
-        console.log('主窗口快捷键注册完成');
-      } catch (error) {
-        console.warn('主窗口快捷键注册失败:', error);
-      }
-    }
-
-  // ...拦截器注册已移至 createMainWindow 内容视图加载后...
-
-    console.log('所有视图快速创建完成');
-  } catch (error) {
-    console.error('创建视图失败:', error);
-    throw error;
-  }
-}
-
-/**
  * 设置主窗口拦截器
  */
 function setupMainWindowInterceptors() {
@@ -1233,6 +960,27 @@ function setupMainWindowInterceptors() {
         }
       });
 
+      // 为主窗口添加防重复拦截机制
+      let mainWindowLastBlockedDomain = '';
+      let mainWindowLastBlockedTime = 0;
+      const MAIN_WINDOW_DEBOUNCE_TIME = 2000; // 2秒内同一域名只弹一次窗
+      
+      function shouldBlockMainWindowDialog(url) {
+        const now = Date.now();
+        const domain = require('./utils/urlHelper').getHostname(url);
+        
+        // 如果是同一域名且在去重时间内，则不弹窗
+        if (domain === mainWindowLastBlockedDomain && now - mainWindowLastBlockedTime < MAIN_WINDOW_DEBOUNCE_TIME) {
+          console.log(`主窗口拦截去重: ${domain} 在 ${MAIN_WINDOW_DEBOUNCE_TIME}ms 内已拦截过，跳过弹窗`);
+          return false;
+        }
+        
+        // 更新最近拦截记录
+        mainWindowLastBlockedDomain = domain;
+        mainWindowLastBlockedTime = now;
+        return true;
+      }
+
       // 主窗口 will-navigate 拦截
       contentView.webContents.on('will-navigate', (event, url) => {
         const domain = require('./utils/urlHelper').getHostname(url);
@@ -1240,7 +988,9 @@ function setupMainWindowInterceptors() {
         // 检查是否是GitHub链接，全部拦截
         if (domain.includes('github.com')) {
           event.preventDefault();
-          showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+          if (shouldBlockMainWindowDialog(url)) {
+            showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+          }
           return;
         }
 
@@ -1253,7 +1003,7 @@ function setupMainWindowInterceptors() {
         // 非主域名/白名单，全部弹窗拦截
         if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
           event.preventDefault();
-          if (mainWindow && !mainWindow.isDestroyed()) {
+          if (mainWindow && !mainWindow.isDestroyed() && shouldBlockMainWindowDialog(url)) {
             showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
           }
           return;
@@ -1271,7 +1021,7 @@ function setupMainWindowInterceptors() {
         const domain = require('./utils/urlHelper').getHostname(url);
         if (domain !== APP_CONFIG.MAIN_DOMAIN && !isWhiteDomain(url, APP_CONFIG)) {
           event.preventDefault();
-          if (mainWindow && !mainWindow.isDestroyed()) {
+          if (mainWindow && !mainWindow.isDestroyed() && shouldBlockMainWindowDialog(url)) {
             showBlockedDialogWithDebounce(mainWindow, domain, '非法重定向拦截，已阻止跳转', 'redirect');
           }
           return;
@@ -1285,7 +1035,9 @@ function setupMainWindowInterceptors() {
 
         // 检查是否是GitHub链接，全部拦截
         if (domain.includes('github.com')) {
-          showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+          if (shouldBlockMainWindowDialog(url)) {
+            showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
+          }
           return { action: 'deny' };
         }
 
@@ -1301,7 +1053,7 @@ function setupMainWindowInterceptors() {
         }
 
         // 非白名单域名，显示拦截对话框
-        if (mainWindow && !mainWindow.isDestroyed()) {
+        if (mainWindow && !mainWindow.isDestroyed() && shouldBlockMainWindowDialog(url)) {
           showBlockedDialogWithDebounce(mainWindow, domain, '该域名不在允许访问范围', 'default');
         }
         return { action: 'deny' };
