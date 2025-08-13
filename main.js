@@ -725,8 +725,8 @@ app.whenReady().then(() => {
   });
   contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
   mainWindow._contentViewManager = contentViewManager;
-  // 创建内容视图并直接加载主页面
-  contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
+  // 创建内容视图但不立即加载主页面
+  contentViewManager.createContentView(undefined, 'about:blank');
   // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
   const contentBounds = mainWindow.getContentBounds();
   const toolbarHeight = 48;
@@ -769,19 +769,21 @@ app.whenReady().then(() => {
       console.warn('异步组件初始化失败:', error);
     });
   });
-  // 页面加载完成后再显示主窗口
-  if (contentViewManager && contentViewManager.contentView) {
-    try {
-      const wc = contentViewManager.contentView.webContents;
-      wc.once('did-finish-load', () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-          mainWindow.focus();
-          console.log('主窗口页面加载完成后显示');
-        }
-      });
-    } catch (e) {
-      console.warn('主窗口内容视图加载页面失败:', e.message);
+  // 先显示主窗口，再加载主页面内容
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+    console.log('主窗口已显示，准备加载页面');
+    if (contentViewManager && contentViewManager.contentView) {
+      try {
+        const wc = contentViewManager.contentView.webContents;
+        wc.loadURL(APP_CONFIG.HOME_URL);
+        wc.once('did-finish-load', () => {
+          console.log('主窗口页面加载完成');
+        });
+      } catch (e) {
+        console.warn('主窗口内容视图加载页面失败:', e.message);
+      }
     }
   }
 }).catch(error => {
