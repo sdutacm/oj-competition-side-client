@@ -111,28 +111,12 @@ function createStartupWindow(htmlContent, options = {}) {
     console.log('[Splash] dom-ready，准备显示启动窗口');
     startupWindow.show();
   });
-  // show 事件后注入动画或直接设置最终帧
+  // show 事件后统一注入动画
   startupWindow.once('show', () => {
-    const isWindows = process.platform === 'win32';
     setTimeout(() => {
       try {
         if (startupWindow && !startupWindow.isDestroyed()) {
-          if (isWindows) {
-            // 直接设置最终动画帧：移除所有动画，设置最终样式
-            startupWindow.webContents.executeJavaScript(`
-              document.body.classList.add('start-animation');
-              // 立即完成所有动画
-              const org = document.querySelector('.org');
-              const productText = document.querySelector('.product-text');
-              const version = document.querySelector('.version');
-              if (org) { org.style.opacity = '1'; org.style.transform = 'translateY(0)'; }
-              if (productText) { productText.style.opacity = '1'; productText.style.transform = 'translateY(0)'; }
-              if (version) { version.style.opacity = '0.85'; version.style.transform = 'translateY(0)'; }
-            `);
-          } else {
-            // 其他系统正常播放动画
-            startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
-          }
+          startupWindow.webContents.executeJavaScript('document.body.classList.add("start-animation")');
         }
       } catch (e) {
         console.warn('[Splash] 注入动画启动JS失败:', e.message);
