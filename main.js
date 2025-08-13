@@ -241,7 +241,7 @@ function openNewWindow(url) {
   const windowWidth = 1400;
   const windowHeight = 900;
   const centerPosition = calculateCenteredPosition(windowWidth, windowHeight);
-  
+
   // 使用统一的背景色检测函数
   const backgroundColor = getWindowsBackgroundColor();
   console.log('创建新窗口使用背景色:', backgroundColor);
@@ -266,7 +266,7 @@ function openNewWindow(url) {
 
   // 将新窗口添加到追踪列表
   allWindows.push(win);
-  
+
   // 监听新窗口关闭事件，从追踪列表中移除
   win.on('closed', () => {
     const index = allWindows.indexOf(win);
@@ -356,7 +356,7 @@ function openNewWindow(url) {
     // Windows系统：获取统一的背景色
     const browserViewBgColor = getWindowsBackgroundColor();
     console.log('新窗口BrowserView使用背景色:', browserViewBgColor);
-    
+
     // 创建内容视图并添加到窗口
     const contentView = new BrowserView({
       webPreferences: {
@@ -370,7 +370,7 @@ function openNewWindow(url) {
 
     // 设置自定义 User-Agent
     const defaultUserAgent = contentView.webContents.getUserAgent();
-  const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
+    const customUserAgent = `${defaultUserAgent} SDUTOJCompetitionSideClient/${getAppVersion()}`;
     contentView.webContents.setUserAgent(customUserAgent);
 
     // 新窗口标题同步 - 跟随网页标题
@@ -461,7 +461,7 @@ function openNewWindow(url) {
   if (newWindowContentViewManager.contentView && !newWindowContentViewManager.contentView.webContents.isDestroyed()) {
     newWindowContentViewManager.contentView.webContents.loadURL(url);
   }
-  
+
   setTimeout(() => {
     if (win && !win.isDestroyed()) {
       win.show();
@@ -498,7 +498,7 @@ function getWindowsBackgroundColor() {
   try {
     const isDarkTheme = nativeTheme.shouldUseDarkColors;
     console.log('系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
-    
+
     // Windows系统特殊处理，背景色与主题保持一致
     if (process.platform === 'win32') {
       return isDarkTheme ? '#1f1f1f' : '#f5f5f5';
@@ -569,13 +569,13 @@ function createMainWindow() {
       });
       console.log('内容视图直接设置为工具栏下方，避免后续调整闪烁');
 
-      // 布局完成后立即显示主窗口
-      mainWindow.show();
-      mainWindow.focus();
-      console.log('主窗口布局完成后立即显示');
-
-      // show后再加载主页面URL
+      // 只有当内容视图加载完成后再显示主窗口，避免白屏
       if (view && view.webContents) {
+        view.webContents.once('did-finish-load', () => {
+          mainWindow.show();
+          mainWindow.focus();
+          console.log('主窗口内容加载完成后显示');
+        });
         view.webContents.loadURL(APP_CONFIG.HOME_URL);
         // 注册拦截器
         setupMainWindowInterceptors();
@@ -646,7 +646,7 @@ function createMainWindow() {
 
 app.whenReady().then(() => {
   console.log('=== Electron Ready ===', `耗时: ${Date.now() - startTime}ms`);
-  
+
   // 只在 macOS 系统下初始化 i18n
   if (process.platform === 'darwin') {
     console.log('macOS 系统 - 延迟加载 i18n');
@@ -667,14 +667,14 @@ app.whenReady().then(() => {
       try {
         // 使用统一的背景色检测函数
         const newBgColor = getWindowsBackgroundColor();
-        
+
         console.log('Windows系统主题变化检测到，更新背景色:', newBgColor);
-        
+
         // 更新主窗口背景色
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.setBackgroundColor(newBgColor);
         }
-        
+
         // 更新所有子窗口背景色
         allWindows.forEach(win => {
           if (win && !win.isDestroyed()) {
@@ -723,7 +723,7 @@ function initializeOtherComponentsAsync() {
   return new Promise((resolve, reject) => {
     try {
       console.log('开始异步初始化其他组件...');
-      
+
       // 创建快捷键管理器
       shortcutManager = new ShortcutManager(contentViewManager, APP_CONFIG.HOME_URL, mainWindow, true);
       shortcutManager.initialUrl = APP_CONFIG.HOME_URL;
@@ -767,7 +767,7 @@ function initializeOtherComponentsAsync() {
         });
       }
 
-  // ...拦截器注册已移至 createMainWindow 内容视图加载后...
+      // ...拦截器注册已移至 createMainWindow 内容视图加载后...
 
       // 注册快捷键（非阻塞）
       if (shortcutManager && process.platform !== 'darwin') {
@@ -830,7 +830,7 @@ function initializeViewsAsync() {
   return new Promise((resolve, reject) => {
     try {
       console.log('第二阶段：异步创建完整组件...');
-      
+
       // 异步创建其他管理器
       setImmediate(() => {
         try {
@@ -851,7 +851,7 @@ function initializeViewsAsync() {
           });
         }
       });
-      
+
     } catch (error) {
       console.error('异步初始化失败:', error);
       reject(error);
@@ -956,7 +956,7 @@ function finishInitialization() {
     // 设置布局
     setupLayout();
 
-  // ...拦截器注册已移至 createMainWindow 内容视图加载后...
+    // ...拦截器注册已移至 createMainWindow 内容视图加载后...
 
     // 注册快捷键（非阻塞）
     if (shortcutManager && process.platform !== 'darwin') {
@@ -1072,7 +1072,7 @@ function createViews() {
       }
     }
 
-  // ...拦截器注册已移至 createMainWindow 内容视图加载后...
+    // ...拦截器注册已移至 createMainWindow 内容视图加载后...
 
     console.log('所有视图快速创建完成');
   } catch (error) {
@@ -1281,15 +1281,15 @@ app.on('before-quit', (event) => {
   if (isQuittingConfirmed) {
     return;
   }
-  
+
   // 如果正在重启，也不需要确认
   if (isRestarting) {
     return;
   }
-  
+
   // 阻止默认退出行为，显示确认对话框
   event.preventDefault();
-  
+
   if (mainWindow && !mainWindow.isDestroyed()) {
     // 如果主窗口存在，通过主窗口的 close 事件来处理
     // 这样可以复用主窗口的确认逻辑
@@ -1311,10 +1311,10 @@ app.on('before-quit', (event) => {
     dialog.showMessageBox(null, options).then((result) => {
       if (result.response === 1) {
         isQuittingConfirmed = true;
-        
+
         // 先关闭所有子窗口
         closeAllChildWindows();
-        
+
         app.quit();
       }
     }).catch((error) => {
