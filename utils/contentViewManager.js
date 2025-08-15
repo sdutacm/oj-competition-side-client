@@ -41,6 +41,7 @@ class ContentViewManager {
  */
   injectPerfCSS(contentView) {
     if (!contentView || !contentView.webContents) return;
+    return; // 临时禁用CSS注入进行测试
     
     contentView.webContents.insertCSS(`
                 /* 优化滚动性能，但保留网页原有的动画和过渡效果 */

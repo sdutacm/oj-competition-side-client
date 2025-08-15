@@ -523,11 +523,6 @@ function getWindowsBackgroundColor() {
     console.log('nativeTheme.shouldUseDarkColors:', isDarkTheme);
     console.log('process.platform:', process.platform);
     
-    // 临时强制使用浅色背景进行测试
-    const forceLightBackground = '#f5f5f5';
-    console.log('强制使用浅色背景进行测试:', forceLightBackground);
-    return forceLightBackground;
-    
     // Windows系统特殊处理，背景色与主题保持一致
     if (process.platform === 'win32') {
       return isDarkTheme ? '#1f1f1f' : '#f5f5f5';
@@ -563,7 +558,7 @@ function createMainWindow() {
       x: centerPosition.x,
       y: centerPosition.y,
       backgroundColor: backgroundColor, // 统一用主题色
-      show: false, // 先不显示，加载临时页面后再显示
+      show: true, // 立即显示
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -573,54 +568,51 @@ function createMainWindow() {
       }
     });
     
-    // ===== 先加载临时浅色页面，然后显示窗口，避免黑屏 =====
-    console.log('窗口创建完成，先加载临时页面...');
+    // ===== 恢复正常的 ContentView 流程 =====
+    console.log('窗口创建完成，开始正常初始化...');
     
-    // 创建一个与背景色匹配的临时页面
-    const tempHTML = `<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { 
-      margin: 0; 
-      padding: 0; 
-      background-color: ${backgroundColor}; 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      color: #666666;
-    }
-  </style>
-</head>
-<body>
-  <div>正在加载 SDUT OnlineJudge...</div>
-</body>
-</html>`;
-    const tempDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(tempHTML)}`;
-    
-    // 先加载临时页面
-    mainWindow.loadURL(tempDataURL);
-    
-    // 临时页面加载完成后显示窗口，然后加载真正的页面
-    mainWindow.webContents.once('did-finish-load', () => {
-      console.log('临时页面加载完成，显示窗口');
-      mainWindow.show();
-      mainWindow.focus();
-      
-      // 延迟1秒后加载真正的页面
-      setTimeout(() => {
-        console.log('开始加载真正的页面:', APP_CONFIG.HOME_URL);
-        mainWindow.loadURL(APP_CONFIG.HOME_URL);
-        
-        // 真正页面加载完成后的处理
-        mainWindow.webContents.once('did-finish-load', () => {
-          console.log('真正页面加载完成');
-          mainWindow.focus();
+    try {
+      // 创建内容视图管理器
+      contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
+      mainWindow._contentViewManager = contentViewManager;
+      console.log('内容视图管理器创建完成');
+
+      // 创建内容视图并开始加载
+      const view = contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
+      console.log('内容视图创建完成，页面已开始加载');
+
+      // 监听页面加载完成事件，重点调试 title 更新后的黑屏问题
+      if (view && view.webContents) {
+        view.webContents.once('did-finish-load', () => {
+          console.log('页面加载完成，开始调试后续步骤...');
+          setupMainWindowInterceptors();
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.focus();
+            console.log('主窗口内容加载完成后聚焦');
+          }
         });
-      }, 1000);
-    });
+
+        // 监听 title 变化，看看黑屏是否在 title 更新时发生
+        view.webContents.on('page-title-updated', (event, title) => {
+          console.log('页面 title 更新为:', title);
+          console.log('title 更新时检查页面状态...');
+        });
+      }
+
+      // 设置内容视图位置
+      const contentBounds = mainWindow.getContentBounds();
+      const toolbarHeight = 48;
+      contentViewManager.setBounds({
+        x: 0,
+        y: toolbarHeight,
+        width: contentBounds.width,
+        height: contentBounds.height - toolbarHeight
+      });
+      console.log('内容视图设置为工具栏下方');
+      
+    } catch (error) {
+      console.error('初始化失败:', error);
+    }
     
     // 临时注释掉 ContentView 相关代码
     /*
