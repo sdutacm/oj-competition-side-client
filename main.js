@@ -823,6 +823,14 @@ app.whenReady().then(() => {
         }
       });
 
+      // ===== 临时禁用 ContentView，直接用主窗口加载网页 =====
+      console.log('第二个createMainWindow - 测试直接加载网页...');
+      
+      // 主窗口直接加载网页，跳过 BrowserView
+      mainWindow.loadURL(APP_CONFIG.HOME_URL);
+      console.log('第二个createMainWindow - 主窗口直接加载网页:', APP_CONFIG.HOME_URL);
+      
+      /*
       // 初始化内容视图管理器
       contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
       mainWindow._contentViewManager = contentViewManager;
@@ -839,6 +847,7 @@ app.whenReady().then(() => {
         width: contentBounds.width,
         height: contentBounds.height - toolbarHeight
       });
+      */
 
       // 关闭事件处理
       mainWindow.on('close', (event) => {
@@ -877,6 +886,24 @@ app.whenReady().then(() => {
         });
       });
 
+      // 监听主窗口直接加载的页面事件
+      mainWindow.webContents.once('did-finish-load', () => {
+        console.log('第二个createMainWindow - 主窗口页面加载完成，显示窗口');
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      });
+
+      // 监听主窗口的 title 变化
+      mainWindow.webContents.on('page-title-updated', (event, title) => {
+        console.log('第二个createMainWindow - title 更新为:', title);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setTitle(title);
+        }
+      });
+
+      /*
       // 监听页面加载完成事件（当前使用直接加载，这段代码不会执行）
       if (contentViewManager && contentViewManager.contentView) {
         const webContents = contentViewManager.contentView.webContents;
@@ -889,6 +916,7 @@ app.whenReady().then(() => {
             mainWindow.focus();
           }
         });
+      */
 
         // 启动更新检查
         setTimeout(() => {
@@ -897,16 +925,7 @@ app.whenReady().then(() => {
             updateManager.startPeriodicCheck();
           }
         }, 5000);
-      } else {
-        console.log('当前使用主窗口直接加载，跳过 ContentView 相关逻辑');
-        // 启动更新检查
-        setTimeout(() => {
-          if (updateManager) {
-            console.log('启动更新检查');
-            updateManager.startPeriodicCheck();
-          }
-        }, 5000);
-      }
+        // */
 
     } catch (error) {
       console.error('主窗口创建失败:', error);
