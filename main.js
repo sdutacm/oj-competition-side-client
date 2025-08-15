@@ -513,6 +513,11 @@ function openNewWindow(url) {
   return win;
 }
 
+// 临时禁用硬件加速，测试是否解决黑屏问题
+// 必须在 app.whenReady() 之前调用
+app.disableHardwareAcceleration();
+console.log('已禁用硬件加速');
+
 /**
  * Windows系统提前检测系统主题背景色
  */
@@ -958,11 +963,12 @@ function initializeOtherComponentsAsync() {
           shortcutManager.handleToolbarAction(action);
         }
       }, null);
-      contentViewManager.setToolbarManager(toolbarManager);
+      // 跳过 contentViewManager.setToolbarManager，因为当前没有使用 ContentViewManager
+      // contentViewManager.setToolbarManager(toolbarManager);
       console.log('工具栏管理器创建完成');
 
-      // 创建布局管理器
-      layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
+      // 创建布局管理器 - 传入null作为contentViewManager
+      layoutManager = new LayoutManager(mainWindow, toolbarManager, null);
       console.log('布局管理器创建完成');
 
       // 设置管理器引用
