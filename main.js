@@ -862,8 +862,7 @@ app.whenReady().then(() => {
         webContents.once('did-finish-load', () => {
           console.log('主窗口页面加载完成，显示窗口');
           if (mainWindow && !mainWindow.isDestroyed()) {
-            // 移除这个 show() 调用，因为主窗口已经设置为立即显示
-            // mainWindow.show();
+            mainWindow.show(); // 恢复显示窗口的调用
             mainWindow.focus();
           }
         });
