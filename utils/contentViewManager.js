@@ -104,6 +104,13 @@ class ContentViewManager {
     try {
       const isDarkTheme = nativeTheme.shouldUseDarkColors;
       console.log('ContentViewManager 系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
+      console.log('ContentViewManager nativeTheme.shouldUseDarkColors:', isDarkTheme);
+      console.log('ContentViewManager process.platform:', process.platform);
+      
+      // 临时强制使用浅色背景进行测试
+      const forceLightBackground = '#f5f5f5';
+      console.log('ContentViewManager 强制使用浅色背景进行测试:', forceLightBackground);
+      return forceLightBackground;
       
       // Windows系统特殊处理，背景色与主题保持一致
       if (process.platform === 'win32') {

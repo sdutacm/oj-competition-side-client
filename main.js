@@ -520,6 +520,13 @@ function getWindowsBackgroundColor() {
   try {
     const isDarkTheme = nativeTheme.shouldUseDarkColors;
     console.log('系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
+    console.log('nativeTheme.shouldUseDarkColors:', isDarkTheme);
+    console.log('process.platform:', process.platform);
+    
+    // 临时强制使用浅色背景进行测试
+    const forceLightBackground = '#f5f5f5';
+    console.log('强制使用浅色背景进行测试:', forceLightBackground);
+    return forceLightBackground;
     
     // Windows系统特殊处理，背景色与主题保持一致
     if (process.platform === 'win32') {
@@ -566,9 +573,15 @@ function createMainWindow() {
       }
     });
     
-    // ===== 延迟创建内容视图，避免黑屏 =====
-    console.log('窗口创建完成，延迟初始化...');
+    // ===== 测试：主窗口直接加载页面，不使用 BrowserView =====
+    console.log('窗口创建完成，测试直接加载页面...');
     
+    // 测试：让主窗口直接加载外部页面，看是否还有黑屏
+    mainWindow.loadURL(APP_CONFIG.HOME_URL);
+    console.log('主窗口直接加载页面:', APP_CONFIG.HOME_URL);
+    
+    // 临时注释掉 ContentView 相关代码
+    /*
     // 延迟100ms创建内容视图，让主窗口背景色先显示
     setTimeout(() => {
       try {
@@ -607,6 +620,7 @@ function createMainWindow() {
         console.error('延迟初始化失败:', error);
       }
     }, 200); // 延迟200ms，确保主窗口背景色先显示
+    */
     
   // 主窗口直接创建并显示，无 splash
     // 主窗口直接创建并显示，无 splash
