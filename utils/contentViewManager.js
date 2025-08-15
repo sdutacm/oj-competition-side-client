@@ -125,9 +125,8 @@ class ContentViewManager {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        webSecurity: true,
-        backgroundColor: backgroundColor, // 保留背景色避免白屏
-        // 移除其他配置，使用Electron默认Chrome行为
+        webSecurity: true
+        // 移除 backgroundColor，使用 setBackgroundColor 设置
       }
     });
     targetWindow.addBrowserView(contentView);
