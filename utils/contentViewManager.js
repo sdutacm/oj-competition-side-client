@@ -151,32 +151,6 @@ class ContentViewManager {
       console.log('BrowserView背景色设置失败:', error);
     }
 
-    // 立即加载一个临时的浅色背景页面，防止about:blank黑屏
-    const tempHTML = `<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { 
-      margin: 0; 
-      padding: 0; 
-      background-color: ${backgroundColor}; 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      color: ${backgroundColor === '#1f1f1f' ? '#ffffff' : '#666666'};
-    }
-  </style>
-</head>
-<body>
-  <div>正在加载...</div>
-</body>
-</html>`;
-    const tempDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(tempHTML)}`;
-    contentView.webContents.loadURL(tempDataURL);
-    console.log('已加载临时背景页面，防止黑屏');
-
     // 绑定 title 同步
     this.bindTitleSync(contentView, targetWindow);
 
@@ -217,36 +191,34 @@ class ContentViewManager {
     if (!checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).allowed) {
       console.log('[拦截] 首次加载，弹窗提示', hostname);
       showBlockedDialog(targetWindow, hostname, checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).reason, 'default');
-      return contentView; // 返回contentView，但已经加载了临时背景页面，不会黑屏
+      return contentView; // 返回contentView，已设置背景色，不会黑屏
     }
 
-    // 延迟一点加载真实页面，确保临时背景页面先显示
-    setTimeout(() => {
-      try {
-        contentView.webContents.loadURL(url);
-        console.log('开始加载真实页面:', url);
-        // 页面加载完成后每次都注入性能优化CSS，保证刷新/新建窗口/导航都生效
-        contentView.webContents.on('did-finish-load', () => {
+    // 直接加载真实页面
+    try {
+      contentView.webContents.loadURL(url);
+      console.log('开始加载真实页面:', url);
+      // 页面加载完成后每次都注入性能优化CSS，保证刷新/新建窗口/导航都生效
+      contentView.webContents.on('did-finish-load', () => {
+        this.injectPerfCSS(contentView);
+        console.log('页面加载完成并注入CSS');
+      });
+      // 主窗口内容视图的 dom-ready 也注入一次，增强注入时机
+      if (targetWindow === this.mainWindow) {
+        contentView.webContents.on('dom-ready', () => {
           this.injectPerfCSS(contentView);
-          console.log('页面加载完成并注入CSS');
+          console.log('主窗口 dom-ready 注入CSS');
         });
-        // 主窗口内容视图的 dom-ready 也注入一次，增强注入时机
-        if (targetWindow === this.mainWindow) {
-          contentView.webContents.on('dom-ready', () => {
-            this.injectPerfCSS(contentView);
-            console.log('主窗口 dom-ready 注入CSS');
-          });
-        }
-        // Windows特殊处理：监听第一次DOM准备就绪，确保有初始内容
-        if (process.platform === 'win32' && targetWindow === this.mainWindow) {
-          contentView.webContents.once('dom-ready', () => {
-            console.log('Windows系统：DOM准备就绪，页面有基础内容');
-          });
-        }
-      } catch (e) {
-        console.warn('加载页面失败:', e.message);
       }
-    }, 100); // 延迟100ms加载真实页面
+      // Windows特殊处理：监听第一次DOM准备就绪，确保有初始内容
+      if (process.platform === 'win32' && targetWindow === this.mainWindow) {
+        contentView.webContents.once('dom-ready', () => {
+          console.log('Windows系统：DOM准备就绪，页面有基础内容');
+        });
+      }
+    } catch (e) {
+      console.warn('加载页面失败:', e.message);
+    }
 
     // 禁用内容视图的开发者工具相关功能和快捷键，仅拦截开发者工具快捷键
     this.disableDevToolsForContentView(contentView);

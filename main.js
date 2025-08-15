@@ -566,44 +566,47 @@ function createMainWindow() {
       }
     });
     
-    // ===== 立即同步初始化，确保真正的立即加载 =====
-    console.log('窗口创建完成，开始同步初始化...');
+    // ===== 延迟创建内容视图，避免黑屏 =====
+    console.log('窗口创建完成，延迟初始化...');
     
-    try {
-      // 立即同步创建内容视图管理器
-      contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
-      mainWindow._contentViewManager = contentViewManager;
-      console.log('内容视图管理器同步创建完成');
+    // 延迟100ms创建内容视图，让主窗口背景色先显示
+    setTimeout(() => {
+      try {
+        // 创建内容视图管理器
+        contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
+        mainWindow._contentViewManager = contentViewManager;
+        console.log('内容视图管理器创建完成');
 
-      // 立即同步创建内容视图并开始加载
-      const view = contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
-      console.log('内容视图同步创建完成，页面已开始加载');
+        // 创建内容视图并开始加载
+        const view = contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
+        console.log('内容视图创建完成，页面已开始加载');
 
-      // 只在内容视图创建并 loadURL 后注册一次拦截器
-      if (view && view.webContents) {
-        view.webContents.once('did-finish-load', () => {
-          setupMainWindowInterceptors();
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.focus();
-            console.log('主窗口内容加载完成后聚焦');
-          }
+        // 只在内容视图创建并 loadURL 后注册一次拦截器
+        if (view && view.webContents) {
+          view.webContents.once('did-finish-load', () => {
+            setupMainWindowInterceptors();
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.focus();
+              console.log('主窗口内容加载完成后聚焦');
+            }
+          });
+        }
+
+        // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
+        const contentBounds = mainWindow.getContentBounds();
+        const toolbarHeight = 48; // 工具栏高度
+        contentViewManager.setBounds({
+          x: 0,
+          y: toolbarHeight, // 直接为工具栏预留空间
+          width: contentBounds.width,
+          height: contentBounds.height - toolbarHeight
         });
+        console.log('内容视图直接设置为工具栏下方，避免后续调整闪烁');
+        
+      } catch (error) {
+        console.error('延迟初始化失败:', error);
       }
-
-      // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
-      const contentBounds = mainWindow.getContentBounds();
-      const toolbarHeight = 48; // 工具栏高度
-      contentViewManager.setBounds({
-        x: 0,
-        y: toolbarHeight, // 直接为工具栏预留空间
-        width: contentBounds.width,
-        height: contentBounds.height - toolbarHeight
-      });
-      console.log('内容视图直接设置为工具栏下方，避免后续调整闪烁');
-      
-    } catch (error) {
-      console.error('同步初始化失败:', error);
-    }
+    }, 200); // 延迟200ms，确保主窗口背景色先显示
     
   // 主窗口直接创建并显示，无 splash
     // 主窗口直接创建并显示，无 splash
