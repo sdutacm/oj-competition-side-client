@@ -41,7 +41,6 @@ class ContentViewManager {
  */
   injectPerfCSS(contentView) {
     if (!contentView || !contentView.webContents) return;
-    return; // 临时禁用CSS注入进行测试
     
     contentView.webContents.insertCSS(`
                 /* 优化滚动性能，但保留网页原有的动画和过渡效果 */
@@ -102,31 +101,13 @@ class ContentViewManager {
    * Windows系统提前检测系统主题背景色（与main.js保持一致）
    */
   getWindowsBackgroundColor() {
-    try {
-      const isDarkTheme = nativeTheme.shouldUseDarkColors;
-      console.log('ContentViewManager 系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
-      console.log('ContentViewManager nativeTheme.shouldUseDarkColors:', isDarkTheme);
-      console.log('ContentViewManager process.platform:', process.platform);
-      
-      // 临时强制使用浅色背景进行测试
-      const forceLightBackground = '#f5f5f5';
-      console.log('ContentViewManager 强制使用浅色背景进行测试:', forceLightBackground);
-      return forceLightBackground;
-      
-      // Windows系统特殊处理，背景色与主题保持一致
-      if (process.platform === 'win32') {
-        return isDarkTheme ? '#1f1f1f' : '#f5f5f5';
-      }
-      // 其他系统使用原有逻辑，避免纯白色
-      return isDarkTheme ? '#2d2d2d' : '#f5f5f5';
-    } catch (error) {
-      console.log('ContentViewManager 主题检测失败，使用默认背景色:', error);
-      // Windows系统检测失败时使用中性背景
-      if (process.platform === 'win32') {
-        return '#f0f0f0';
-      }
-      return '#f5f5f5';
+    // Windows系统特殊处理，背景色与网页首屏保持一致，彻底消除闪烁
+    if (process.platform === 'win32') {
+      return '#f5f5f5'; // 与网页首屏背景色一致
     }
+    // 其他系统使用原有逻辑
+    const { nativeTheme } = require('electron');
+    return nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#f5f5f5';
   }
 
   /**
@@ -144,20 +125,13 @@ class ContentViewManager {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        webSecurity: true
-        // 移除 backgroundColor，使用 setBackgroundColor 设置
+        webSecurity: true,
+        backgroundColor: backgroundColor, // 保留背景色避免白屏
+        // 移除其他配置，使用Electron默认Chrome行为
       }
     });
     targetWindow.addBrowserView(contentView);
     console.log('BrowserView已添加到窗口');
-
-    // 立即设置背景色，防止黑屏
-    try {
-      contentView.setBackgroundColor(backgroundColor);
-      console.log('BrowserView背景色设置完成:', backgroundColor);
-    } catch (error) {
-      console.log('BrowserView背景色设置失败:', error);
-    }
 
     // 绑定 title 同步
     this.bindTitleSync(contentView, targetWindow);
@@ -168,19 +142,18 @@ class ContentViewManager {
     } else {
       this.setupNavigation(contentView, targetWindow, true); // 主窗口只绑定导航状态
     }
-    
-    // 所有系统都设置BrowserView背景色，确保不会黑屏
-    try {
-      contentView.setBackgroundColor(backgroundColor);
-      console.log('BrowserView背景色设置完成:', backgroundColor);
-      
-      // Windows特殊处理：设置额外的显示属性
-      if (process.platform === 'win32' && contentView.webContents) {
-        contentView.webContents.setBackgroundThrottling(false);
-        console.log('Windows系统：BrowserView显示属性设置完成');
+    // Windows系统特殊处理：立即设置BrowserView背景色并强制刷新
+    if (process.platform === 'win32') {
+      try {
+        contentView.setBackgroundColor(backgroundColor);
+        // Windows特殊处理：设置额外的显示属性
+        if (contentView.webContents) {
+          contentView.webContents.setBackgroundThrottling(false);
+        }
+        console.log('Windows系统：BrowserView背景色和显示属性设置完成');
+      } catch (error) {
+        console.log('Windows系统：BrowserView背景色设置失败:', error);
       }
-    } catch (error) {
-      console.log('BrowserView背景色设置失败:', error);
     }
 
   // 只声明一次 webContents
@@ -199,13 +172,13 @@ class ContentViewManager {
     if (!checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).allowed) {
       console.log('[拦截] 首次加载，弹窗提示', hostname);
       showBlockedDialog(targetWindow, hostname, checkDomainAllowed(hostname, this.config, targetWindow === this.mainWindow).reason, 'default');
-      return contentView; // 返回contentView，已设置背景色，不会黑屏
+      return contentView; // 返回空的contentView，不加载非法域名
     }
 
-    // 直接加载真实页面
+    // 直接加载真实页面，不做额外的全局背景色注入
     try {
       contentView.webContents.loadURL(url);
-      console.log('开始加载真实页面:', url);
+      console.log('直接加载真实页面:', url);
       // 页面加载完成后每次都注入性能优化CSS，保证刷新/新建窗口/导航都生效
       contentView.webContents.on('did-finish-load', () => {
         this.injectPerfCSS(contentView);

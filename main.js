@@ -513,11 +513,6 @@ function openNewWindow(url) {
   return win;
 }
 
-// 临时禁用硬件加速，测试是否解决黑屏问题
-// 必须在 app.whenReady() 之前调用
-app.disableHardwareAcceleration();
-console.log('已禁用硬件加速');
-
 /**
  * Windows系统提前检测系统主题背景色
  */
@@ -525,8 +520,6 @@ function getWindowsBackgroundColor() {
   try {
     const isDarkTheme = nativeTheme.shouldUseDarkColors;
     console.log('系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
-    console.log('nativeTheme.shouldUseDarkColors:', isDarkTheme);
-    console.log('process.platform:', process.platform);
     
     // Windows系统特殊处理，背景色与主题保持一致
     if (process.platform === 'win32') {
@@ -563,126 +556,56 @@ function createMainWindow() {
       x: centerPosition.x,
       y: centerPosition.y,
       backgroundColor: backgroundColor, // 统一用主题色
-      show: true, // 立即显示
+      show: false, // 先不显示，等 ready-to-show 再 show
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
         webSecurity: true,
         sandbox: false,
+        backgroundColor: backgroundColor, // BrowserView 也统一用主题色
         transparent: false // 禁止透明，避免黑底
       }
     });
     
-    // ===== 临时禁用 ContentView，直接用主窗口加载网页 =====
-    console.log('窗口创建完成，测试直接加载网页...');
+    // ===== 立即同步初始化，确保真正的立即加载 =====
+    console.log('窗口创建完成，开始同步初始化...');
     
-    // 主窗口直接加载网页，跳过 BrowserView
-    mainWindow.loadURL(APP_CONFIG.HOME_URL);
-    console.log('主窗口直接加载网页:', APP_CONFIG.HOME_URL);
-    
-    // 监听主窗口的页面加载事件
-    mainWindow.webContents.once('did-finish-load', () => {
-      console.log('主窗口页面加载完成');
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.focus();
-        console.log('主窗口聚焦完成');
-      }
-    });
-
-    // 监听主窗口的 title 变化
-    mainWindow.webContents.on('page-title-updated', (event, title) => {
-      console.log('主窗口 title 更新为:', title);
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.setTitle(title);
-      }
-    });
-    
-    /*
     try {
-      // 创建内容视图管理器
+      // 立即同步创建内容视图管理器
       contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
       mainWindow._contentViewManager = contentViewManager;
-      console.log('内容视图管理器创建完成');
+      console.log('内容视图管理器同步创建完成');
 
-      // 创建内容视图并开始加载
+      // 立即同步创建内容视图并开始加载
       const view = contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
-      console.log('内容视图创建完成，页面已开始加载');
+      console.log('内容视图同步创建完成，页面已开始加载');
 
-      // 监听页面加载完成事件，重点调试 title 更新后的黑屏问题
+      // 只在内容视图创建并 loadURL 后注册一次拦截器
       if (view && view.webContents) {
         view.webContents.once('did-finish-load', () => {
-          console.log('页面加载完成，开始调试后续步骤...');
           setupMainWindowInterceptors();
           if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.show();
             mainWindow.focus();
-            console.log('主窗口内容加载完成后聚焦');
+            console.log('主窗口内容加载完成后显示');
           }
-        });
-
-        // 监听 title 变化，看看黑屏是否在 title 更新时发生
-        view.webContents.on('page-title-updated', (event, title) => {
-          console.log('页面 title 更新为:', title);
-          console.log('title 更新时检查页面状态...');
         });
       }
 
-      // 设置内容视图位置
+      // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
       const contentBounds = mainWindow.getContentBounds();
-      const toolbarHeight = 48;
+      const toolbarHeight = 48; // 工具栏高度
       contentViewManager.setBounds({
         x: 0,
-        y: toolbarHeight,
+        y: toolbarHeight, // 直接为工具栏预留空间
         width: contentBounds.width,
         height: contentBounds.height - toolbarHeight
       });
-      console.log('内容视图设置为工具栏下方');
+      console.log('内容视图直接设置为工具栏下方，避免后续调整闪烁');
       
     } catch (error) {
-      console.error('初始化失败:', error);
+      console.error('同步初始化失败:', error);
     }
-    */
-    
-    // 临时注释掉 ContentView 相关代码
-    /*
-    // 延迟100ms创建内容视图，让主窗口背景色先显示
-    setTimeout(() => {
-      try {
-        // 创建内容视图管理器
-        contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
-        mainWindow._contentViewManager = contentViewManager;
-        console.log('内容视图管理器创建完成');
-
-        // 创建内容视图并开始加载
-        const view = contentViewManager.createContentView(undefined, APP_CONFIG.HOME_URL);
-        console.log('内容视图创建完成，页面已开始加载');
-
-        // 只在内容视图创建并 loadURL 后注册一次拦截器
-        if (view && view.webContents) {
-          view.webContents.once('did-finish-load', () => {
-            setupMainWindowInterceptors();
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.focus();
-              console.log('主窗口内容加载完成后聚焦');
-            }
-          });
-        }
-
-        // 立即设置正确的bounds，为工具栏预留空间，避免后续布局闪烁
-        const contentBounds = mainWindow.getContentBounds();
-        const toolbarHeight = 48; // 工具栏高度
-        contentViewManager.setBounds({
-          x: 0,
-          y: toolbarHeight, // 直接为工具栏预留空间
-          width: contentBounds.width,
-          height: contentBounds.height - toolbarHeight
-        });
-        console.log('内容视图直接设置为工具栏下方，避免后续调整闪烁');
-        
-      } catch (error) {
-        console.error('延迟初始化失败:', error);
-      }
-    }, 200); // 延迟200ms，确保主窗口背景色先显示
-    */
     
   // 主窗口直接创建并显示，无 splash
     // 主窗口直接创建并显示，无 splash
@@ -828,14 +751,6 @@ app.whenReady().then(() => {
         }
       });
 
-      // ===== 临时禁用 ContentView，直接用主窗口加载网页 =====
-      console.log('第二个createMainWindow - 测试直接加载网页...');
-      
-      // 主窗口直接加载网页，跳过 BrowserView
-      mainWindow.loadURL(APP_CONFIG.HOME_URL);
-      console.log('第二个createMainWindow - 主窗口直接加载网页:', APP_CONFIG.HOME_URL);
-      
-      /*
       // 初始化内容视图管理器
       contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
       mainWindow._contentViewManager = contentViewManager;
@@ -852,7 +767,6 @@ app.whenReady().then(() => {
         width: contentBounds.width,
         height: contentBounds.height - toolbarHeight
       });
-      */
 
       // 关闭事件处理
       mainWindow.on('close', (event) => {
@@ -891,25 +805,7 @@ app.whenReady().then(() => {
         });
       });
 
-      // 监听主窗口直接加载的页面事件
-      mainWindow.webContents.once('did-finish-load', () => {
-        console.log('第二个createMainWindow - 主窗口页面加载完成，显示窗口');
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-          mainWindow.focus();
-        }
-      });
-
-      // 监听主窗口的 title 变化
-      mainWindow.webContents.on('page-title-updated', (event, title) => {
-        console.log('第二个createMainWindow - title 更新为:', title);
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.setTitle(title);
-        }
-      });
-
-      /*
-      // 监听页面加载完成事件（当前使用直接加载，这段代码不会执行）
+      // 监听页面加载完成事件，然后显示主窗口
       if (contentViewManager && contentViewManager.contentView) {
         const webContents = contentViewManager.contentView.webContents;
         console.log('主窗口开始加载页面:', APP_CONFIG.HOME_URL);
@@ -917,11 +813,10 @@ app.whenReady().then(() => {
         webContents.once('did-finish-load', () => {
           console.log('主窗口页面加载完成，显示窗口');
           if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.show(); // 恢复显示窗口的调用
+            mainWindow.show();
             mainWindow.focus();
           }
         });
-      */
 
         // 启动更新检查
         setTimeout(() => {
@@ -930,7 +825,7 @@ app.whenReady().then(() => {
             updateManager.startPeriodicCheck();
           }
         }, 5000);
-        // */
+      }
 
     } catch (error) {
       console.error('主窗口创建失败:', error);
@@ -963,12 +858,11 @@ function initializeOtherComponentsAsync() {
           shortcutManager.handleToolbarAction(action);
         }
       }, null);
-      // 跳过 contentViewManager.setToolbarManager，因为当前没有使用 ContentViewManager
-      // contentViewManager.setToolbarManager(toolbarManager);
+      contentViewManager.setToolbarManager(toolbarManager);
       console.log('工具栏管理器创建完成');
 
-      // 创建布局管理器 - 传入null作为contentViewManager
-      layoutManager = new LayoutManager(mainWindow, toolbarManager, null);
+      // 创建布局管理器
+      layoutManager = new LayoutManager(mainWindow, toolbarManager, contentViewManager);
       console.log('布局管理器创建完成');
 
       // 设置管理器引用
