@@ -568,9 +568,31 @@ function createMainWindow() {
       }
     });
     
-    // ===== 恢复正常的 ContentView 流程 =====
-    console.log('窗口创建完成，开始正常初始化...');
+    // ===== 临时禁用 ContentView，直接用主窗口加载网页 =====
+    console.log('窗口创建完成，测试直接加载网页...');
     
+    // 主窗口直接加载网页，跳过 BrowserView
+    mainWindow.loadURL(APP_CONFIG.HOME_URL);
+    console.log('主窗口直接加载网页:', APP_CONFIG.HOME_URL);
+    
+    // 监听主窗口的页面加载事件
+    mainWindow.webContents.once('did-finish-load', () => {
+      console.log('主窗口页面加载完成');
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.focus();
+        console.log('主窗口聚焦完成');
+      }
+    });
+
+    // 监听主窗口的 title 变化
+    mainWindow.webContents.on('page-title-updated', (event, title) => {
+      console.log('主窗口 title 更新为:', title);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.setTitle(title);
+      }
+    });
+    
+    /*
     try {
       // 创建内容视图管理器
       contentViewManager = new ContentViewManager(mainWindow, APP_CONFIG, openNewWindow);
@@ -613,6 +635,7 @@ function createMainWindow() {
     } catch (error) {
       console.error('初始化失败:', error);
     }
+    */
     
     // 临时注释掉 ContentView 相关代码
     /*
