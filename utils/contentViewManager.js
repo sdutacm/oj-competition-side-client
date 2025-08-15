@@ -127,7 +127,14 @@ class ContentViewManager {
         contextIsolation: true,
         webSecurity: true,
         backgroundColor: backgroundColor, // 保留背景色避免白屏
-        // 移除其他配置，使用Electron默认Chrome行为
+        spellcheck: false,
+        webgl: false,
+        enableWebSQL: false,
+        // Windows系统额外的GPU禁用设置以防止进程崩溃
+        ...(process.platform === 'win32' ? {
+          hardwareAcceleration: false,
+          offscreen: false
+        } : {})
       }
     });
     targetWindow.addBrowserView(contentView);
@@ -498,6 +505,14 @@ class ContentViewManager {
               nodeIntegration: false,
               contextIsolation: true,
               devTools: false,
+              spellcheck: false,
+              webgl: false,
+              enableWebSQL: false,
+              // Windows系统额外的GPU禁用设置以防止进程崩溃
+              ...(process.platform === 'win32' ? {
+                hardwareAcceleration: false,
+                offscreen: false
+              } : {})
             }
           });
           testView.webContents.once('did-finish-load', () => {
@@ -543,6 +558,14 @@ class ContentViewManager {
               nodeIntegration: false,
               contextIsolation: true,
               devTools: false,
+              spellcheck: false,
+              webgl: false,
+              enableWebSQL: false,
+              // Windows系统额外的GPU禁用设置以防止进程崩溃
+              ...(process.platform === 'win32' ? {
+                hardwareAcceleration: false,
+                offscreen: false
+              } : {})
             }
           });
           testView.webContents.once('did-finish-load', () => {

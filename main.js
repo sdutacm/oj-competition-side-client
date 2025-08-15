@@ -1,5 +1,29 @@
 const { app, BrowserWindow, BrowserView, nativeTheme, shell } = require('electron');
 
+// GPU进程优化配置 - 防止Windows系统GPU进程崩溃
+if (process.platform === 'win32') {
+  // 在Windows系统禁用硬件加速以避免GPU进程崩溃
+  app.disableHardwareAcceleration();
+  
+  // 设置GPU相关命令行开关
+  app.commandLine.appendSwitch('--disable-gpu');
+  app.commandLine.appendSwitch('--disable-gpu-compositing');
+  app.commandLine.appendSwitch('--disable-gpu-rasterization');
+  app.commandLine.appendSwitch('--disable-gpu-sandbox');
+  app.commandLine.appendSwitch('--disable-software-rasterizer');
+  
+  // 禁用GPU缓存相关功能
+  app.commandLine.appendSwitch('--disable-gpu-memory-buffer-compositor-resources');
+  app.commandLine.appendSwitch('--disable-gpu-memory-buffer-video-frames');
+  
+  // 设置渲染器进程限制
+  app.commandLine.appendSwitch('--max-active-webgl-contexts', '0');
+  app.commandLine.appendSwitch('--disable-webgl');
+  app.commandLine.appendSwitch('--disable-webgl2');
+  
+  console.log('Windows系统：已禁用GPU硬件加速以防止进程崩溃');
+}
+
 // 启动性能监控
 const startTime = Date.now();
 console.log('=== 应用启动开始 ===', new Date().toISOString());
@@ -282,7 +306,12 @@ function openNewWindow(url) {
       backgroundThrottling: false,
       spellcheck: false,
       webgl: false,
-      enableWebSQL: false
+      enableWebSQL: false,
+      // Windows系统额外的GPU禁用设置
+      ...(process.platform === 'win32' ? {
+        hardwareAcceleration: false,
+        offscreen: false
+      } : {})
     }
   });
 
@@ -383,7 +412,17 @@ function openNewWindow(url) {
     const contentView = new BrowserView({
       webPreferences: {
         backgroundColor: browserViewBgColor,
-        transparent: false
+        transparent: false,
+        nodeIntegration: false,
+        contextIsolation: true,
+        webSecurity: true,
+        spellcheck: false,
+        webgl: false,
+        // Windows系统额外的GPU禁用设置
+        ...(process.platform === 'win32' ? {
+          hardwareAcceleration: false,
+          offscreen: false
+        } : {})
       }
     });
 
@@ -747,7 +786,16 @@ app.whenReady().then(() => {
         backgroundColor: backgroundColor,
         show: false, // 初始不显示，等页面加载完成后再显示
         webPreferences: {
-          contextIsolation: true
+          contextIsolation: true,
+          nodeIntegration: false,
+          webSecurity: true,
+          spellcheck: false,
+          webgl: false,
+          // Windows系统额外的GPU禁用设置
+          ...(process.platform === 'win32' ? {
+            hardwareAcceleration: false,
+            offscreen: false
+          } : {})
         }
       });
 
