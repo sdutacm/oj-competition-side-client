@@ -101,13 +101,24 @@ class ContentViewManager {
    * Windows系统提前检测系统主题背景色（与main.js保持一致）
    */
   getWindowsBackgroundColor() {
-    // Windows系统特殊处理，背景色与网页首屏保持一致，彻底消除闪烁
-    if (process.platform === 'win32') {
-      return '#f5f5f5'; // 与网页首屏背景色一致
+    try {
+      const isDarkTheme = nativeTheme.shouldUseDarkColors;
+      console.log('ContentViewManager 系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
+      
+      // Windows系统特殊处理，背景色与主题保持一致
+      if (process.platform === 'win32') {
+        return isDarkTheme ? '#1f1f1f' : '#f5f5f5';
+      }
+      // 其他系统使用原有逻辑，避免纯白色
+      return isDarkTheme ? '#2d2d2d' : '#f5f5f5';
+    } catch (error) {
+      console.log('ContentViewManager 主题检测失败，使用默认背景色:', error);
+      // Windows系统检测失败时使用中性背景
+      if (process.platform === 'win32') {
+        return '#f0f0f0';
+      }
+      return '#f5f5f5';
     }
-    // 其他系统使用原有逻辑
-    const { nativeTheme } = require('electron');
-    return nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#f5f5f5';
   }
 
   /**

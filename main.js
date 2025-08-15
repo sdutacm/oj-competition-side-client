@@ -520,6 +520,11 @@ function getWindowsBackgroundColor() {
   try {
     const isDarkTheme = nativeTheme.shouldUseDarkColors;
     console.log('系统主题检测结果:', isDarkTheme ? '暗色' : '亮色');
+    
+    // Windows系统特殊处理，背景色与主题保持一致
+    if (process.platform === 'win32') {
+      return isDarkTheme ? '#1f1f1f' : '#f5f5f5';
+    }
     // 其他系统使用原有逻辑，避免纯白色
     return isDarkTheme ? '#2d2d2d' : '#f5f5f5';
   } catch (error) {
@@ -551,7 +556,7 @@ function createMainWindow() {
       x: centerPosition.x,
       y: centerPosition.y,
       backgroundColor: backgroundColor, // 统一用主题色
-      show: false, // 先不显示，等 ready-to-show 再 show
+      show: true, // 立即显示，让用户看到正确的背景色
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -579,9 +584,8 @@ function createMainWindow() {
         view.webContents.once('did-finish-load', () => {
           setupMainWindowInterceptors();
           if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.show();
             mainWindow.focus();
-            console.log('主窗口内容加载完成后显示');
+            console.log('主窗口内容加载完成后聚焦');
           }
         });
       }
