@@ -563,7 +563,7 @@ function createMainWindow() {
       x: centerPosition.x,
       y: centerPosition.y,
       backgroundColor: backgroundColor, // 统一用主题色
-      show: true, // 立即显示，让用户看到正确的背景色
+      show: false, // 先不显示，加载临时页面后再显示
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -573,12 +573,54 @@ function createMainWindow() {
       }
     });
     
-    // ===== 测试：主窗口直接加载页面，不使用 BrowserView =====
-    console.log('窗口创建完成，测试直接加载页面...');
+    // ===== 先加载临时浅色页面，然后显示窗口，避免黑屏 =====
+    console.log('窗口创建完成，先加载临时页面...');
     
-    // 测试：让主窗口直接加载外部页面，看是否还有黑屏
-    mainWindow.loadURL(APP_CONFIG.HOME_URL);
-    console.log('主窗口直接加载页面:', APP_CONFIG.HOME_URL);
+    // 创建一个与背景色匹配的临时页面
+    const tempHTML = `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { 
+      margin: 0; 
+      padding: 0; 
+      background-color: ${backgroundColor}; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: #666666;
+    }
+  </style>
+</head>
+<body>
+  <div>正在加载 SDUT OnlineJudge...</div>
+</body>
+</html>`;
+    const tempDataURL = `data:text/html;charset=utf-8,${encodeURIComponent(tempHTML)}`;
+    
+    // 先加载临时页面
+    mainWindow.loadURL(tempDataURL);
+    
+    // 临时页面加载完成后显示窗口，然后加载真正的页面
+    mainWindow.webContents.once('did-finish-load', () => {
+      console.log('临时页面加载完成，显示窗口');
+      mainWindow.show();
+      mainWindow.focus();
+      
+      // 延迟1秒后加载真正的页面
+      setTimeout(() => {
+        console.log('开始加载真正的页面:', APP_CONFIG.HOME_URL);
+        mainWindow.loadURL(APP_CONFIG.HOME_URL);
+        
+        // 真正页面加载完成后的处理
+        mainWindow.webContents.once('did-finish-load', () => {
+          console.log('真正页面加载完成');
+          mainWindow.focus();
+        });
+      }, 1000);
+    });
     
     // 临时注释掉 ContentView 相关代码
     /*
@@ -820,7 +862,7 @@ app.whenReady().then(() => {
         });
       });
 
-      // 监听页面加载完成事件，然后显示主窗口
+      // 监听页面加载完成事件（当前使用直接加载，这段代码不会执行）
       if (contentViewManager && contentViewManager.contentView) {
         const webContents = contentViewManager.contentView.webContents;
         console.log('主窗口开始加载页面:', APP_CONFIG.HOME_URL);
@@ -828,11 +870,21 @@ app.whenReady().then(() => {
         webContents.once('did-finish-load', () => {
           console.log('主窗口页面加载完成，显示窗口');
           if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.show();
+            // 移除这个 show() 调用，因为主窗口已经设置为立即显示
+            // mainWindow.show();
             mainWindow.focus();
           }
         });
 
+        // 启动更新检查
+        setTimeout(() => {
+          if (updateManager) {
+            console.log('启动更新检查');
+            updateManager.startPeriodicCheck();
+          }
+        }, 5000);
+      } else {
+        console.log('当前使用主窗口直接加载，跳过 ContentView 相关逻辑');
         // 启动更新检查
         setTimeout(() => {
           if (updateManager) {
