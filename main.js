@@ -26,6 +26,7 @@ if (process.platform === 'win32') {
 
 // 启动性能监控
 const startTime = Date.now();
+
 console.log('=== 应用启动开始 ===', new Date().toISOString());
 
 // 核心启动必需的模块
