@@ -190,14 +190,14 @@ jobs:
           chmod +x ./bin/debug-github.sh
           ./bin/debug-github.sh
         env:
-          GITHUB_TOKEN: ${{ secrets.atriordsa }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       
       - name: Clean unwanted files from release
         run: |
           chmod +x ./bin/cleanup-release.sh
           ./bin/cleanup-release.sh
         env:
-          GITHUB_TOKEN: ${{ secrets.atriordsa }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
 
@@ -224,7 +224,7 @@ jobs:
           chmod +x ./bin/get-release-info.sh
           ./bin/get-release-info.sh
         env:
-          GITHUB_TOKEN: ${{ secrets.atriordsa }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
 
@@ -233,7 +233,7 @@ jobs:
           chmod +x ./bin/download-assets.sh
           ./bin/download-assets.sh
         env:
-          GITHUB_TOKEN: ${{ secrets.atriordsa }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
 
@@ -242,7 +242,7 @@ jobs:
         env:
           TAG_NAME: ${{ github.ref_name }}
           CDN_URL: ${{ secrets.CDN_URL }}
-          GITHUB_TOKEN: ${{ secrets.atriordsa }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: Upload all files to COS using npm script
         run: npm run upload:cos
