@@ -72,7 +72,8 @@
       {
         "provider": "github",
         "owner": "sdutacm",
-        "repo": "oj-competition-side-client"
+        "repo": "oj-competition-side-client",
+        "releaseType": "release"
       }
     ],
     "mac": {
