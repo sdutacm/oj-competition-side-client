@@ -47,12 +47,3 @@ echo "📋 签名信息:"
 codesign -dv "$APP_PATH" 2>&1 || true
 
 echo "🎉 macOS应用修复完成!"
-echo ""
-echo "📌 用户安装说明:"
-echo "   1. 下载dmg文件后，拖拽到Applications文件夹"
-echo "   2. 如果提示'文件已损坏'，请在终端运行:"
-echo "      sudo xattr -cr /Applications/'$APP_NAME.app'"
-echo "      codesign --force --deep --sign - /Applications/'$APP_NAME.app'"
-echo "   3. 或者运行一键修复命令:"
-echo "      curl -s https://raw.githubusercontent.com/sdutacm/oj-competition-side-client/master/bin/user-fix-macos.sh | bash"
-echo ""

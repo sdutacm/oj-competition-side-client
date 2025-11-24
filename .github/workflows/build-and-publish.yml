@@ -96,7 +96,7 @@ jobs:
         shell: powershell
 
   publish-macos:
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 60
     strategy:
       matrix:
