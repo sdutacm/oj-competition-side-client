@@ -122,7 +122,8 @@ const APP_CONFIG = {
     'rl.algoux.cn',
     'rl.algoux.org',
     'rank.ac',
-    'acm.sdut.edu.cn'
+    'acm.sdut.edu.cn',
+    'cdn.shaly.sdutacm.cn'
   ]),
 
   // 显式禁止的域名
