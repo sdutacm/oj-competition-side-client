@@ -1,7 +1,7 @@
 {
   "name": "oj-competition-side-client",
   "version": "1.2.3",
-  "description": "SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端应用程序",
+  "description": "拙壮程长 OJ 竞赛客户端 - 专业的在线评测系统客户端应用程序",
   "author": {
     "name": "SDUTACM",
     "email": "sdutacm@163.com"
@@ -42,7 +42,7 @@
   },
   "build": {
     "appId": "org.sdutacm.SDUTOJCompetitionSideClient",
-    "productName": "SDUT OJ 竞赛客户端",
+    "productName": "拙壮程长 OJ 竞赛客户端",
     "buildDependenciesFromSource": false,
     "generateUpdatesFilesForAllChannels": false,
     "electronUpdaterCompatibility": ">=2.16",
@@ -94,9 +94,9 @@
         },
         "CFBundleURLTypes": [
           {
-            "CFBundleURLName": "SDUT OJ Competition Side Client",
+            "CFBundleURLName": "ZZCZ OJ Competition Side Client",
             "CFBundleURLSchemes": [
-              "sdutoj"
+              "zzczoj"
             ]
           }
         ]
@@ -115,7 +115,7 @@
           ]
         }
       ],
-      "artifactName": "SDUTOJCompetitionSideClient_mac_${arch}_${version}.${ext}"
+      "artifactName": "ZZCZOJCompetitionSideClient_mac_${arch}_${version}.${ext}"
     },
     "win": {
       "icon": "public/favicon.ico",
@@ -135,8 +135,8 @@
           ]
         }
       ],
-      "executableName": "SDUT OJ 竞赛客户端",
-      "artifactName": "SDUTOJCompetitionSideClient_windows_${target}_${arch}_${version}.${ext}",
+      "executableName": "ZZCZ OJ 竞赛客户端",
+      "artifactName": "ZZCZOJCompetitionSideClient_windows_${target}_${arch}_${version}.${ext}",
       "forceCodeSigning": false,
       "verifyUpdateCodeSignature": false,
       "signAndEditExecutable": true,
@@ -159,23 +159,23 @@
       ],
       "fileAssociations": [],
       "protocols": [],
-      "legalTrademarks": "SDUT OJ Competition Side Client"
+      "legalTrademarks": "ZZCZ OJ Competition Side Client"
     },
     "linux": {
       "icon": "public/icon.png",
       "category": "Education",
-      "executableName": "sdut-oj-competition-client",
-      "maintainer": "sdutacm",
+      "executableName": "zzcz-oj-competition-client",
+      "maintainer": "zzczacm",
       "desktop": {
         "entry": {
-          "Name": "SDUT OJ Competition Side Client",
+          "Name": "ZZCZ OJ Competition Side Client",
           "Comment": "Professional Online Judge System Client",
-          "GenericName": "SDUT OJ Competition Side Client",
-          "Icon": "sdut-oj-competition-client",
+          "GenericName": "ZZCZ OJ Competition Side Client",
+          "Icon": "zzcz-oj-competition-client",
           "Type": "Application",
           "Categories": "Education;Development;",
-          "StartupWMClass": "sdut-oj-competition-client",
-          "Name[zh_CN]": "SDUT OJ 竞赛客户端",
+          "StartupWMClass": "zzcz-oj-competition-client",
+          "Name[zh_CN]": "ZZCZ OJ 竞赛客户端",
           "Comment[zh_CN]": "专业的在线评测系统客户端",
           "Keywords": "OJ;ACM;Programming;Contest;Judge;"
         }
@@ -214,13 +214,13 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "license": null,
-      "artifactName": "SDUTOJCompetitionSideClient_windows_installer_${arch}_${version}.${ext}",
+      "artifactName": "ZZCZOJCompetitionSideClient_windows_installer_${arch}_${version}.${ext}",
       "installerIcon": "public/favicon.ico",
       "uninstallerIcon": "public/favicon.ico",
       "installerHeaderIcon": "public/favicon.ico",
       "installerSidebar": null,
       "uninstallerSidebar": null,
-      "shortcutName": "SDUT OJ 竞赛客户端",
+      "shortcutName": "ZZCZ OJ 竞赛客户端",
       "displayLanguageSelector": false,
       "installerLanguages": [
         "en_US",
@@ -239,7 +239,7 @@
       "unicode": true
     },
     "portable": {
-      "artifactName": "SDUTOJCompetitionSideClient_windows_portable_${arch}_${version}.${ext}",
+      "artifactName": "ZZCZOJCompetitionSideClient_windows_portable_${arch}_${version}.${ext}",
       "requestExecutionLevel": "user"
     }
   },

@@ -3,7 +3,8 @@ name: Build and Publish Release
 on:
   push:
     tags:
-      - 'v*'
+      branches:
+        - zzcz
 
 permissions:
   contents: write

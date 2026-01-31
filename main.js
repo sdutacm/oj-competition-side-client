@@ -112,10 +112,10 @@ function loadModulesLazily() {
 // 应用配置
 const APP_CONFIG = {
   // 主页面地址
-  HOME_URL: 'https://op.sdutacm.cn/onlinejudge3_cs/competitions',
+  HOME_URL: 'https://oj.zzczup.com/onlinejudge3_zzczup_cs/competitions',
 
   // 主窗口允许访问的根域名（支持子路径）
-  MAIN_DOMAIN: 'op.sdutacm.cn',
+  MAIN_DOMAIN: 'oj.zzczup.com',
 
   // 新窗口白名单域名
   POPUP_WHITELIST: new Set([
