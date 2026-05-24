@@ -1,5 +1,4 @@
 const { getHostname } = require('./urlHelper');
-const { showBlockedDialog } = require('./dialogHelper');
 
 /**
  * 统一判断弹窗只允许白名单，主窗口允许主域名和白名单
@@ -54,29 +53,6 @@ function checkDomainAllowed(domain, config, isMainWindow = false) {
 }
 
 /**
- * 统一拦截并弹窗提示（如不允许则自动关闭弹窗窗口）
- * @param {BrowserWindow} win
- * @param {string} url
- * @param {object} config
- * @param {boolean} isMainWindow
- * @param {string} type - 拦截类型（可选：'redirect' | 'default'）
- * @returns {boolean} 是否允许访问
- */
-function interceptDomain(win, url, config, isMainWindow = false, type = 'default') {
-  const domain = getHostname(url);
-  const { allowed, reason } = checkDomainAllowed(domain, config, isMainWindow);
-  if (!allowed) {
-    showBlockedDialog(win, domain, reason, type);
-    if (!isMainWindow) {
-      win.hide();
-      win.close();
-    }
-    return false;
-  }
-  return true;
-}
-
-/**
  * 判断 url 是否属于白名单域名
  * @param {string} url
  * @param {object} config
@@ -95,6 +71,5 @@ function isWhiteDomain(url, config) {
 
 module.exports = {
   checkDomainAllowed,
-  interceptDomain,
   isWhiteDomain
 };

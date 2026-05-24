@@ -1,0 +1,343 @@
+:root {
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: var(--el-bg-color-page);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+.client-shell {
+  height: 100%;
+  min-width: 860px;
+  overflow: hidden;
+}
+
+.app-toolbar {
+  align-items: center;
+  background: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-light);
+  display: flex;
+  gap: 12px;
+  height: 44px;
+  padding: 0 10px;
+  -webkit-app-region: drag;
+}
+
+.platform-mac .app-toolbar {
+  padding-left: 76px;
+}
+
+.toolbar-section {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.toolbar-icon-button,
+.window-control-button {
+  align-items: center;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: var(--el-text-color-regular);
+  cursor: pointer;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  transition: background-color 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+  width: 28px;
+  -webkit-app-region: no-drag;
+}
+
+.toolbar-icon-button svg,
+.window-control-button svg {
+  height: 16px;
+  stroke-width: 2;
+  width: 16px;
+}
+
+.toolbar-icon-button:hover,
+.window-control-button:hover {
+  background: var(--el-fill-color-light);
+}
+
+.toolbar-icon-button:active,
+.window-control-button:active {
+  background: var(--el-fill-color);
+}
+
+.toolbar-icon-button:focus-visible,
+.window-control-button:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
+.toolbar-icon-button:disabled {
+  cursor: default;
+  opacity: 0.34;
+}
+
+.toolbar-icon-button:disabled:hover {
+  background: transparent;
+}
+
+.navigation-tools {
+  flex: 0 0 auto;
+}
+
+.toolbar-title {
+  color: var(--el-text-color-primary);
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  min-width: 0;
+  text-align: left;
+  -webkit-app-region: drag;
+}
+
+.toolbar-title span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.right-tools {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.window-controls {
+  align-items: center;
+  border-left: 1px solid var(--el-border-color-light);
+  display: flex;
+  gap: 2px;
+  margin-left: 4px;
+  padding-left: 10px;
+  -webkit-app-region: no-drag;
+}
+
+.window-control-button.close:hover {
+  background: #e5484d;
+  color: #fff;
+}
+
+.browser-stage {
+  height: calc(100% - 44px);
+}
+
+.utility-window {
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  min-height: 100%;
+}
+
+.window-titlebar {
+  align-items: center;
+  background: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-light);
+  display: flex;
+  height: 44px;
+  padding: 0 10px;
+  -webkit-app-region: drag;
+}
+
+.platform-mac .window-titlebar {
+  padding-left: 76px;
+}
+
+.window-titlebar-title {
+  color: var(--el-text-color-primary);
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.utility-content {
+  display: flex;
+  height: calc(100vh - 44px);
+  overflow: hidden;
+}
+
+.utility-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 16px;
+  min-height: 0;
+  padding: 18px 24px 20px;
+}
+
+.utility-summary {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+}
+
+.utility-summary h1 {
+  color: var(--el-text-color-primary);
+  font-size: 17px;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.utility-summary p {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 4px 0 0;
+}
+
+.summary-icon {
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 12px;
+  color: var(--el-text-color-regular);
+  flex: 0 0 auto;
+  height: 44px;
+  padding: 11px;
+  stroke-width: 2.1;
+  width: 44px;
+}
+
+.utility-status {
+  background: var(--el-fill-color-blank);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+  flex: 1;
+  min-height: 0;
+  padding: 18px;
+}
+
+.utility-status.centered {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.utility-status p {
+  color: var(--el-text-color-primary);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  margin: 0 0 6px;
+}
+
+.utility-status span {
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.utility-status.success p {
+  color: var(--el-color-success);
+}
+
+.utility-status.warning p {
+  color: var(--el-color-warning);
+}
+
+.utility-status.error p {
+  color: var(--el-color-danger);
+}
+
+.loading-icon {
+  animation: spin 0.9s linear infinite;
+  color: var(--el-color-primary);
+  height: 36px;
+  margin-top: 32px;
+  width: 36px;
+}
+
+.dialog-body {
+  display: grid;
+  flex: 1;
+  gap: 12px;
+  min-height: 0;
+}
+
+.dialog-copy {
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.reset-list {
+  background: var(--el-fill-color-blank);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+  color: var(--el-text-color-secondary);
+  display: grid;
+  gap: 9px;
+  font-size: 14px;
+  line-height: 1.55;
+  list-style: none;
+  margin: 0;
+  padding: 16px 18px;
+}
+
+.reset-list li {
+  padding-left: 16px;
+  position: relative;
+}
+
+.reset-list li::before {
+  color: var(--el-color-primary);
+  content: "";
+  height: 6px;
+  left: 0;
+  position: absolute;
+  top: 0.7em;
+  transform: translateY(-50%);
+  width: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.reset-note {
+  color: var(--el-text-color-placeholder);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

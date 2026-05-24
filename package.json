@@ -8,34 +8,43 @@
   },
   "main": "main.js",
   "scripts": {
-    "start": "electron . --max-old-space-size=4096 --max-semi-space-size=512",
-    "build": "npm run verify:icon && electron-builder",
-    "build:win": "npm run verify:icon && electron-builder --win --x64",
-    "build:win:x64": "npm run verify:icon && electron-builder --win --x64",
-    "build:win:arm64": "npm run verify:icon && electron-builder --win --arm64",
-    "build:win:all": "npm run verify:icon && electron-builder --win",
-    "build:win:clean": "rm -rf dist && npm run verify:icon && electron-builder --win --x64",
-    "build:mac": "npm run verify:icon && electron-builder --mac && npm run fix:mac",
-    "build:mac:x64": "npm run verify:icon && electron-builder --mac --x64 && npm run fix:mac",
-    "build:mac:arm64": "npm run verify:icon && electron-builder --mac --arm64 && npm run fix:mac",
+    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "start": "npm run dev",
+    "renderer:dev": "vite --host 127.0.0.1",
+    "renderer:build": "vite build",
+    "electron:dev": "cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron . --max-old-space-size=4096 --max-semi-space-size=512",
+    "build": "npm run renderer:build && npm run verify:icon && electron-builder",
+    "build:win": "npm run renderer:build && npm run verify:icon && electron-builder --win --x64",
+    "build:win:x64": "npm run renderer:build && npm run verify:icon && electron-builder --win --x64",
+    "build:win:arm64": "npm run renderer:build && npm run verify:icon && electron-builder --win --arm64",
+    "build:win:all": "npm run renderer:build && npm run verify:icon && electron-builder --win",
+    "build:win:clean": "rm -rf dist && npm run renderer:build && npm run verify:icon && electron-builder --win --x64",
+    "build:mac": "npm run renderer:build && npm run verify:icon && electron-builder --mac && npm run fix:mac",
+    "build:mac:x64": "npm run renderer:build && npm run verify:icon && electron-builder --mac --x64 && npm run fix:mac",
+    "build:mac:arm64": "npm run renderer:build && npm run verify:icon && electron-builder --mac --arm64 && npm run fix:mac",
     "fix:mac": "chmod +x bin/fix-macos.sh && bin/fix-macos.sh",
-    "publish:win": "npm run verify:icon && electron-builder --win --publish=always",
-    "publish:win:x64": "npm run verify:icon && electron-builder --win --x64 --publish=always",
-    "publish:win:arm64": "npm run verify:icon && electron-builder --win --arm64 --publish=always",
-    "publish:win:all": "npm run verify:icon && electron-builder --win --publish=always",
-    "publish:mac": "npm run verify:icon && electron-builder --mac --publish=always",
-    "publish:mac:x64": "npm run verify:icon && electron-builder --mac --x64 --publish=always",
-    "publish:mac:arm64": "npm run verify:icon && electron-builder --mac --arm64 --publish=always",
-    "publish:linux": "npm run verify:icon && electron-builder --linux --publish=always",
+    "publish:win": "npm run renderer:build && npm run verify:icon && electron-builder --win --publish=always",
+    "publish:win:x64": "npm run renderer:build && npm run verify:icon && electron-builder --win --x64 --publish=always",
+    "publish:win:arm64": "npm run renderer:build && npm run verify:icon && electron-builder --win --arm64 --publish=always",
+    "publish:win:all": "npm run renderer:build && npm run verify:icon && electron-builder --win --publish=always",
+    "publish:mac": "npm run renderer:build && npm run verify:icon && electron-builder --mac --publish=always",
+    "publish:mac:x64": "npm run renderer:build && npm run verify:icon && electron-builder --mac --x64 --publish=always",
+    "publish:mac:arm64": "npm run renderer:build && npm run verify:icon && electron-builder --mac --arm64 --publish=always",
+    "publish:linux": "npm run renderer:build && npm run verify:icon && electron-builder --linux --publish=always",
     "upload:cos": "node scripts/upload-to-cos.js",
     "verify:icon": "node scripts/verifyIcon.js",
     "verify:windows": "node scripts/verifyWindowsBuild.js",
     "test:taskbar": "node scripts/testTaskbarIcon.js"
   },
   "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "electron": "^27.3.11",
+    "electron-builder": "^26.3.0",
     "rcedit": "^4.0.1",
-    "electron-builder": "^26.3.0"
+    "vite": "^5.4.21",
+    "wait-on": "^9.0.10"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -56,6 +65,8 @@
     },
     "files": [
       "main.js",
+      "src/electron/**/*",
+      "dist/renderer/**/*",
       "utils/**/*",
       "public/**/*",
       "locales/**/*",
@@ -245,6 +256,9 @@
   },
   "dependencies": {
     "cos-nodejs-sdk-v5": "^2.16.0-beta.3",
-    "i18n-js": "^4.5.1"
+    "element-plus": "^2.14.0",
+    "i18n-js": "^4.5.1",
+    "lucide-vue-next": "^1.0.0",
+    "vue": "^3.5.34"
   }
 }

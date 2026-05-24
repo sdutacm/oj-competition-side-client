@@ -24,14 +24,18 @@ npm install
 
 ### 3. 启动开发环境
 ```bash
-npm start
+npm run dev
 ```
 
 ## 开发脚本
 
 | 命令 | 功能 | 说明 |
 |------|------|------|
-| `npm start` | 启动应用 | 开发模式启动，支持热重载 |
+| `npm run dev` | 启动完整开发环境 | 同时启动 Vite `localhost:5173` 和 Electron |
+| `npm start` | 启动完整开发环境 | `npm run dev` 的别名 |
+| `npm run renderer:dev` | 启动渲染进程 | 只启动 Vue/Vite，可直接访问 `http://127.0.0.1:5173` |
+| `npm run electron:dev` | 启动 Electron | 连接已经运行的 `localhost:5173` |
+| `npm run renderer:build` | 构建渲染进程 | 输出到 `dist/renderer` |
 | `npm run build` | 构建所有平台 | 构建 Windows、macOS、Linux 版本 |
 | `npm run build:win` | 构建 Windows | 构建 Windows 版本（NSIS + Portable） |
 | `npm run build:mac` | 构建 macOS | 构建 macOS 版本（DMG + ZIP） |
@@ -43,7 +47,19 @@ npm start
 ```
 oj-competition-side-client/
 ├── main.js                   # 主进程入口文件
+├── index.html                # Vite 渲染进程入口
+├── vite.config.mjs           # Vite 配置
 ├── package.json              # 项目配置和依赖
+├── src/
+│   ├── electron/             # Electron 主进程与 preload
+│   │   ├── main.js           # 窗口、BrowserView、安全拦截、IPC
+│   │   ├── preload.js        # 受控 IPC API 暴露
+│   │   └── appConfig.js      # 域名与应用配置
+│   └── renderer/             # Vue + Vite 渲染进程
+│       ├── App.vue           # 应用外壳
+│       ├── components/       # Element Plus UI 组件
+│       ├── api/              # IPC 适配层
+│       └── styles/           # 全局样式与明暗色适配
 ├── build/                    # 构建配置文件
 │   ├── installer.nsh         # Windows NSIS 安装脚本
 │   └── sdut-oj-competition-client.desktop  # Linux 桌面文件
@@ -62,12 +78,9 @@ oj-competition-side-client/
 │   ├── beforePublish.js     # 发布前处理脚本
 │   └── ...                  # 其他构建脚本
 ├── utils/                   # 工具模块
-│   ├── toolbarManager.js    # 工具栏管理器
-│   ├── contentViewManager.js # 内容视图管理器
-│   ├── shortcutManager.js   # 快捷键管理器
-│   ├── windowHelper.js      # 窗口工具助手
-│   ├── dialogHelper.js      # 对话框工具
 │   ├── domainHelper.js      # 域名控制工具
+│   ├── updateManager.js     # 更新检测
+│   ├── uaHelper.js          # User-Agent 处理
 │   ├── versionHelper.js     # 版本号工具
 │   └── ...                  # 其他工具模块
 └── locales/                 # 国际化文件
@@ -77,30 +90,19 @@ oj-competition-side-client/
 
 ## 核心模块说明
 
-### 主进程模块 (`main.js`)
-- 应用启动和窗口管理
-- 安全控制和域名拦截
-- 快捷键注册和菜单管理
+### Electron 主进程 (`src/electron/main.js`)
+- 创建应用窗口和内容 BrowserView
+- 负责域名白名单、安全拦截和窗口复用
+- 通过 IPC 接收 Vue 工具栏操作并执行浏览器行为
 
-### 工具栏管理器 (`utils/toolbarManager.js`)
-- 独立工具栏 BrowserView 创建
-- SVG 图标渲染和主题适配
-- 工具栏按钮事件处理
+### Preload (`src/electron/preload.js`)
+- 通过 `contextBridge` 暴露最小化 API
+- 渲染进程只能调用受控 IPC，不能直接访问 Node.js
 
-### 内容视图管理器 (`utils/contentViewManager.js`)
-- 网页内容视图管理
-- 导航拦截和重定向处理
-- 域名白名单/黑名单控制
-
-### 快捷键管理器 (`utils/shortcutManager.js`)
-- 跨平台快捷键注册
-- 焦点检测和冲突避免
-- 快捷键状态同步
-
-### 窗口助手 (`utils/windowHelper.js`)
-- 新窗口创建和管理
-- 窗口布局和大小控制
-- 窗口间通信
+### Vue 渲染进程 (`src/renderer`)
+- 基于 Vue 3 + Vite + Element Plus
+- 工具栏、更新弹窗、重置弹窗均在 Vue 中维护
+- 通过 Element Plus 和 CSS 变量完成明暗色适配
 
 ## 构建配置
 
@@ -117,6 +119,8 @@ oj-competition-side-client/
     },
     "files": [
       "main.js",
+      "src/electron/**/*",
+      "dist/renderer/**/*",
       "utils/**/*",
       "public/**/*",
       "locales/**/*",
@@ -190,13 +194,13 @@ oj-competition-side-client/
 ### 2. 调试技巧
 ```bash
 # 启动时显示调试信息
-npm start -- --enable-logging
+npm run electron:dev -- --enable-logging
 
 # 在开发模式下显示开发者工具
-npm start -- --dev
+npm run electron:dev -- --dev
 
 # 查看详细的 Electron 日志
-DEBUG=electron* npm start
+DEBUG=electron* npm run electron:dev
 ```
 
 ### 3. 构建测试
@@ -291,13 +295,13 @@ sudo apt install build-essential libnss3-dev libatk-bridge2.0-dev libdrm2-dev li
 ### 开发问题
 
 **Q: 应用启动后白屏**
-A: 检查网络连接，确保能访问 `op.sdutacm.cn`
+A: 开发模式下先确认 Vite 是否运行在 `http://127.0.0.1:5173`，再检查竞赛站点网络连接。
 
 **Q: 热重载不工作**
-A: 重启开发服务器：`Ctrl+C` 后重新运行 `npm start`
+A: 重启开发服务器：`Ctrl+C` 后重新运行 `npm run dev`
 
-**Q: 快捷键冲突**
-A: 检查 `shortcutManager.js` 中的快捷键注册逻辑
+**Q: 工具栏操作没有响应**
+A: 检查 `src/electron/preload.js` 暴露的 IPC API 和 `src/electron/main.js` 中对应的 `ipcMain.handle`。
 
 ## 贡献指南
 
