@@ -1,6 +1,6 @@
 const APP_CONFIG = {
-  HOME_URL: 'https://oj.sdutacm.cn/onlinejudge3/competitions',
-  MAIN_DOMAIN: 'oj.sdutacm.cn',
+  HOME_URL: 'https://op.sdutacm.cn/onlinejudge3_cs/competitions',
+  MAIN_DOMAIN: 'op.sdutacm.cn',
   DOWNLOAD_URL: 'https://oj.sdutacm.cn/oj-competition-side-client/',
   POPUP_WHITELIST: new Set([
     'rl.algoux.cn',
