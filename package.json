@@ -1,6 +1,6 @@
 {
   "name": "oj-competition-side-client",
-  "version": "1.2.3",
+  "version": "1.2.4-alpha",
   "description": "SDUT OJ 竞赛客户端 - 专业的在线评测系统客户端应用程序",
   "author": {
     "name": "SDUTACM",
@@ -58,7 +58,7 @@
     "afterPack": "scripts/afterPack.js",
     "compression": "normal",
     "npmRebuild": false,
-    "buildVersion": "1.2.3",
+    "buildVersion": "1.2.4-alpha",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -77,7 +77,7 @@
       "!**/node_modules/.cache/**/*"
     ],
     "extraMetadata": {
-      "version": "1.2.3"
+      "version": "1.2.4-alpha"
     },
     "publish": [
       {
