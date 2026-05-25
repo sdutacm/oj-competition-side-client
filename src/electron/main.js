@@ -13,17 +13,6 @@ const TOOLBAR_HEIGHT = 44;
 const WINDOW_SIZE = { width: 1400, height: 900 };
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
 
-if (process.platform === 'win32') {
-  app.disableHardwareAcceleration();
-  app.commandLine.appendSwitch('--disable-gpu');
-  app.commandLine.appendSwitch('--disable-gpu-compositing');
-  app.commandLine.appendSwitch('--disable-gpu-rasterization');
-  app.commandLine.appendSwitch('--disable-gpu-sandbox');
-  app.commandLine.appendSwitch('--disable-software-rasterizer');
-  app.commandLine.appendSwitch('--disable-webgl');
-  app.commandLine.appendSwitch('--disable-webgl2');
-}
-
 let mainState = null;
 let updateManager = null;
 let confirmedQuit = false;
@@ -228,10 +217,8 @@ function createContentView(state, url) {
       contextIsolation: true,
       webSecurity: true,
       spellcheck: false,
-      webgl: false,
       enableWebSQL: false,
-      backgroundColor: getBackgroundColor(),
-      ...(process.platform === 'win32' ? { hardwareAcceleration: false, offscreen: false } : {})
+      backgroundColor: getBackgroundColor()
     }
   });
 
