@@ -107,11 +107,14 @@ body {
 }
 
 .toolbar-title {
+  align-items: center;
   color: var(--el-text-color-primary);
+  display: flex;
   flex: 1;
   font-size: 13px;
   font-weight: 500;
-  line-height: 1;
+  height: 100%;
+  line-height: 18px;
   min-width: 0;
   text-align: left;
   -webkit-app-region: drag;
@@ -119,6 +122,7 @@ body {
 
 .toolbar-title span {
   display: block;
+  line-height: 18px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -169,10 +173,14 @@ body {
 }
 
 .window-titlebar-title {
+  align-items: center;
   color: var(--el-text-color-primary);
+  display: flex;
   flex: 1;
   font-size: 13px;
   font-weight: 500;
+  height: 100%;
+  line-height: 18px;
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;

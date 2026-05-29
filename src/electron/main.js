@@ -48,6 +48,10 @@ function getBackgroundColor() {
   return nativeTheme.shouldUseDarkColors ? '#141414' : '#ffffff';
 }
 
+function isDevelopment() {
+  return !app.isPackaged;
+}
+
 function getStateFromWebContents(webContents) {
   const win = BrowserWindow.fromWebContents(webContents);
   return win ? windowStates.get(win.id) : null;
@@ -68,6 +72,82 @@ function updateNavigationState(state) {
     domain: getHostname(webContents.getURL()),
     title: webContents.getTitle()
   });
+}
+
+function runBrowserAction(state, action) {
+  const webContents = state?.view?.webContents;
+  if (!state || !webContents || webContents.isDestroyed()) return false;
+
+  if (action === 'back') {
+    if (webContents.canGoBack()) webContents.goBack();
+    updateNavigationState(state);
+    return true;
+  }
+
+  if (action === 'forward') {
+    if (webContents.canGoForward()) webContents.goForward();
+    updateNavigationState(state);
+    return true;
+  }
+
+  if (action === 'refresh') {
+    webContents.reload();
+    updateNavigationState(state);
+    return true;
+  }
+
+  if (action === 'hard-refresh') {
+    webContents.reloadIgnoringCache();
+    updateNavigationState(state);
+    return true;
+  }
+
+  if (action === 'home') {
+    webContents.loadURL(state.homeUrl);
+    updateNavigationState(state);
+    return true;
+  }
+
+  return false;
+}
+
+function getBrowserShortcutAction(input) {
+  if (input.type !== 'keyDown') return null;
+
+  const key = String(input.key || '').toLowerCase();
+  const isLeft = key === 'arrowleft' || key === 'left';
+  const isRight = key === 'arrowright' || key === 'right';
+  const isCommand = input.control || input.meta;
+
+  if (key === 'browserback' || (input.alt && isLeft) || (input.meta && (key === '[' || isLeft))) {
+    return 'back';
+  }
+
+  if (key === 'browserforward' || (input.alt && isRight) || (input.meta && (key === ']' || isRight))) {
+    return 'forward';
+  }
+
+  if ((isCommand && key === 'r') || key === 'f5') {
+    return input.shift || (input.control && key === 'f5') ? 'hard-refresh' : 'refresh';
+  }
+
+  if (input.alt && key === 'home') {
+    return 'home';
+  }
+
+  return null;
+}
+
+function handleBrowserInputEvent(state, input) {
+  if (!isDevelopment() && isDevtoolsShortcut(input)) return true;
+
+  const action = getBrowserShortcutAction(input);
+  return action ? runBrowserAction(state, action) : false;
+}
+
+function openDevToolsInDevelopment(win) {
+  if (!isDevelopment() || !win || win.isDestroyed()) return;
+  win.webContents.openDevTools({ mode: 'right' });
 }
 
 function platformWindowOptions() {
@@ -153,7 +233,7 @@ function bindContentEvents(state) {
   });
 
   webContents.on('before-input-event', (event, input) => {
-    if (isDevtoolsShortcut(input)) {
+    if (handleBrowserInputEvent(state, input)) {
       event.preventDefault();
     }
   });
@@ -252,7 +332,7 @@ function createShellWindow({ url, isMainWindow = false }) {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
-      devTools: !app.isPackaged
+      devTools: isDevelopment()
     }
   });
 
@@ -272,6 +352,12 @@ function createShellWindow({ url, isMainWindow = false }) {
     domainWindows.set(domain, state);
   }
 
+  win.webContents.on('before-input-event', (event, input) => {
+    if (handleBrowserInputEvent(state, input)) {
+      event.preventDefault();
+    }
+  });
+
   win.loadURL(rendererUrl('shell')).catch((error) => {
     console.error('加载 Vue 渲染进程失败:', error);
   });
@@ -280,6 +366,7 @@ function createShellWindow({ url, isMainWindow = false }) {
     createContentView(state, url);
     win.show();
     win.focus();
+    openDevToolsInDevelopment(win);
   });
 
   win.on('close', (event) => {
@@ -360,7 +447,7 @@ function createUtilityWindow(type) {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
-      devTools: !app.isPackaged
+      devTools: isDevelopment()
     }
   });
 
@@ -385,6 +472,7 @@ function createUtilityWindow(type) {
   win.once('ready-to-show', () => {
     win.show();
     win.focus();
+    openDevToolsInDevelopment(win);
   });
 
   win.on('closed', () => {
@@ -436,17 +524,18 @@ function registerIpc() {
 
   ipcMain.handle('browser:navigate', (event, action) => {
     const state = getStateFromWebContents(event.sender);
-    const webContents = state?.view?.webContents;
-    if (!state || !webContents || webContents.isDestroyed()) return false;
+    if (!state) return false;
 
-    if (action === 'back' && webContents.canGoBack()) webContents.goBack();
-    if (action === 'forward' && webContents.canGoForward()) webContents.goForward();
-    if (action === 'refresh') webContents.reload();
-    if (action === 'home') webContents.loadURL(state.homeUrl);
-    if (action === 'info') showInfoDialog(state.window);
+    if (['back', 'forward', 'refresh', 'home'].includes(action)) {
+      return runBrowserAction(state, action);
+    }
 
-    updateNavigationState(state);
-    return true;
+    if (action === 'info') {
+      showInfoDialog(state.window);
+      return true;
+    }
+
+    return false;
   });
 
   ipcMain.handle('app:check-update', async () => {
